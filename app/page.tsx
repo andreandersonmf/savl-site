@@ -1,56 +1,70 @@
-"use client"
+"use client";
 
-import { useEffect, useMemo, useRef, useState } from "react"
-import Image from "next/image"
-import { createClient, type SupabaseClient } from "@supabase/supabase-js"
-import { ChevronDown, Trophy } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { ChevronDown, Trophy } from "lucide-react";
 
 type Country = {
-  name: string
-  code: string
-}
+  name: string;
+  code: string;
+};
 
 type Team = {
-  id: number
-  country: string
-  code: string
-  captain_name: string
-  captain_discord: string
-  captain_roblox_id: string
-  approved: boolean
-  approved_at?: string | null
-  created_at: string
-}
+  id: number;
+  country: string;
+  code: string;
+  captain_name: string;
+  captain_discord: string;
+  captain_roblox_id: string;
+  approved: boolean;
+  approved_at?: string | null;
+  created_at: string;
+};
 
-type MatchStatus = "Scheduled" | "Live" | "Finished"
+type MatchStatus = "Scheduled" | "Live" | "Finished";
 
 type MatchRow = {
-  id: number
-  home_country: string
-  away_country: string
-  match_date: string
-  match_time: string
-  status: MatchStatus
-  home_score: number
-  away_score: number
-  winner_country: string | null
-  created_at: string
-}
+  id: number;
+  home_country: string;
+  away_country: string;
+  stage: string | null;
+  match_date: string;
+  match_time: string;
+  status: MatchStatus;
+  home_score: number;
+  away_score: number;
+  winner_country: string | null;
+  created_at: string;
+};
 
 type SelectOption = {
-  label: string
-  value: string
-  imageUrl?: string
-  badgeClassName?: string
-}
+  label: string;
+  value: string;
+  imageUrl?: string;
+  badgeClassName?: string;
+};
 
 type MatchDraft = {
-  status: MatchStatus
-  match_date: string
-  match_time: string
-  home_score: number
-  away_score: number
-}
+  status: MatchStatus;
+  stage: string;
+  match_date: string;
+  match_time: string;
+  home_score: number;
+  away_score: number;
+};
+
+type TeamPlayerRole = "Vice Captain" | "Player";
+
+type TeamPlayer = {
+  id: number;
+  team_id: number;
+  roblox_username: string;
+  roblox_user_id: string;
+  discord_username: string;
+  role: TeamPlayerRole;
+  created_at: string;
+};
 
 const COUNTRIES: Country[] = [
   { name: "Argentina", code: "ar" },
@@ -85,116 +99,121 @@ const COUNTRIES: Country[] = [
   { name: "United Kingdom", code: "gb" },
   { name: "United States", code: "us" },
   { name: "Venezuela", code: "ve" },
-]
+];
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 const supabase: SupabaseClient | null =
-  supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null
+  supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 function normalizeText(value: string) {
-  return value.trim().toLowerCase()
+  return value.trim().toLowerCase();
 }
 
 function getCountryByName(name: string) {
-  return COUNTRIES.find((country) => normalizeText(country.name) === normalizeText(name)) || null
+  return (
+    COUNTRIES.find(
+      (country) => normalizeText(country.name) === normalizeText(name),
+    ) || null
+  );
 }
 
 function getFlagUrl(code: string) {
-  return `https://flagcdn.com/w160/${code}.png`
+  return `https://flagcdn.com/w160/${code}.png`;
 }
 
 function formatDate(date: string) {
-  if (!date) return "-"
+  if (!date) return "-";
 
   try {
     return new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
-    })
+    });
   } catch {
-    return date
+    return date;
   }
 }
 
 function getStatusBadgeClass(status: MatchStatus) {
-  if (status === "Live") return "border-red-400/20 bg-red-400/10 text-red-300"
-  if (status === "Finished") return "border-white/15 bg-white/10 text-white"
-  return "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+  if (status === "Live") return "border-red-400/20 bg-red-400/10 text-red-300";
+  if (status === "Finished") return "border-white/15 bg-white/10 text-white";
+  return "border-emerald-400/20 bg-emerald-400/10 text-emerald-300";
 }
 
 function scrollToSection(id: string) {
-  const element = document.getElementById(id)
-  if (!element) return
+  const element = document.getElementById(id);
+  if (!element) return;
 
   element.scrollIntoView({
     behavior: "smooth",
     block: "start",
-  })
+  });
 
   setTimeout(() => {
-    const headerOffset = 96
+    const headerOffset = 96;
     window.scrollBy({
       top: -headerOffset,
       behavior: "smooth",
-    })
-  }, 50)
+    });
+  }, 50);
 }
 
-function getRobloxAvatarUrl(userId: string) {
-  const cleanId = userId.trim()
-  if (!/^\d+$/.test(cleanId)) return null
-
-  return `https://www.roblox.com/headshot-thumbnail/image?userId=${cleanId}&width=150&height=150&format=png`
-}
-
-function Avatar({ robloxUserId, name }: { robloxUserId: string; name: string }) {
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+function Avatar({
+  robloxUserId,
+  name,
+}: {
+  robloxUserId: string;
+  name: string;
+}) {
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     async function loadAvatar() {
       if (!/^\d+$/.test(robloxUserId.trim())) {
-        setAvatarUrl(null)
-        setLoading(false)
-        return
+        setAvatarUrl(null);
+        setLoading(false);
+        return;
       }
 
       try {
-        setLoading(true)
+        setLoading(true);
 
         const response = await fetch(
           `/api/roblox-avatar?userId=${encodeURIComponent(robloxUserId.trim())}`,
-          { cache: "no-store" }
-        )
+          { cache: "no-store" },
+        );
 
-        const data = await response.json()
+        const data = await response.json();
 
         if (!cancelled) {
-          setAvatarUrl(data?.imageUrl ?? null)
-          setLoading(false)
+          setAvatarUrl(data?.imageUrl ?? null);
+          setLoading(false);
         }
       } catch {
         if (!cancelled) {
-          setAvatarUrl(null)
-          setLoading(false)
+          setAvatarUrl(null);
+          setLoading(false);
         }
       }
     }
 
-    loadAvatar()
+    loadAvatar();
 
     return () => {
-      cancelled = true
-    }
-  }, [robloxUserId])
+      cancelled = true;
+    };
+  }, [robloxUserId]);
 
   if (loading) {
-    return <div className="h-10 w-10 animate-pulse rounded-full border border-white/10 bg-white/5" />
+    return (
+      <div className="h-10 w-10 animate-pulse rounded-full border border-white/10 bg-white/5" />
+    );
   }
 
   if (!avatarUrl) {
@@ -202,7 +221,7 @@ function Avatar({ robloxUserId, name }: { robloxUserId: string; name: string }) 
       <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-bold text-white/70">
         {name.slice(0, 2).toUpperCase()}
       </div>
-    )
+    );
   }
 
   return (
@@ -214,7 +233,7 @@ function Avatar({ robloxUserId, name }: { robloxUserId: string; name: string }) 
       loading="lazy"
       referrerPolicy="no-referrer"
     />
-  )
+  );
 }
 
 function SelectPicker({
@@ -223,43 +242,43 @@ function SelectPicker({
   options,
   placeholder,
 }: {
-  value: string
-  onChange: (value: string) => void
-  options: SelectOption[]
-  placeholder: string
+  value: string;
+  onChange: (value: string) => void;
+  options: SelectOption[];
+  placeholder: string;
 }) {
-  const [open, setOpen] = useState(false)
-  const wrapperRef = useRef<HTMLDivElement | null>(null)
+  const [open, setOpen] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
 
-  const selected = options.find((option) => option.value === value) || null
+  const selected = options.find((option) => option.value === value) || null;
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (!wrapperRef.current) return
+      if (!wrapperRef.current) return;
       if (!wrapperRef.current.contains(event.target as Node)) {
-        setOpen(false)
+        setOpen(false);
       }
     }
 
     function handleEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false)
+      if (event.key === "Escape") setOpen(false);
     }
 
-    document.addEventListener("mousedown", handleClickOutside)
-    document.addEventListener("keydown", handleEscape)
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
 
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside)
-      document.removeEventListener("keydown", handleEscape)
-    }
-  }, [])
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
 
   return (
     <div ref={wrapperRef} className="relative">
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-white transition duration-200 hover:-translate-y-0.5 hover:border-emerald-400/30 hover:bg-white/10"
+        className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-white transition duration-200 hover:-translate-y-0.5 hover:border-emerald-400/30 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
       >
         <span className="flex min-w-0 items-center gap-3">
           {selected?.imageUrl ? (
@@ -271,31 +290,39 @@ function SelectPicker({
           ) : null}
 
           {selected?.badgeClassName ? (
-            <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${selected.badgeClassName}`}>
+            <span
+              className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${selected.badgeClassName}`}
+            >
               {selected.label}
             </span>
           ) : (
-            <span className={`truncate ${selected ? "text-white" : "text-white/45"}`}>
+            <span
+              className={`truncate ${selected ? "text-white" : "text-white/45"}`}
+            >
               {selected ? selected.label : placeholder}
             </span>
           )}
         </span>
 
-        <ChevronDown className={`h-4 w-4 shrink-0 text-white/60 transition duration-200 ${open ? "rotate-180" : "rotate-0"}`} />
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-white/60 transition duration-200 ${open ? "rotate-180" : "rotate-0"}`}
+        />
       </button>
 
       {open ? (
         <div className="absolute z-40 mt-2 max-h-72 w-full overflow-y-auto rounded-2xl border border-white/10 bg-[#081712] p-2 shadow-2xl shadow-black/40">
           {options.length === 0 ? (
-            <div className="px-3 py-3 text-sm text-white/50">No options available</div>
+            <div className="px-3 py-3 text-sm text-white/50">
+              No options available
+            </div>
           ) : (
             options.map((option) => (
               <button
                 key={option.value}
                 type="button"
                 onClick={() => {
-                  onChange(option.value)
-                  setOpen(false)
+                  onChange(option.value);
+                  setOpen(false);
                 }}
                 className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-white transition duration-150 hover:bg-emerald-400/10 active:scale-[0.99]"
               >
@@ -308,7 +335,9 @@ function SelectPicker({
                 ) : null}
 
                 {option.badgeClassName ? (
-                  <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${option.badgeClassName}`}>
+                  <span
+                    className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] ${option.badgeClassName}`}
+                  >
                     {option.label}
                   </span>
                 ) : (
@@ -320,88 +349,208 @@ function SelectPicker({
         </div>
       ) : null}
     </div>
-  )
+  );
 }
 
-function AnimatedNavButton({ label, targetId }: { label: string; targetId: string }) {
+function AnimatedNavButton({
+  label,
+  targetId,
+}: {
+  label: string;
+  targetId: string;
+}) {
   return (
     <NavScrollLink
       label={label}
       targetId={targetId}
       className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
     />
-  )
+  );
 }
 
-function TeamCard({ team }: { team: Team }) {
+function TeamCard({
+  team,
+  players,
+  expanded,
+  onToggle,
+}: {
+  team: Team;
+  players: TeamPlayer[];
+  expanded: boolean;
+  onToggle: () => void;
+}) {
   return (
     <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5 transition duration-200 hover:-translate-y-1 hover:bg-white/[0.07]">
-      <div className="flex items-center gap-4">
-        <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#0D1F18]">
-          <img src={getFlagUrl(team.code)} alt={`${team.country} flag`} className="h-full w-full object-cover" />
-        </div>
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-full rounded-[1rem] text-left focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+        aria-expanded={expanded}
+        aria-label={expanded ? `Hide roster for ${team.country}` : `View roster for ${team.country}`}
+      >
+        <div className="flex items-center gap-4">
+          <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#0D1F18]">
+            <img
+              src={getFlagUrl(team.code)}
+              alt={`${team.country} flag`}
+              className="h-full w-full object-cover"
+            />
+          </div>
 
-        <div className="min-w-0 flex-1">
-          <h3 className="truncate text-lg font-bold">{team.country}</h3>
-          <div className="mt-2 flex items-center gap-3 text-sm text-white/70">
-            <Avatar robloxUserId={team.captain_roblox_id} name={team.captain_name} />
-            <div className="min-w-0">
-              <p className="truncate">Captain {team.captain_name}</p>
-              <p className="truncate text-white/55">@{team.captain_discord}</p>
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-lg font-bold">{team.country}</h3>
+            <div className="mt-2 flex items-center gap-3 text-sm text-white/70">
+              <Avatar
+                robloxUserId={team.captain_roblox_id}
+                name={team.captain_name}
+              />
+              <div className="min-w-0">
+                <p className="truncate">Captain {team.captain_name}</p>
+                <p className="truncate text-white/55">
+                  @{team.captain_discord}
+                </p>
+              </div>
             </div>
+            <p className="mt-3 text-xs uppercase tracking-[0.18em] text-emerald-300">
+              {expanded ? "Hide roster" : "View roster"} • {players.length + 1}{" "}
+              members
+            </p>
           </div>
         </div>
-      </div>
+      </button>
+
+      {expanded ? (
+        <div className="mt-5 rounded-2xl border border-white/10 bg-[#081712] p-4">
+          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">
+            Team Roster
+          </p>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+              <Avatar
+                robloxUserId={team.captain_roblox_id}
+                name={team.captain_name}
+              />
+              <div className="min-w-0">
+                <p className="font-semibold text-white">{team.captain_name}</p>
+                <p className="text-sm text-white/60">@{team.captain_discord}</p>
+              </div>
+              <span className="ml-auto rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+                Captain
+              </span>
+            </div>
+
+            {players.length === 0 ? (
+              <p className="text-sm text-white/55">
+                No extra players added yet.
+              </p>
+            ) : (
+              players.map((player) => (
+                <div
+                  key={player.id}
+                  className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3"
+                >
+                  <Avatar
+                    robloxUserId={player.roblox_user_id}
+                    name={player.roblox_username}
+                  />
+                  <div className="min-w-0">
+                    <p className="font-semibold text-white">
+                      {player.roblox_username}
+                    </p>
+                    <p className="text-sm text-white/60">
+                      @{player.discord_username}
+                    </p>
+                  </div>
+                  <span className="ml-auto rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white/75">
+                    {player.role}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      ) : null}
     </div>
-  )
+  );
 }
 
 function ScheduleCard({ match }: { match: MatchRow }) {
-  const homeCountry = getCountryByName(match.home_country)
-  const awayCountry = getCountryByName(match.away_country)
+  const homeCountry = getCountryByName(match.home_country);
+  const awayCountry = getCountryByName(match.away_country);
+  const resultStyles = getMatchResultStyles(match);
 
   return (
     <div className="rounded-[1.5rem] border border-white/10 bg-[#0B1712] p-5 md:hidden">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-sm font-semibold text-white">
+          <div className="flex items-center gap-2 text-sm font-semibold">
             {homeCountry ? (
-              <img src={getFlagUrl(homeCountry.code)} alt={`${match.home_country} flag`} className="h-5 w-7 rounded-sm object-cover" />
+              <img
+                src={getFlagUrl(homeCountry.code)}
+                alt={`${match.home_country} flag`}
+                className="h-5 w-7 rounded-sm object-cover"
+              />
             ) : null}
-            <span className="truncate">{match.home_country}</span>
+            <span className={`truncate ${match.status === "Finished" ? resultStyles.homeClass : "text-white"}`}>
+              {match.home_country}
+            </span>
           </div>
-          <p className="my-2 text-xs uppercase tracking-[0.2em] text-white/40">vs</p>
-          <div className="flex items-center gap-2 text-sm font-semibold text-white">
+          <p className="my-2 text-xs uppercase tracking-[0.2em] text-white/40">
+            vs
+          </p>
+          <div className="flex items-center gap-2 text-sm font-semibold">
             {awayCountry ? (
-              <img src={getFlagUrl(awayCountry.code)} alt={`${match.away_country} flag`} className="h-5 w-7 rounded-sm object-cover" />
+              <img
+                src={getFlagUrl(awayCountry.code)}
+                alt={`${match.away_country} flag`}
+                className="h-5 w-7 rounded-sm object-cover"
+              />
             ) : null}
-            <span className="truncate">{match.away_country}</span>
+            <span className={`truncate ${match.status === "Finished" ? resultStyles.awayClass : "text-white"}`}>
+              {match.away_country}
+            </span>
           </div>
         </div>
 
-        <span className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${getStatusBadgeClass(match.status)}`}>
+        <span
+          className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] ${getStatusBadgeClass(match.status)}`}
+        >
           {match.status}
         </span>
       </div>
-
+      {match.stage ? (
+        <div className="mt-4">
+          <span className="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-300">
+            {match.stage}
+          </span>
+        </div>
+      ) : null}
       <div className="mt-4 grid grid-cols-2 gap-3 text-sm text-white/75">
         <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
-          <p className="text-xs uppercase tracking-[0.18em] text-white/45">Date</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-white/45">
+            Date
+          </p>
           <p className="mt-1 font-medium">{formatDate(match.match_date)}</p>
         </div>
         <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3">
-          <p className="text-xs uppercase tracking-[0.18em] text-white/45">Time</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-white/45">
+            Time
+          </p>
           <p className="mt-1 font-medium">{match.match_time} BRT</p>
         </div>
       </div>
 
       {match.status === "Finished" ? (
         <div className="mt-4 rounded-xl border border-white/8 bg-white/[0.03] p-3 text-sm text-white/75">
-          Final score: <span className="font-semibold text-white">{match.home_score} - {match.away_score}</span>
+          Final score:{" "}
+          <span className="font-semibold text-white">
+            {match.home_score}-{match.away_score}
+          </span>
         </div>
       ) : null}
     </div>
-  )
+  );
 }
 
 function NavScrollLink({
@@ -409,36 +558,59 @@ function NavScrollLink({
   targetId,
   className = "",
 }: {
-  label: string
-  targetId: string
-  className?: string
+  label: string;
+  targetId: string;
+  className?: string;
 }) {
   return (
     <a
       href={`#${targetId}`}
       onClick={(e) => {
-        e.preventDefault()
-        scrollToSection(targetId)
+        e.preventDefault();
+        scrollToSection(targetId);
       }}
       className={className}
     >
       {label}
     </a>
-  )
+  );
+}
+
+function getMatchResultStyles(match: MatchRow) {
+  const homeWon = match.home_score > match.away_score;
+  const awayWon = match.away_score > match.home_score;
+
+  return {
+    homeClass:
+      homeWon
+        ? "font-bold text-emerald-300"
+        : awayWon
+          ? "font-semibold text-red-300"
+          : "font-semibold text-white",
+    awayClass:
+      awayWon
+        ? "font-bold text-emerald-300"
+        : homeWon
+          ? "font-semibold text-red-300"
+          : "font-semibold text-white",
+  };
 }
 
 function StandingsCard({
   team,
 }: {
   team: {
-    country: string
-    code: string
-    played: number
-    wins: number
-    losses: number
-    points: number
-    position: number
-  }
+    country: string;
+    code: string;
+    played: number;
+    wins: number;
+    losses: number;
+    setsWon: number;
+    setsLost: number;
+    setDiff: number;
+    points: number;
+    position: number;
+  };
 }) {
   return (
     <div className="rounded-[1.5rem] border border-white/10 bg-[#0B1712] p-5 md:hidden">
@@ -448,7 +620,11 @@ function StandingsCard({
             {team.position}
           </div>
           <div className="flex items-center gap-3">
-            <img src={getFlagUrl(team.code)} alt={`${team.country} flag`} className="h-5 w-7 rounded-sm object-cover" />
+            <img
+              src={getFlagUrl(team.code)}
+              alt={`${team.country} flag`}
+              className="h-5 w-7 rounded-sm object-cover"
+            />
             <span className="font-semibold text-white">{team.country}</span>
           </div>
         </div>
@@ -461,76 +637,124 @@ function StandingsCard({
 
       <div className="mt-4 grid grid-cols-3 gap-3 text-sm text-white/75">
         <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3 text-center">
-          <p className="text-xs uppercase tracking-[0.18em] text-white/45">Played</p>
-          <p className="mt-1 font-semibold text-white">{team.played}</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-white/45">
+            W-L
+          </p>
+          <p className="mt-1 font-semibold text-white">
+            {team.wins}-{team.losses}
+          </p>
         </div>
         <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3 text-center">
-          <p className="text-xs uppercase tracking-[0.18em] text-white/45">Wins</p>
-          <p className="mt-1 font-semibold text-white">{team.wins}</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-white/45">
+            Sets
+          </p>
+          <p className="mt-1 font-semibold text-white">
+            {team.setsWon}-{team.setsLost}
+          </p>
         </div>
         <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3 text-center">
-          <p className="text-xs uppercase tracking-[0.18em] text-white/45">Losses</p>
-          <p className="mt-1 font-semibold text-white">{team.losses}</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-white/45">
+            SD
+          </p>
+          <p className="mt-1 font-semibold text-white">
+            {team.setDiff > 0 ? `+${team.setDiff}` : team.setDiff}
+          </p>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export default function SAVLSitePage() {
-  const [teams, setTeams] = useState<Team[]>([])
-  const [matches, setMatches] = useState<MatchRow[]>([])
-  const [loading, setLoading] = useState(true)
-  const [notice, setNotice] = useState("")
-  const [adminNotice, setAdminNotice] = useState("")
-  const [filterStatus, setFilterStatus] = useState<"All" | MatchStatus>("All")
-  const [adminLogged, setAdminLogged] = useState(false)
-  const [adminEmail, setAdminEmail] = useState("")
-  const [adminPassword, setAdminPassword] = useState("")
-  const [matchDrafts, setMatchDrafts] = useState<Record<number, MatchDraft>>({})
-  const [submittingTeam, setSubmittingTeam] = useState(false)
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [matches, setMatches] = useState<MatchRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState("");
+  const [adminNotice, setAdminNotice] = useState("");
+  const [filterStatus, setFilterStatus] = useState<"All" | MatchStatus>("All");
+  const [filterStage, setFilterStage] = useState("All");
+  const [adminLogged, setAdminLogged] = useState(false);
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [matchDrafts, setMatchDrafts] = useState<Record<number, MatchDraft>>(
+    {},
+  );
+  const [submittingTeam, setSubmittingTeam] = useState(false);
+  const [teamPlayers, setTeamPlayers] = useState<TeamPlayer[]>([]);
+  const [selectedAdminTeamId, setSelectedAdminTeamId] = useState<number | null>(
+    null,
+  );
+  const [expandedTeamId, setExpandedTeamId] = useState<number | null>(null);
+  const [registrationsOpen, setRegistrationsOpen] = useState(true);
+  const [togglingRegistrations, setTogglingRegistrations] = useState(false);
+
+  const [playerForm, setPlayerForm] = useState({
+    team_id: "",
+    roblox_username: "",
+    roblox_user_id: "",
+    discord_username: "",
+    role: "Player" as TeamPlayerRole,
+  });
 
   const [registerForm, setRegisterForm] = useState({
     country: "",
     captain_name: "",
     captain_discord: "",
     captain_roblox_id: "",
-  })
+  });
 
   const [registerConfirmations, setRegisterConfirmations] = useState({
-  captain_commitment: false,
-  in_discord_server: false,
-  })
+    captain_commitment: false,
+    in_discord_server: false,
+  });
 
   const [successDialog, setSuccessDialog] = useState({
     open: false,
     title: "",
     message: "",
-  })
+  });
 
   const [adminTeamForm, setAdminTeamForm] = useState({
     country: "",
     captain_name: "",
     captain_discord: "",
     captain_roblox_id: "",
-  })
+  });
 
   const [matchForm, setMatchForm] = useState({
     home_country: "",
     away_country: "",
+    stage: "",
     match_date: "",
     match_time: "",
     status: "Scheduled" as MatchStatus,
     home_score: "0",
     away_score: "0",
-  })
+  });
+
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    confirmLabel: string;
+    onConfirm: null | (() => Promise<void> | void);
+  }>({
+    open: false,
+    title: "",
+    message: "",
+    confirmLabel: "Confirm",
+    onConfirm: null,
+  });
 
   async function reloadTeams() {
-    if (!supabase) return
+    if (!supabase) return;
 
-    const result = await supabase.from("teams").select("*").order("country", { ascending: true })
+    const result = await supabase
+      .from("teams")
+      .select("*")
+      .order("country", { ascending: true });
     if (!result.error && result.data) {
-      setTeams(result.data as Team[])
+      setTeams(result.data as Team[]);
     }
   }
 
@@ -539,61 +763,65 @@ export default function SAVLSitePage() {
       open: true,
       title,
       message,
-    })
+    });
   }
 
   async function handleAdminLogin(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+    event.preventDefault();
 
-    if (!supabase) return
+    if (!supabase) return;
 
     const { error } = await supabase.auth.signInWithPassword({
       email: adminEmail.trim(),
       password: adminPassword,
-    })
+    });
 
     if (error) {
-      showNotice(error.message, true)
-      return
+      showNotice(error.message, true);
+      return;
     }
 
-    setAdminLogged(true)
-    setAdminEmail("")
-    setAdminPassword("")
-    await reloadTeams()
-    await reloadMatches()
-    showNotice("Admin unlocked.", true)
+    setAdminLogged(true);
+    setAdminEmail("");
+    setAdminPassword("");
+    await reloadTeams();
+    await reloadMatches();
+    await reloadTeamPlayers();
+    await reloadLeagueSettings();
+    showNotice("Admin unlocked.", true);
   }
 
   async function handleAdminLogout() {
-    if (!supabase) return
+    if (!supabase) return;
 
-    await supabase.auth.signOut()
-    setAdminLogged(false)
-    await supabase.auth.signOut()
-    await reloadTeams()
-    await reloadMatches()
-    showNotice("Admin locked.", true)
+    await supabase.auth.signOut();
+    setAdminLogged(false);
+    await reloadTeams();
+    await reloadMatches();
+    await reloadTeamPlayers();
+    await reloadLeagueSettings();
+    showNotice("Admin locked.", true);
   }
 
   async function reloadMatches() {
-    if (!supabase) return
+    if (!supabase) return;
 
     const result = await supabase
       .from("matches")
       .select("*")
       .order("match_date", { ascending: true })
-      .order("match_time", { ascending: true })
+      .order("match_time", { ascending: true });
 
     if (!result.error && result.data) {
-      const rows = result.data as MatchRow[]
-      setMatches(rows)
+      const rows = result.data as MatchRow[];
+      setMatches(rows);
       setMatchDrafts(
         Object.fromEntries(
           rows.map((match) => [
             match.id,
             {
               status: match.status,
+              stage: match.stage ?? "",
               match_date: match.match_date,
               match_time: match.match_time,
               home_score: match.home_score,
@@ -601,43 +829,50 @@ export default function SAVLSitePage() {
             },
           ]),
         ),
-      )
+      );
     }
   }
 
   useEffect(() => {
     async function loadData() {
       if (!supabase) {
-        setLoading(false)
-        setNotice("Configure Supabase to enable submissions.")
-        return
+        setLoading(false);
+        setNotice("Configure Supabase to enable submissions.");
+        return;
       }
 
       const {
         data: { session },
-      } = await supabase.auth.getSession()
+      } = await supabase.auth.getSession();
 
-      setAdminLogged(!!session)
+      setAdminLogged(!!session);
 
-      await Promise.all([reloadTeams(), reloadMatches()])
-      setLoading(false)
+      await Promise.all([
+        reloadTeams(),
+        reloadMatches(),
+        reloadTeamPlayers(),
+        reloadLeagueSettings(),
+      ]);
+      setLoading(false);
     }
 
-    loadData()
-  }, [])
+    loadData();
+  }, []);
 
   const availableCountries = useMemo(() => {
-    const used = new Set(teams.map((team) => normalizeText(team.country)))
-    return COUNTRIES.filter((country) => !used.has(normalizeText(country.name)))
-  }, [teams])
+    const used = new Set(teams.map((team) => normalizeText(team.country)));
+    return COUNTRIES.filter(
+      (country) => !used.has(normalizeText(country.name)),
+    );
+  }, [teams]);
 
   const approvedTeams = useMemo(() => {
-    return teams.filter((team) => team.approved)
-  }, [teams])
+    return teams.filter((team) => team.approved);
+  }, [teams]);
 
   const pendingTeams = useMemo(() => {
-    return teams.filter((team) => !team.approved)
-  }, [teams])
+    return teams.filter((team) => !team.approved);
+  }, [teams]);
 
   const statusOptions = useMemo<SelectOption[]>(() => {
     return [
@@ -656,35 +891,61 @@ export default function SAVLSitePage() {
         value: "Finished",
         badgeClassName: getStatusBadgeClass("Finished"),
       },
-    ]
-  }, [])
+    ];
+  }, []);
 
   const countryOptions = useMemo<SelectOption[]>(() => {
     return availableCountries.map((country) => ({
       label: country.name,
       value: country.name,
       imageUrl: getFlagUrl(country.code),
-    }))
-  }, [availableCountries])
+    }));
+  }, [availableCountries]);
 
   const registeredCountryOptions = useMemo<SelectOption[]>(() => {
     return approvedTeams.map((team) => ({
       label: team.country,
       value: team.country,
       imageUrl: getFlagUrl(team.code),
-    }))
-  }, [approvedTeams])
+    }));
+  }, [approvedTeams]);
+
+  const availableStages = useMemo(() => {
+    const stages = Array.from(
+      new Set(
+        matches
+          .map((match) => match.stage?.trim())
+          .filter((stage): stage is string => Boolean(stage)),
+      ),
+    );
+
+    return stages.sort((a, b) => a.localeCompare(b));
+  }, [matches]);
 
   const filteredMatches = useMemo(() => {
-    if (filterStatus === "All") return matches
-    return matches.filter((match) => match.status === filterStatus)
-  }, [filterStatus, matches])
+    return matches.filter((match) => {
+      const statusOk = filterStatus === "All" || match.status === filterStatus;
+      const stageOk =
+        filterStage === "All" || (match.stage?.trim() ?? "") === filterStage;
+      return statusOk && stageOk;
+    });
+  }, [filterStatus, filterStage, matches]);
 
   const standings = useMemo(() => {
     const map = new Map<
       string,
-      { country: string; code: string; played: number; wins: number; losses: number; points: number }
-    >()
+      {
+        country: string;
+        code: string;
+        played: number;
+        wins: number;
+        losses: number;
+        setsWon: number;
+        setsLost: number;
+        setDiff: number;
+        points: number;
+      }
+    >();
 
     for (const team of approvedTeams) {
       map.set(team.country, {
@@ -693,54 +954,82 @@ export default function SAVLSitePage() {
         played: 0,
         wins: 0,
         losses: 0,
+        setsWon: 0,
+        setsLost: 0,
+        setDiff: 0,
         points: 0,
-      })
+      });
     }
 
     for (const match of matches) {
-      if (match.status !== "Finished") continue
+      if (match.status !== "Finished") continue;
 
-      const home = map.get(match.home_country)
-      const away = map.get(match.away_country)
-      if (!home || !away) continue
+      const home = map.get(match.home_country);
+      const away = map.get(match.away_country);
+      if (!home || !away) continue;
 
-      home.played += 1
-      away.played += 1
+      const homeSets = match.home_score;
+      const awaySets = match.away_score;
 
-      if (match.home_score > match.away_score) {
-        home.wins += 1
-        away.losses += 1
-        home.points += 3
-      } else if (match.away_score > match.home_score) {
-        away.wins += 1
-        home.losses += 1
-        away.points += 3
+      home.played += 1;
+      away.played += 1;
+
+      home.setsWon += homeSets;
+      home.setsLost += awaySets;
+      away.setsWon += awaySets;
+      away.setsLost += homeSets;
+
+      home.setDiff = home.setsWon - home.setsLost;
+      away.setDiff = away.setsWon - away.setsLost;
+
+      if (homeSets > awaySets) {
+        home.wins += 1;
+        away.losses += 1;
+
+        if (homeSets === 3 && awaySets === 2) {
+          home.points += 2;
+          away.points += 1;
+        } else {
+          home.points += 3;
+        }
+      } else if (awaySets > homeSets) {
+        away.wins += 1;
+        home.losses += 1;
+
+        if (awaySets === 3 && homeSets === 2) {
+          away.points += 2;
+          home.points += 1;
+        } else {
+          away.points += 3;
+        }
       }
     }
 
     return Array.from(map.values())
       .sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points
-        if (b.wins !== a.wins) return b.wins - a.wins
-        return a.country.localeCompare(b.country)
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        if (b.setDiff !== a.setDiff) return b.setDiff - a.setDiff;
+        if (b.setsWon !== a.setsWon) return b.setsWon - a.setsWon;
+        return a.country.localeCompare(b.country);
       })
-      .map((team, index) => ({ ...team, position: index + 1 }))
-  }, [approvedTeams, matches])
+      .map((team, index) => ({ ...team, position: index + 1 }));
+  }, [approvedTeams, matches]);
 
   function showNotice(text: string, isAdmin = false) {
     if (isAdmin) {
-      setAdminNotice(text)
-      window.setTimeout(() => setAdminNotice(""), 3500)
-      return
+      setAdminNotice(text);
+      window.setTimeout(() => setAdminNotice(""), 3500);
+      return;
     }
 
-    setNotice(text)
-    window.setTimeout(() => setNotice(""), 3500)
+    setNotice(text);
+    window.setTimeout(() => setNotice(""), 3500);
   }
 
   function handleMatchFormChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const { name, value } = event.target
-    setMatchForm((prev) => ({ ...prev, [name]: value }))
+    const { name, value } = event.target;
+    setMatchForm((prev) => ({ ...prev, [name]: value }));
   }
 
   function updateMatchDraft(matchId: number, patch: Partial<MatchDraft>) {
@@ -750,11 +1039,40 @@ export default function SAVLSitePage() {
         ...prev[matchId],
         ...patch,
       },
-    }))
+    }));
   }
 
+  function getPlayersByTeam(teamId: number) {
+    return teamPlayers.filter((player) => player.team_id === teamId);
+  }
+
+  function openConfirmDialog({
+    title,
+    message,
+    confirmLabel = "Confirm",
+    onConfirm,
+  }: {
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    onConfirm: () => Promise<void> | void;
+  }) {
+    setConfirmDialog({
+      open: true,
+      title,
+      message,
+      confirmLabel,
+      onConfirm,
+    });
+  }
+
+  const roleOptions: SelectOption[] = [
+    { label: "Vice Captain", value: "Vice Captain" },
+    { label: "Player", value: "Player" },
+  ];
+
   async function handleApproveTeam(teamId: number) {
-    if (!supabase) return
+    if (!supabase) return;
 
     const { error } = await supabase
       .from("teams")
@@ -762,54 +1080,64 @@ export default function SAVLSitePage() {
         approved: true,
         approved_at: new Date().toISOString(),
       })
-      .eq("id", teamId)
+      .eq("id", teamId);
 
     if (error) {
-      showNotice(error.message, true)
-      return
+      showNotice(error.message, true);
+      return;
     }
 
-    await reloadTeams()
-    showNotice("Team approved successfully.", true)
+    await reloadTeams();
+    showNotice("Team approved successfully.", true);
   }
 
   async function submitTeam(
     payload: {
-      country: string
-      captain_name: string
-      captain_discord: string
-      captain_roblox_id: string
+      country: string;
+      captain_name: string;
+      captain_discord: string;
+      captain_roblox_id: string;
     },
     isAdmin = false,
   ) {
     if (!supabase) {
-      showNotice("Supabase is not configured yet.", isAdmin)
-      return false
+      showNotice("Supabase is not configured yet.", isAdmin);
+      return false;
     }
 
-    const selectedCountry = getCountryByName(payload.country)
+    if (!isAdmin && !registrationsOpen) {
+      showNotice("Team registrations are currently closed.", false);
+      return false;
+    }
+
+    const selectedCountry = getCountryByName(payload.country);
     if (!selectedCountry) {
-      showNotice("Select a valid country.", isAdmin)
-      return false
+      showNotice("Select a valid country.", isAdmin);
+      return false;
     }
 
-    if (teams.some((team) => normalizeText(team.country) === normalizeText(payload.country))) {
-      showNotice("This country is already registered.", isAdmin)
-      return false
+    if (
+      teams.some(
+        (team) =>
+          normalizeText(team.country) === normalizeText(payload.country),
+      )
+    ) {
+      showNotice("This country is already registered.", isAdmin);
+      return false;
     }
 
-    const cleanCaptain = payload.captain_name.trim()
-    const cleanDiscord = payload.captain_discord.trim().replace(/^@/, "")
-    const cleanRobloxReference = payload.captain_roblox_id.trim()
+    const cleanCaptain = payload.captain_name.trim();
+    const cleanDiscord = payload.captain_discord.trim().replace(/^@/, "");
+    const cleanRobloxReference = payload.captain_roblox_id.trim();
 
     if (!/^\d+$/.test(cleanRobloxReference)) {
-      showNotice("Enter a valid Roblox User ID (numbers only).", isAdmin)
-      return false
+      showNotice("Enter a valid Roblox User ID (numbers only).", isAdmin);
+      return false;
     }
 
     if (!cleanCaptain || !cleanDiscord || !cleanRobloxReference) {
-      showNotice("Fill in all fields before submitting.", isAdmin)
-      return false
+      showNotice("Fill in all fields before submitting.", isAdmin);
+      return false;
     }
 
     const { error } = await supabase.from("teams").insert({
@@ -820,45 +1148,61 @@ export default function SAVLSitePage() {
       captain_roblox_id: cleanRobloxReference,
       approved: isAdmin,
       approved_at: isAdmin ? new Date().toISOString() : null,
-    })
+    });
 
     if (error) {
-      showNotice(error.message, isAdmin)
-      return false
+      showNotice(error.message, isAdmin);
+      return false;
     }
 
-    await reloadTeams()
+    await reloadTeams();
 
     if (isAdmin) {
-      showNotice(`${selectedCountry.name} registered successfully.`, true)
+      showNotice(`${selectedCountry.name} registered successfully.`, true);
     } else {
       showSuccessDialog(
         "Registration Submitted",
-        `${selectedCountry.name} has been submitted successfully and is now awaiting admin approval.`
-      )
+        `${selectedCountry.name} has been submitted successfully and is now awaiting admin approval.`,
+      );
     }
 
-    return true
+    return true;
   }
 
   async function handleRegisterSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+    event.preventDefault();
 
-    const { country, captain_name, captain_discord, captain_roblox_id } = registerForm
-
-    if (!country || !captain_name.trim() || !captain_discord.trim() || !captain_roblox_id.trim()) {
-      showNotice("Fill in all fields before submitting.")
-      return
+    if (!registrationsOpen) {
+      showNotice("Team registrations are currently closed.");
+      return;
     }
 
-    if (!registerConfirmations.captain_commitment || !registerConfirmations.in_discord_server) {
-      showNotice("You must confirm captain commitment and Discord server presence before submitting.")
-      return
+    const { country, captain_name, captain_discord, captain_roblox_id } =
+      registerForm;
+
+    if (
+      !country ||
+      !captain_name.trim() ||
+      !captain_discord.trim() ||
+      !captain_roblox_id.trim()
+    ) {
+      showNotice("Fill in all fields before submitting.");
+      return;
     }
 
-    setSubmittingTeam(true)
-    const ok = await submitTeam(registerForm)
-    setSubmittingTeam(false)
+    if (
+      !registerConfirmations.captain_commitment ||
+      !registerConfirmations.in_discord_server
+    ) {
+      showNotice(
+        "You must confirm captain commitment and Discord server presence before submitting.",
+      );
+      return;
+    }
+
+    setSubmittingTeam(true);
+    const ok = await submitTeam(registerForm);
+    setSubmittingTeam(false);
 
     if (ok) {
       setRegisterForm({
@@ -866,68 +1210,80 @@ export default function SAVLSitePage() {
         captain_name: "",
         captain_discord: "",
         captain_roblox_id: "",
-      })
+      });
 
       setRegisterConfirmations({
         captain_commitment: false,
         in_discord_server: false,
-      })
+      });
     }
   }
 
   async function handleAdminAddTeam(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+    event.preventDefault();
 
-    const { country, captain_name, captain_discord, captain_roblox_id } = adminTeamForm
-    if (!country || !captain_name.trim() || !captain_discord.trim() || !captain_roblox_id.trim()) {
-      showNotice("Fill in all team fields.", true)
-      return
+    const { country, captain_name, captain_discord, captain_roblox_id } =
+      adminTeamForm;
+    if (
+      !country ||
+      !captain_name.trim() ||
+      !captain_discord.trim() ||
+      !captain_roblox_id.trim()
+    ) {
+      showNotice("Fill in all team fields.", true);
+      return;
     }
 
-    const ok = await submitTeam(adminTeamForm, true)
+    const ok = await submitTeam(adminTeamForm, true);
     if (ok) {
       setAdminTeamForm({
         country: "",
         captain_name: "",
         captain_discord: "",
         captain_roblox_id: "",
-      })
+      });
     }
   }
 
   async function handleDeleteTeam(teamId: number) {
-    if (!supabase) return
+    if (!supabase) return;
 
-    const { error } = await supabase.from("teams").delete().eq("id", teamId)
+    const { error } = await supabase.from("teams").delete().eq("id", teamId);
     if (error) {
-      showNotice(error.message, true)
-      return
+      showNotice(error.message, true);
+      return;
     }
 
-    await reloadTeams()
-    showNotice("Team removed.", true)
+    await reloadTeams();
+    showNotice("Team removed.", true);
   }
 
   async function handleCreateMatch(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
+    event.preventDefault();
 
     if (!supabase) {
-      showNotice("Supabase is not configured yet.", true)
-      return
+      showNotice("Supabase is not configured yet.", true);
+      return;
     }
 
-    if (!matchForm.home_country || !matchForm.away_country || !matchForm.match_date || !matchForm.match_time) {
-      showNotice("Fill in all match fields.", true)
-      return
+    if (
+      !matchForm.home_country ||
+      !matchForm.away_country ||
+      !matchForm.stage.trim() ||
+      !matchForm.match_date ||
+      !matchForm.match_time
+    ) {
+      showNotice("Fill in all match fields.", true);
+      return;
     }
 
     if (matchForm.home_country === matchForm.away_country) {
-      showNotice("Home and away teams must be different.", true)
-      return
+      showNotice("Home and away teams must be different.", true);
+      return;
     }
 
-    const homeScore = Number(matchForm.home_score)
-    const awayScore = Number(matchForm.away_score)
+    const homeScore = Number(matchForm.home_score);
+    const awayScore = Number(matchForm.away_score);
     const winnerCountry =
       matchForm.status === "Finished"
         ? homeScore > awayScore
@@ -935,43 +1291,45 @@ export default function SAVLSitePage() {
           : awayScore > homeScore
             ? matchForm.away_country
             : null
-        : null
+        : null;
 
     const { error } = await supabase.from("matches").insert({
       home_country: matchForm.home_country,
       away_country: matchForm.away_country,
+      stage: matchForm.stage.trim(),
       match_date: matchForm.match_date,
       match_time: matchForm.match_time,
       status: matchForm.status,
       home_score: homeScore,
       away_score: awayScore,
       winner_country: winnerCountry,
-    })
+    });
 
     if (error) {
-      showNotice(error.message, true)
-      return
+      showNotice(error.message, true);
+      return;
     }
 
-    await reloadMatches()
+    await reloadMatches();
     setMatchForm({
       home_country: "",
       away_country: "",
+      stage: "",
       match_date: "",
       match_time: "",
       status: "Scheduled",
       home_score: "0",
       away_score: "0",
-    })
-    showNotice("Match created successfully.", true)
+    });
+    showNotice("Match created successfully.", true);
   }
 
   async function saveMatchDraft(matchId: number) {
-    if (!supabase) return
+    if (!supabase) return;
 
-    const current = matches.find((match) => match.id === matchId)
-    const draft = matchDrafts[matchId]
-    if (!current || !draft) return
+    const current = matches.find((match) => match.id === matchId);
+    const draft = matchDrafts[matchId];
+    if (!current || !draft) return;
 
     const winnerCountry =
       draft.status === "Finished"
@@ -980,40 +1338,209 @@ export default function SAVLSitePage() {
           : draft.away_score > draft.home_score
             ? current.away_country
             : null
-        : null
+        : null;
 
     const { error } = await supabase
       .from("matches")
       .update({
         status: draft.status,
+        stage: draft.stage,
         match_date: draft.match_date,
         match_time: draft.match_time,
         home_score: draft.home_score,
         away_score: draft.away_score,
         winner_country: winnerCountry,
       })
-      .eq("id", matchId)
+      .eq("id", matchId);
 
     if (error) {
-      showNotice(error.message, true)
-      return
+      showNotice(error.message, true);
+      return;
     }
 
-    await reloadMatches()
-    showNotice("Match updated.", true)
+    await reloadMatches();
+    showNotice("Match updated.", true);
   }
 
   async function handleDeleteMatch(matchId: number) {
-    if (!supabase) return
+    if (!supabase) return;
 
-    const { error } = await supabase.from("matches").delete().eq("id", matchId)
+    const { error } = await supabase.from("matches").delete().eq("id", matchId);
     if (error) {
-      showNotice(error.message, true)
-      return
+      showNotice(error.message, true);
+      return;
     }
 
-    await reloadMatches()
-    showNotice("Match removed.", true)
+    await reloadMatches();
+    showNotice("Match removed.", true);
+  }
+
+  async function reloadTeamPlayers() {
+    if (!supabase) return;
+
+    const result = await supabase
+      .from("team_players")
+      .select("*")
+      .order("created_at", { ascending: true });
+
+    if (!result.error && result.data) {
+      setTeamPlayers(result.data as TeamPlayer[]);
+    }
+  }
+
+  async function handleAddPlayer(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!supabase) return;
+
+    const cleanTeamId = Number(playerForm.team_id);
+    const cleanUsername = playerForm.roblox_username.trim();
+    const cleanUserId = playerForm.roblox_user_id.trim();
+    const cleanDiscord = playerForm.discord_username.trim().replace(/^@/, "");
+
+    if (
+      !cleanTeamId ||
+      !cleanUsername ||
+      !cleanUserId ||
+      !cleanDiscord ||
+      !playerForm.role
+    ) {
+      showNotice("Fill in all player fields.", true);
+      return;
+    }
+
+    if (!/^\d+$/.test(cleanUserId)) {
+      showNotice("Enter a valid Roblox User ID (numbers only).", true);
+      return;
+    }
+
+    const payload = {
+      team_id: cleanTeamId,
+      roblox_username: cleanUsername,
+      roblox_user_id: cleanUserId,
+      discord_username: cleanDiscord,
+      role: playerForm.role,
+    };
+
+    const { error } = await supabase.from("team_players").insert(payload);
+
+    if (error) {
+      showNotice(error.message, true);
+      return;
+    }
+
+    await reloadTeamPlayers();
+
+    setPlayerForm({
+      team_id: "",
+      roblox_username: "",
+      roblox_user_id: "",
+      discord_username: "",
+      role: "Player",
+    });
+
+    showNotice("Player added successfully.", true);
+  }
+
+  async function handleUpdatePlayer(
+    playerId: number,
+    updated: Partial<TeamPlayer>,
+  ) {
+    if (!supabase) return;
+
+    const cleanedUpdate: Partial<TeamPlayer> = { ...updated };
+
+    if (typeof cleanedUpdate.roblox_username === "string") {
+      cleanedUpdate.roblox_username = cleanedUpdate.roblox_username.trim();
+      if (!cleanedUpdate.roblox_username) return;
+    }
+
+    if (typeof cleanedUpdate.discord_username === "string") {
+      cleanedUpdate.discord_username = cleanedUpdate.discord_username
+        .trim()
+        .replace(/^@/, "");
+      if (!cleanedUpdate.discord_username) return;
+    }
+
+    if (typeof cleanedUpdate.roblox_user_id === "string") {
+      cleanedUpdate.roblox_user_id = cleanedUpdate.roblox_user_id.trim();
+      if (!/^\d+$/.test(cleanedUpdate.roblox_user_id)) return;
+    }
+
+    const { error } = await supabase
+      .from("team_players")
+      .update(cleanedUpdate)
+      .eq("id", playerId);
+
+    if (error) {
+      showNotice(error.message, true);
+      return;
+    }
+
+    await reloadTeamPlayers();
+    showNotice("Player updated successfully.", true);
+  }
+
+  async function handleDeletePlayer(playerId: number) {
+    if (!supabase) return;
+
+    const { error } = await supabase
+      .from("team_players")
+      .delete()
+      .eq("id", playerId);
+
+    if (error) {
+      showNotice(error.message, true);
+      return;
+    }
+
+    await reloadTeamPlayers();
+    showNotice("Player removed.", true);
+  }
+
+  async function reloadLeagueSettings() {
+    if (!supabase) return;
+
+    const { data, error } = await supabase
+      .from("league_settings")
+      .select("registrations_open")
+      .eq("id", 1)
+      .single();
+
+    if (!error && data) {
+      setRegistrationsOpen(data.registrations_open);
+    }
+  }
+
+  async function handleToggleRegistrations() {
+    if (!supabase) return;
+
+    setTogglingRegistrations(true);
+
+    const nextValue = !registrationsOpen;
+
+    const { error } = await supabase
+      .from("league_settings")
+      .update({
+        registrations_open: nextValue,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", 1);
+
+    setTogglingRegistrations(false);
+
+    if (error) {
+      showNotice(error.message, true);
+      return;
+    }
+
+    setRegistrationsOpen(nextValue);
+    showNotice(
+      nextValue
+        ? "Team registrations are now open."
+        : "Team registrations are now closed.",
+      true,
+    );
   }
 
   return (
@@ -1022,7 +1549,13 @@ export default function SAVLSitePage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
           <div className="flex min-w-0 items-center gap-4">
             <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/5">
-              <Image src="/savl-logo.jpg" alt="SAVL logo" fill className="object-cover" priority />
+              <Image
+                src="/savl-logo.jpg"
+                alt="SAVL logo"
+                fill
+                className="object-cover"
+                priority
+              />
             </div>
             <p className="truncate text-sm font-semibold uppercase tracking-[0.22em] text-emerald-300 md:text-base">
               South America Volleyball League
@@ -1053,12 +1586,15 @@ export default function SAVLSitePage() {
 
               <h1 className="mt-6 text-5xl font-black leading-none tracking-tight md:text-7xl">
                 South America
-                <span className="block text-emerald-300">Volleyball League</span>
+                <span className="block text-emerald-300">
+                  Volleyball League
+                </span>
               </h1>
 
               <p className="mt-5 max-w-xl text-base leading-7 text-white/70 md:text-lg">
-                SAVL is a Volleyball 4.2 league created by xImTutu, focused on organized fixtures
-                and a clean competitive experience for players, captains, and staff.
+                SAVL is a Volleyball 4.2 league created by xImTutu, focused on
+                organized fixtures and a clean competitive experience for
+                players, captains, and staff.
               </p>
 
               <div className="mt-8 flex flex-wrap gap-4">
@@ -1090,21 +1626,28 @@ export default function SAVLSitePage() {
                 </div>
               </div>
 
-              {notice ? <p className="mt-5 text-sm text-emerald-300">{notice}</p> : null}
+              {notice ? (
+                <p className="mt-5 text-sm text-emerald-300">{notice}</p>
+              ) : null}
             </div>
 
             <div className="flex justify-center md:justify-end">
               <div className="w-full max-w-xl rounded-[2rem] border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-8 shadow-2xl shadow-black/30">
                 <div className="rounded-[1.5rem] border border-emerald-400/15 bg-[#062019] p-8 text-center">
                   <div className="relative mx-auto h-40 w-40 overflow-hidden rounded-[2rem] border border-white/10 bg-[#03110D]">
-                    <Image src="/savl-logo.jpg" alt="SAVL logo" fill className="object-cover" />
+                    <Image
+                      src="/savl-logo.jpg"
+                      alt="SAVL logo"
+                      fill
+                      className="object-cover"
+                    />
                   </div>
                   <p className="mt-6 text-sm uppercase tracking-[0.35em] text-emerald-300">
                     Official League Hub
                   </p>
                   <p className="mt-3 text-white/65">
-                    Built for registrations, standings, schedule viewing, and admin control in one
-                    clean page.
+                    Built for registrations, standings, schedule viewing, and
+                    admin control in one clean page.
                   </p>
                   {/* CORREÇÃO: Ícones do Discord e YouTube com cores oficiais */}
                   <div className="relative z-20 mt-6 flex items-center justify-center gap-6">
@@ -1115,9 +1658,15 @@ export default function SAVLSitePage() {
                       className="group flex flex-col items-center gap-2"
                     >
                       <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-[#5865F2]/10 text-[#5865F2] transition duration-200 group-hover:-translate-y-1 group-hover:bg-[#5865F2] group-hover:text-white">
-                        <img src="/discord.png" alt="Discord" className="h-6 w-6" />
+                        <img
+                          src="/discord.png"
+                          alt="Discord"
+                          className="h-6 w-6"
+                        />
                       </div>
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 group-hover:text-[#5865F2]">Discord</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 group-hover:text-[#5865F2]">
+                        Discord
+                      </span>
                     </a>
 
                     <a
@@ -1127,9 +1676,15 @@ export default function SAVLSitePage() {
                       className="group flex flex-col items-center gap-2"
                     >
                       <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-[#FF0000]/10 text-[#FF0000] transition duration-200 group-hover:-translate-y-1 group-hover:bg-[#FF0000] group-hover:text-white">
-                        <img src="/youtube.png" alt="YouTube" className="h-6 w-6" />
+                        <img
+                          src="/youtube.png"
+                          alt="YouTube"
+                          className="h-6 w-6"
+                        />
                       </div>
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 group-hover:text-[#FF0000]">YouTube</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 group-hover:text-[#FF0000]">
+                        YouTube
+                      </span>
                     </a>
                   </div>
                 </div>
@@ -1138,13 +1693,18 @@ export default function SAVLSitePage() {
           </div>
         </section>
 
-        <section id="teams" className="mx-auto max-w-7xl scroll-mt-28 px-6 py-16">
+        <section
+          id="teams"
+          className="mx-auto max-w-7xl scroll-mt-28 px-6 py-16"
+        >
           <div className="mb-8 flex items-end justify-between gap-4">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
                 League Teams
               </p>
-              <h2 className="mt-2 text-3xl font-black md:text-4xl">Registered Teams</h2>
+              <h2 className="mt-2 text-3xl font-black md:text-4xl">
+                Registered Teams
+              </h2>
             </div>
 
             <button
@@ -1162,15 +1722,28 @@ export default function SAVLSitePage() {
             </div>
           ) : approvedTeams.length === 0 ? (
             <div className="rounded-[1.75rem] border border-dashed border-white/15 bg-white/[0.03] p-10 text-center">
-              <p className="text-lg font-semibold text-white">No teams registered yet</p>
+              <p className="text-lg font-semibold text-white">
+                No teams registered yet
+              </p>
               <p className="mt-2 text-white/60">
-                Once captains submit their teams and an admin approves them, they will appear here with flags and avatars.
+                Once captains submit their teams and an admin approves them,
+                they will appear here with flags and avatars.
               </p>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {approvedTeams.map((team) => (
-                <TeamCard key={team.id} team={team} />
+                <TeamCard
+                  key={team.id}
+                  team={team}
+                  players={getPlayersByTeam(team.id)}
+                  expanded={expandedTeamId === team.id}
+                  onToggle={() =>
+                    setExpandedTeamId((prev) =>
+                      prev === team.id ? null : team.id,
+                    )
+                  }
+                />
               ))}
             </div>
           )}
@@ -1183,19 +1756,58 @@ export default function SAVLSitePage() {
                 <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
                   Fixtures
                 </p>
-                <h2 className="mt-2 text-3xl font-black md:text-4xl">Upcoming Matches</h2>
+                <h2 className="mt-2 text-3xl font-black md:text-4xl">
+                  Upcoming Matches
+                </h2>
               </div>
 
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as "All" | MatchStatus)}
-                className="rounded-2xl border border-white/10 bg-[#0B1712] px-4 py-3 text-sm text-white outline-none transition duration-200 hover:border-emerald-400/30"
-              >
-                <option value="All">All statuses</option>
-                <option value="Scheduled">Scheduled</option>
-                <option value="Live">Live</option>
-                <option value="Finished">Finished</option>
-              </select>
+              <div className="flex flex-col gap-4 md:flex-row md:items-end">
+                <div className="min-w-[220px]">
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                    Filter by status
+                  </label>
+                  <SelectPicker
+                    value={filterStatus}
+                    onChange={(value) =>
+                      setFilterStatus(value as "All" | MatchStatus)
+                    }
+                    options={[
+                      { label: "All statuses", value: "All" },
+                      ...statusOptions,
+                    ]}
+                    placeholder="Select status"
+                  />
+                </div>
+
+                <div className="min-w-[240px]">
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                    Filter by stage
+                  </label>
+                  <SelectPicker
+                    value={filterStage}
+                    onChange={setFilterStage}
+                    options={[
+                      { label: "All stages", value: "All" },
+                      ...availableStages.map((stage) => ({
+                        label: stage,
+                        value: stage,
+                      })),
+                    ]}
+                    placeholder="Select stage"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilterStatus("All");
+                    setFilterStage("All");
+                  }}
+                  className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/10"
+                >
+                  Clear Filters
+                </button>
+              </div>
             </div>
 
             <div className="space-y-4 md:hidden">
@@ -1204,12 +1816,14 @@ export default function SAVLSitePage() {
                   No matches added yet. Use the admin panel to create them.
                 </div>
               ) : (
-                filteredMatches.map((match) => <ScheduleCard key={match.id} match={match} />)
+                filteredMatches.map((match) => (
+                  <ScheduleCard key={match.id} match={match} />
+                ))
               )}
             </div>
 
             <div className="hidden overflow-hidden rounded-[2rem] border border-white/10 bg-[#0B1712] md:block">
-              <div className="grid grid-cols-4 border-b border-white/10 px-6 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/50">
+              <div className="grid grid-cols-[2.2fr_1fr_1fr_1fr] border-b border-white/10 px-6 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/50">
                 <span>Match</span>
                 <span>Date</span>
                 <span>Time</span>
@@ -1217,17 +1831,29 @@ export default function SAVLSitePage() {
               </div>
 
               {filteredMatches.length === 0 ? (
-                <div className="px-6 py-8 text-white/60">No matches added yet. Use the admin panel to create them.</div>
+                <div className="px-6 py-8 text-white/60">
+                  No matches added yet. Use the admin panel to create them.
+                </div>
               ) : (
                 filteredMatches.map((match) => {
-                  const homeCountry = getCountryByName(match.home_country)
-                  const awayCountry = getCountryByName(match.away_country)
+                  const homeCountry = getCountryByName(match.home_country);
+                  const awayCountry = getCountryByName(match.away_country);
+                  const resultStyles = getMatchResultStyles(match);
 
                   return (
-                    <div key={match.id} className="grid grid-cols-4 items-center border-b border-white/5 px-6 py-5 text-sm last:border-none">
+                    <div
+                      key={match.id}
+                      className="grid grid-cols-[2.2fr_1fr_1fr_1fr] items-center border-b border-white/5 px-6 py-5 text-sm last:border-none"
+                    >
                       <div>
-                        <p className="font-semibold text-white">
-                          <span className="inline-flex items-center gap-2">
+                        {match.stage ? (
+                          <p className="mb-1 text-xs uppercase tracking-[0.18em] text-emerald-300">
+                            {match.stage}
+                          </p>
+                        ) : null}
+
+                        <p className="mt-1 flex items-center gap-3 font-semibold text-white">
+                          <span className={`inline-flex items-center gap-2 ${match.status === "Finished" ? resultStyles.homeClass : "text-white"}`}>
                             {homeCountry ? (
                               <img
                                 src={getFlagUrl(homeCountry.code)}
@@ -1236,9 +1862,13 @@ export default function SAVLSitePage() {
                               />
                             ) : null}
                             {match.home_country}
-                          </span>{" "}
-                          <span className="text-white/40">vs</span>{" "}
-                          <span className="inline-flex items-center gap-2">
+                          </span>
+
+                          <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/50">
+                            VS
+                          </span>
+
+                          <span className={`inline-flex items-center gap-2 ${match.status === "Finished" ? resultStyles.awayClass : "text-white"}`}>
                             {awayCountry ? (
                               <img
                                 src={getFlagUrl(awayCountry.code)}
@@ -1249,29 +1879,37 @@ export default function SAVLSitePage() {
                             {match.away_country}
                           </span>
                         </p>
-
                         {match.status === "Finished" ? (
                           <p className="mt-1 text-xs text-white/55">
                             Final score: {match.home_score} - {match.away_score}
                           </p>
                         ) : null}
                       </div>
-                      <div className="text-white/75">{formatDate(match.match_date)}</div>
-                      <div className="text-white/75">{match.match_time} BRT</div>
+                      <div className="text-white/75">
+                        {formatDate(match.match_date)}
+                      </div>
+                      <div className="text-white/75">
+                        {match.match_time} BRT
+                      </div>
                       <div>
-                        <span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${getStatusBadgeClass(match.status)}`}>
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${getStatusBadgeClass(match.status)}`}
+                        >
                           {match.status}
                         </span>
                       </div>
                     </div>
-                  )
+                  );
                 })
               )}
             </div>
           </div>
         </section>
 
-        <section id="standings" className="mx-auto max-w-7xl scroll-mt-28 px-6 py-16">
+        <section
+          id="standings"
+          className="mx-auto max-w-7xl scroll-mt-28 px-6 py-16"
+        >
           <div className="mb-8">
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
               League Table
@@ -1282,55 +1920,89 @@ export default function SAVLSitePage() {
           <div className="space-y-4 md:hidden">
             {standings.length === 0 ? (
               <div className="rounded-[1.5rem] border border-white/10 bg-[#0B1712] px-6 py-8 text-white/60">
-                Standings will appear after teams register and matches are finished.
-              </div>
-            ) : (
-              standings.map((team) => <StandingsCard key={team.country} team={team} />)
-            )}
-          </div>
-
-          <div className="hidden overflow-hidden rounded-[2rem] border border-white/10 bg-[#0B1712] md:block">
-            <div className="grid grid-cols-6 border-b border-white/10 px-6 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/50">
-              <span>#</span>
-              <span>Team</span>
-              <span>Played</span>
-              <span>Wins</span>
-              <span>Losses</span>
-              <span>Points</span>
-            </div>
-
-            {standings.length === 0 ? (
-              <div className="px-6 py-8 text-white/60">
-                Standings will appear after teams register and matches are finished.
+                Standings will appear after teams register and matches are
+                finished.
               </div>
             ) : (
               standings.map((team) => (
-                <div key={team.country} className="grid grid-cols-6 items-center border-b border-white/5 px-6 py-5 text-sm last:border-none">
-                  <span className="font-semibold text-white">{team.position}</span>
-                  <span className="flex items-center gap-3 font-semibold text-white">
-                    <img src={getFlagUrl(team.code)} alt={`${team.country} flag`} className="h-5 w-7 rounded-sm object-cover" />
-                    {team.country}
-                  </span>
-                  <span className="text-white/75">{team.played}</span>
-                  <span className="text-white/75">{team.wins}</span>
-                  <span className="text-white/75">{team.losses}</span>
-                  <span className="text-white/75">{team.points}</span>
-                </div>
+                <StandingsCard key={team.country} team={team} />
               ))
             )}
           </div>
+
+        <div className="hidden overflow-hidden rounded-[2rem] border border-white/10 bg-[#0B1712] md:block">
+          <div className="grid grid-cols-[0.5fr_2fr_0.8fr_0.8fr_0.8fr_0.9fr_0.9fr_0.9fr_0.9fr] border-b border-white/10 px-6 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/50">
+            <span>#</span>
+            <span>Team</span>
+            <span>P</span>
+            <span>W</span>
+            <span>L</span>
+            <span>SW</span>
+            <span>SL</span>
+            <span>SD</span>
+            <span>PTS</span>
+          </div>
+
+          {standings.length === 0 ? (
+            <div className="px-6 py-8 text-white/60">
+              Standings will appear after teams register and matches are finished.
+            </div>
+          ) : (
+            standings.map((team) => (
+              <div
+                key={team.country}
+                className="grid grid-cols-[0.5fr_2fr_0.8fr_0.8fr_0.8fr_0.9fr_0.9fr_0.9fr_0.9fr] items-center border-b border-white/5 px-6 py-5 text-sm last:border-none"
+              >
+                <span className="font-semibold text-white">{team.position}</span>
+                <span className="flex items-center gap-3 font-semibold text-white">
+                  <img
+                    src={getFlagUrl(team.code)}
+                    alt={`${team.country} flag`}
+                    className="h-5 w-7 rounded-sm object-cover"
+                  />
+                  {team.country}
+                </span>
+                <span className="text-white/75">{team.played}</span>
+                <span className="text-white/75">{team.wins}</span>
+                <span className="text-white/75">{team.losses}</span>
+                <span className="text-white/75">{team.setsWon}</span>
+                <span className="text-white/75">{team.setsLost}</span>
+                <span className="text-white/75">
+                  {team.setDiff > 0 ? `+${team.setDiff}` : team.setDiff}
+                </span>
+                <span className="font-semibold text-emerald-300">{team.points}</span>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div className="mt-4 hidden rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs leading-6 text-white/60 md:block">
+          <p>
+            <strong>P</strong>: Played • <strong>W</strong>: Wins • <strong>L</strong>: Losses •{" "}
+            <strong>SW</strong>: Sets Won • <strong>SL</strong>: Sets Lost •{" "}
+            <strong>SD</strong>: Set Difference • <strong>PTS</strong>: Points
+          </p>
+          <p className="mt-2">
+            <strong>Points system:</strong> 3 points for a 3-0 or 3-1 win, 2 points for a 3-2 win, 1 point for a 2-3 loss.
+          </p>
+        </div>
         </section>
 
-        <section id="register" className="mx-auto max-w-7xl scroll-mt-28 px-6 py-16">
+        <section
+          id="register"
+          className="mx-auto max-w-7xl scroll-mt-28 px-6 py-16"
+        >
           <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
                 Join The League
               </p>
-              <h2 className="mt-2 text-3xl font-black md:text-4xl">Team Registration</h2>
+              <h2 className="mt-2 text-3xl font-black md:text-4xl">
+                Team Registration
+              </h2>
               <p className="mt-4 max-w-lg text-white/70">
-                Choose one available country, add captain info and Roblox User ID. The
-                roster will be handled outside the site.
+                Choose one available country, add captain info and Roblox User
+                ID. The roster will be handled outside the site.
               </p>
 
               <div className="mt-8 rounded-[2rem] border border-white/10 bg-white/5 p-6">
@@ -1339,8 +2011,15 @@ export default function SAVLSitePage() {
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {availableCountries.map((country) => (
-                    <span key={country.code} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#0B1712] px-3 py-2 text-sm text-white/75">
-                      <img src={getFlagUrl(country.code)} alt={`${country.name} flag`} className="h-4 w-6 rounded-sm object-cover" />
+                    <span
+                      key={country.code}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#0B1712] px-3 py-2 text-sm text-white/75"
+                    >
+                      <img
+                        src={getFlagUrl(country.code)}
+                        alt={`${country.name} flag`}
+                        className="h-4 w-6 rounded-sm object-cover"
+                      />
                       {country.name}
                     </span>
                   ))}
@@ -1348,111 +2027,155 @@ export default function SAVLSitePage() {
               </div>
             </div>
 
-            <form onSubmit={handleRegisterSubmit} className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6 md:p-8">
-              <div className="grid gap-5 md:grid-cols-2">
-                <div className="md:col-span-2">
-                  <label className="mb-2 block text-sm font-medium text-white/70">Country</label>
-                  <SelectPicker
-                    value={registerForm.country}
-                    onChange={(value) => setRegisterForm((prev) => ({ ...prev, country: value }))}
-                    options={countryOptions}
-                    placeholder="Select a country"
-                  />
+            <div>
+              {!registrationsOpen ? (
+                <div className="mb-6 rounded-[1.5rem] border border-red-400/20 bg-red-400/10 p-4 text-sm text-red-200">
+                  Team registrations are currently closed. New teams cannot be
+                  submitted at this time.
                 </div>
+              ) : null}
 
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-white/70">Captain Roblox Username</label>
-                  <input
-                    value={registerForm.captain_name}
-                    onChange={(e) => setRegisterForm((prev) => ({ ...prev, captain_name: e.target.value }))}
-                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                    placeholder="xImTutu"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-white/70">Captain Discord Username</label>
-                  <input
-                    value={registerForm.captain_discord}
-                    onChange={(e) => setRegisterForm((prev) => ({ ...prev, captain_discord: e.target.value }))}
-                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                    placeholder="ximtutu"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label className="mb-2 block text-sm font-medium text-white/70">Captain Roblox User ID</label>
-                  <input
-                    value={registerForm.captain_roblox_id}
-                    onChange={(e) => setRegisterForm((prev) => ({ ...prev, captain_roblox_id: e.target.value }))}
-                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                    placeholder="123456789"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
-                  Registration Confirmation
-                </p>
-
-                <div className="mt-4 space-y-4">
-                  <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-[#081712] p-4 text-sm text-white/80">
-                    <input
-                      type="checkbox"
-                      checked={registerConfirmations.captain_commitment}
-                      onChange={(e) =>
-                        setRegisterConfirmations((prev) => ({
-                          ...prev,
-                          captain_commitment: e.target.checked,
-                        }))
-                      }
-                      className="mt-1 h-4 w-4 rounded border-white/20 bg-transparent accent-emerald-500"
-                    />
-                    <span>
-                      I confirm that I am committed to the role of captain and responsible for my team during the league.
-                    </span>
-                  </label>
-
-                  <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-[#081712] p-4 text-sm text-white/80">
-                    <input
-                      type="checkbox"
-                      checked={registerConfirmations.in_discord_server}
-                      onChange={(e) =>
-                        setRegisterConfirmations((prev) => ({
-                          ...prev,
-                          in_discord_server: e.target.checked,
-                        }))
-                      }
-                      className="mt-1 h-4 w-4 rounded border-white/20 bg-transparent accent-emerald-500"
-                    />
-                    <span>
-                      I confirm that I am in the official SAVL Discord server and understand that all players must also be there:{" "}
-                      <a
-                        href="https://discord.com/invite/uvVkWBq74Q"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-semibold text-emerald-300 underline underline-offset-4"
-                      >
-                        Join Discord
-                      </a>
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={
-                  submittingTeam ||
-                  !registerConfirmations.captain_commitment ||
-                  !registerConfirmations.in_discord_server
-                }
-                className="mt-6 w-full rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:scale-100"
+              <form
+                onSubmit={handleRegisterSubmit}
+                className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6 md:p-8"
               >
-                {submittingTeam ? "Submitting..." : "Submit Registration"}
-              </button>
-            </form>
+                <div className="grid gap-5 md:grid-cols-2">
+                  <div className="md:col-span-2">
+                    <label className="mb-2 block text-sm font-medium text-white/70">
+                      Country
+                    </label>
+                    <SelectPicker
+                      value={registerForm.country}
+                      onChange={(value) =>
+                        setRegisterForm((prev) => ({ ...prev, country: value }))
+                      }
+                      options={countryOptions}
+                      placeholder="Select a country"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-white/70">
+                      Captain Roblox Username
+                    </label>
+                    <input
+                      value={registerForm.captain_name}
+                      onChange={(e) =>
+                        setRegisterForm((prev) => ({
+                          ...prev,
+                          captain_name: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                      placeholder="xImTutu"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-sm font-medium text-white/70">
+                      Captain Discord Username
+                    </label>
+                    <input
+                      value={registerForm.captain_discord}
+                      onChange={(e) =>
+                        setRegisterForm((prev) => ({
+                          ...prev,
+                          captain_discord: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                      placeholder="ximtutu"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="mb-2 block text-sm font-medium text-white/70">
+                      Captain Roblox User ID
+                    </label>
+                    <input
+                      value={registerForm.captain_roblox_id}
+                      onChange={(e) =>
+                        setRegisterForm((prev) => ({
+                          ...prev,
+                          captain_roblox_id: e.target.value,
+                        }))
+                      }
+                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                      placeholder="123456789"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
+                    Registration Confirmation
+                  </p>
+
+                  <div className="mt-4 space-y-4">
+                    <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-[#081712] p-4 text-sm text-white/80">
+                      <input
+                        type="checkbox"
+                        checked={registerConfirmations.captain_commitment}
+                        onChange={(e) =>
+                          setRegisterConfirmations((prev) => ({
+                            ...prev,
+                            captain_commitment: e.target.checked,
+                          }))
+                        }
+                        className="mt-1 h-4 w-4 rounded border-white/20 bg-transparent accent-emerald-500"
+                      />
+                      <span>
+                        I confirm that I am committed to the role of captain and
+                        responsible for my team during the league.
+                      </span>
+                    </label>
+
+                    <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-[#081712] p-4 text-sm text-white/80">
+                      <input
+                        type="checkbox"
+                        checked={registerConfirmations.in_discord_server}
+                        onChange={(e) =>
+                          setRegisterConfirmations((prev) => ({
+                            ...prev,
+                            in_discord_server: e.target.checked,
+                          }))
+                        }
+                        className="mt-1 h-4 w-4 rounded border-white/20 bg-transparent accent-emerald-500"
+                      />
+                      <span>
+                        I confirm that I am in the official SAVL Discord server
+                        and understand that all players must also be there:{" "}
+                        <a
+                          href="https://discord.com/invite/uvVkWBq74Q"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-emerald-300 underline underline-offset-4"
+                        >
+                          Join Discord
+                        </a>
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={
+                    submittingTeam ||
+                    !registrationsOpen ||
+                    !registerConfirmations.captain_commitment ||
+                    !registerConfirmations.in_discord_server
+                  }
+                  className="mt-6 w-full rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:scale-100"
+                >
+                  {!registrationsOpen
+                    ? "Registrations Closed"
+                    : submittingTeam
+                      ? "Submitting..."
+                      : "Submit Registration"}
+                </button>
+              </form>
+            </div>
           </div>
         </section>
 
@@ -1463,7 +2186,9 @@ export default function SAVLSitePage() {
                 <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
                   Admin Panel
                 </p>
-                <h2 className="mt-2 text-3xl font-black md:text-4xl">League Control</h2>
+                <h2 className="mt-2 text-3xl font-black md:text-4xl">
+                  League Control
+                </h2>
                 <p className="mt-3 max-w-2xl text-white/65">
                   Manage teams, create matches, and edit final results here.
                 </p>
@@ -1485,7 +2210,9 @@ export default function SAVLSitePage() {
                 onSubmit={handleAdminLogin}
                 className="max-w-xl rounded-[2rem] border border-white/10 bg-[#0B1712] p-6"
               >
-                <label className="mb-2 block text-sm font-medium text-white/70">Admin email</label>
+                <label className="mb-2 block text-sm font-medium text-white/70">
+                  Admin email
+                </label>
                 <input
                   type="email"
                   value={adminEmail}
@@ -1494,7 +2221,9 @@ export default function SAVLSitePage() {
                   placeholder="admin@email.com"
                 />
 
-                <label className="mb-2 block text-sm font-medium text-white/70">Admin password</label>
+                <label className="mb-2 block text-sm font-medium text-white/70">
+                  Admin password
+                </label>
                 <div className="flex flex-col gap-3 md:flex-row">
                   <input
                     type="password"
@@ -1511,51 +2240,128 @@ export default function SAVLSitePage() {
                   </button>
                 </div>
 
-                {adminNotice ? <p className="mt-3 text-sm text-emerald-300">{adminNotice}</p> : null}
+                {adminNotice ? (
+                  <p className="mt-3 text-sm text-emerald-300">{adminNotice}</p>
+                ) : null}
               </form>
             ) : (
               <div className="space-y-8">
-                {adminNotice ? <p className="text-sm text-emerald-300">{adminNotice}</p> : null}
+                <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="text-xl font-bold text-white">
+                        Team registrations
+                      </p>
+                      <p className="mt-2 text-sm text-white/65">
+                        Control whether new teams can submit registration forms
+                        on the site.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      <span
+                        className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${
+                          registrationsOpen
+                            ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+                            : "border-red-400/20 bg-red-400/10 text-red-300"
+                        }`}
+                      >
+                        {registrationsOpen ? "Open" : "Closed"}
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={handleToggleRegistrations}
+                        disabled={togglingRegistrations}
+                        className={`rounded-2xl px-5 py-3 text-sm font-semibold transition duration-200 ${
+                          registrationsOpen
+                            ? "border border-red-400/20 bg-red-400/10 text-red-300 hover:-translate-y-0.5 hover:bg-red-400/15"
+                            : "bg-emerald-500 text-black hover:-translate-y-0.5 hover:scale-[1.01]"
+                        } disabled:cursor-not-allowed disabled:opacity-50`}
+                      >
+                        {togglingRegistrations
+                          ? "Updating..."
+                          : registrationsOpen
+                            ? "Close Registrations"
+                            : "Open Registrations"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                {adminNotice ? (
+                  <p className="text-sm text-emerald-300">{adminNotice}</p>
+                ) : null}
 
                 <div className="grid gap-8 lg:grid-cols-2">
-                  <form onSubmit={handleAdminAddTeam} className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
+                  <form
+                    onSubmit={handleAdminAddTeam}
+                    className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6"
+                  >
                     <p className="text-xl font-bold">Add team manually</p>
                     <div className="mt-5 grid gap-4">
                       <div>
-                        <label className="mb-2 block text-sm font-medium text-white/70">Team</label>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Team
+                        </label>
                         <SelectPicker
                           value={adminTeamForm.country}
-                          onChange={(value) => setAdminTeamForm((prev) => ({ ...prev, country: value }))}
+                          onChange={(value) =>
+                            setAdminTeamForm((prev) => ({
+                              ...prev,
+                              country: value,
+                            }))
+                          }
                           options={countryOptions}
                           placeholder="Select a country"
                         />
                       </div>
 
                       <div>
-                        <label className="mb-2 block text-sm font-medium text-white/70">Captain Roblox Username</label>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Captain Roblox Username
+                        </label>
                         <input
                           value={adminTeamForm.captain_name}
-                          onChange={(e) => setAdminTeamForm((prev) => ({ ...prev, captain_name: e.target.value }))}
+                          onChange={(e) =>
+                            setAdminTeamForm((prev) => ({
+                              ...prev,
+                              captain_name: e.target.value,
+                            }))
+                          }
                           className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
                           placeholder="Captain Roblox Username"
                         />
                       </div>
 
                       <div>
-                        <label className="mb-2 block text-sm font-medium text-white/70">Discord</label>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Discord
+                        </label>
                         <input
                           value={adminTeamForm.captain_discord}
-                          onChange={(e) => setAdminTeamForm((prev) => ({ ...prev, captain_discord: e.target.value }))}
+                          onChange={(e) =>
+                            setAdminTeamForm((prev) => ({
+                              ...prev,
+                              captain_discord: e.target.value,
+                            }))
+                          }
                           className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
                           placeholder="discorduser"
                         />
                       </div>
 
                       <div>
-                        <label className="mb-2 block text-sm font-medium text-white/70">Roblox User ID</label>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Roblox User ID
+                        </label>
                         <input
                           value={adminTeamForm.captain_roblox_id}
-                          onChange={(e) => setAdminTeamForm((prev) => ({ ...prev, captain_roblox_id: e.target.value }))}
+                          onChange={(e) =>
+                            setAdminTeamForm((prev) => ({
+                              ...prev,
+                              captain_roblox_id: e.target.value,
+                            }))
+                          }
                           className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
                           placeholder="123456789"
                         />
@@ -1570,31 +2376,64 @@ export default function SAVLSitePage() {
                     </div>
                   </form>
 
-                  <form onSubmit={handleCreateMatch} className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
+                  <form
+                    onSubmit={handleCreateMatch}
+                    className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6"
+                  >
                     <p className="text-xl font-bold">Create match</p>
                     <div className="mt-5 grid gap-4 md:grid-cols-2">
                       <div>
-                        <label className="mb-2 block text-sm font-medium text-white/70">Home Country</label>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Home Country
+                        </label>
                         <SelectPicker
                           value={matchForm.home_country}
-                          onChange={(value) => setMatchForm((prev) => ({ ...prev, home_country: value }))}
+                          onChange={(value) =>
+                            setMatchForm((prev) => ({
+                              ...prev,
+                              home_country: value,
+                            }))
+                          }
                           options={registeredCountryOptions}
                           placeholder="Select home country"
                         />
                       </div>
 
                       <div>
-                        <label className="mb-2 block text-sm font-medium text-white/70">Away Country</label>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Away Country
+                        </label>
                         <SelectPicker
                           value={matchForm.away_country}
-                          onChange={(value) => setMatchForm((prev) => ({ ...prev, away_country: value }))}
+                          onChange={(value) =>
+                            setMatchForm((prev) => ({
+                              ...prev,
+                              away_country: value,
+                            }))
+                          }
                           options={registeredCountryOptions}
                           placeholder="Select away country"
                         />
                       </div>
 
+                      <div className="md:col-span-2">
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Stage
+                        </label>
+                        <input
+                          type="text"
+                          name="stage"
+                          value={matchForm.stage}
+                          onChange={handleMatchFormChange}
+                          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                          placeholder="Qualifiers Round 1"
+                        />
+                      </div>
+
                       <div>
-                        <label className="mb-2 block text-sm font-medium text-white/70">Date</label>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Date
+                        </label>
                         <input
                           type="date"
                           name="match_date"
@@ -1605,7 +2444,9 @@ export default function SAVLSitePage() {
                       </div>
 
                       <div>
-                        <label className="mb-2 block text-sm font-medium text-white/70">Time</label>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Time
+                        </label>
                         <input
                           type="time"
                           name="match_time"
@@ -1616,10 +2457,17 @@ export default function SAVLSitePage() {
                       </div>
 
                       <div>
-                        <label className="mb-2 block text-sm font-medium text-white/70">Status</label>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Status
+                        </label>
                         <SelectPicker
                           value={matchForm.status}
-                          onChange={(value) => setMatchForm((prev) => ({ ...prev, status: value as MatchStatus }))}
+                          onChange={(value) =>
+                            setMatchForm((prev) => ({
+                              ...prev,
+                              status: value as MatchStatus,
+                            }))
+                          }
                           options={statusOptions}
                           placeholder="Select status"
                         />
@@ -1627,7 +2475,9 @@ export default function SAVLSitePage() {
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="mb-2 block text-sm font-medium text-white/70">Home Score</label>
+                          <label className="mb-2 block text-sm font-medium text-white/70">
+                            Home Score
+                          </label>
                           <input
                             type="number"
                             min="0"
@@ -1638,7 +2488,9 @@ export default function SAVLSitePage() {
                           />
                         </div>
                         <div>
-                          <label className="mb-2 block text-sm font-medium text-white/70">Away Score</label>
+                          <label className="mb-2 block text-sm font-medium text-white/70">
+                            Away Score
+                          </label>
                           <input
                             type="number"
                             min="0"
@@ -1667,114 +2519,457 @@ export default function SAVLSitePage() {
                     <p className="mb-4 text-xl font-bold">Team approvals</p>
 
                     <div className="space-y-6">
-                  <div>
-                <div className="mb-3 flex items-center justify-between">
-                      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-yellow-300">
-                        Pending Registrations
-                      </p>
-                      <span className="rounded-full border border-yellow-400/20 bg-yellow-400/10 px-3 py-1 text-xs font-semibold text-yellow-300">
-                        {pendingTeams.length}
-                      </span>
-                    </div>
+                      <div>
+                        <div className="mb-3 flex items-center justify-between">
+                          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-yellow-300">
+                            Pending Registrations
+                          </p>
+                          <span className="rounded-full border border-yellow-400/20 bg-yellow-400/10 px-3 py-1 text-xs font-semibold text-yellow-300">
+                            {pendingTeams.length}
+                          </span>
+                        </div>
 
-                    <div className="space-y-4">
-                      {pendingTeams.length === 0 ? (
-                        <p className="text-white/60">No pending teams.</p>
-                      ) : (
-                        pendingTeams.map((team) => (
-                          <div key={team.id} className="rounded-2xl border border-yellow-400/15 bg-yellow-400/[0.04] p-4">
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-3">
-                                  <img
-                                    src={getFlagUrl(team.code)}
-                                    alt={`${team.country} flag`}
-                                    className="h-8 w-11 rounded-md object-cover"
-                                  />
-                                  <div>
-                                    <p className="font-semibold">{team.country}</p>
-                                    <div className="mt-1 flex items-center gap-2 text-sm text-white/70">
-                                      <Avatar robloxUserId={team.captain_roblox_id} name={team.captain_name} />
-                                      <span className="truncate">{team.captain_name} • @{team.captain_discord}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="flex flex-wrap gap-2">
-                                <button
-                                  type="button"
-                                  onClick={() => handleApproveTeam(team.id)}
-                                  className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] active:translate-y-0.5"
-                                >
-                                  Approve
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteTeam(team.id)}
-                                  className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
-                                >
-                                  Reject
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="mb-3 flex items-center justify-between">
-                      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
-                        Approved Teams
-                      </p>
-                      <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
-                        {approvedTeams.length}
-                      </span>
-                    </div>
-
-                    <div className="space-y-4">
-                      {approvedTeams.length === 0 ? (
-                        <p className="text-white/60">No approved teams yet.</p>
-                      ) : (
-                        approvedTeams.map((team) => (
-                          <div key={team.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-3">
-                                  <img
-                                    src={getFlagUrl(team.code)}
-                                    alt={`${team.country} flag`}
-                                    className="h-8 w-11 rounded-md object-cover"
-                                  />
-                                  <div>
-                                    <p className="font-semibold">{team.country}</p>
-                                    <div className="mt-1 flex items-center gap-2 text-sm text-white/70">
-                                      <Avatar robloxUserId={team.captain_roblox_id} name={team.captain_name} />
-                                      <span className="truncate">{team.captain_name} • @{team.captain_discord}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteTeam(team.id)}
-                                className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
+                        <div className="space-y-4">
+                          {pendingTeams.length === 0 ? (
+                            <p className="text-white/60">No pending teams.</p>
+                          ) : (
+                            pendingTeams.map((team) => (
+                              <div
+                                key={team.id}
+                                className="rounded-2xl border border-yellow-400/15 bg-yellow-400/[0.04] p-4"
                               >
-                                Remove
-                              </button>
-                            </div>
-                          </div>
-                        ))
-                      )}
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-3">
+                                      <img
+                                        src={getFlagUrl(team.code)}
+                                        alt={`${team.country} flag`}
+                                        className="h-8 w-11 rounded-md object-cover"
+                                      />
+                                      <div>
+                                        <p className="font-semibold">
+                                          {team.country}
+                                        </p>
+                                        <div className="mt-1 flex items-center gap-2 text-sm text-white/70">
+                                          <Avatar
+                                            robloxUserId={
+                                              team.captain_roblox_id
+                                            }
+                                            name={team.captain_name}
+                                          />
+                                          <span className="truncate">
+                                            {team.captain_name} • @
+                                            {team.captain_discord}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleApproveTeam(team.id)}
+                                      className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] active:translate-y-0.5"
+                                    >
+                                      Approve
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openConfirmDialog({
+                                          title: "Reject Registration",
+                                          message: `Are you sure you want to reject ${team.country}'s registration?`,
+                                          confirmLabel: "Reject",
+                                          onConfirm: () => handleDeleteTeam(team.id),
+                                        })
+                                      }
+                                      className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="mb-3 flex items-center justify-between">
+                          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
+                            Approved Teams
+                          </p>
+                          <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+                            {approvedTeams.length}
+                          </span>
+                        </div>
+
+                        <div className="space-y-4">
+                          {approvedTeams.length === 0 ? (
+                            <p className="text-white/60">
+                              No approved teams yet.
+                            </p>
+                          ) : (
+                            approvedTeams.map((team) => (
+                              <div
+                                key={team.id}
+                                className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-3">
+                                      <img
+                                        src={getFlagUrl(team.code)}
+                                        alt={`${team.country} flag`}
+                                        className="h-8 w-11 rounded-md object-cover"
+                                      />
+                                      <div>
+                                        <p className="font-semibold">
+                                          {team.country}
+                                        </p>
+                                        <div className="mt-1 flex items-center gap-2 text-sm text-white/70">
+                                          <Avatar
+                                            robloxUserId={
+                                              team.captain_roblox_id
+                                            }
+                                            name={team.captain_name}
+                                          />
+                                          <span className="truncate">
+                                            {team.captain_name} • @
+                                            {team.captain_discord}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedAdminTeamId(team.id);
+                                        setPlayerForm({
+                                          team_id: String(team.id),
+                                          roblox_username: "",
+                                          roblox_user_id: "",
+                                          discord_username: "",
+                                          role: "Player",
+                                        });
+                                        scrollToSection("admin");
+                                      }}
+                                      className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-300 transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-400/15 active:translate-y-0.5"
+                                    >
+                                      Add Player
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openConfirmDialog({
+                                          title: "Remove Team",
+                                          message: `Are you sure you want to remove ${team.country}? This action cannot be undone.`,
+                                          confirmLabel: "Remove",
+                                          onConfirm: () => handleDeleteTeam(team.id),
+                                        })
+                                      }
+                                      className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <form
+                      onSubmit={handleAddPlayer}
+                      className="mt-6 rounded-[2rem] border border-white/10 bg-[#0B1712] p-6"
+                    >
+                      <p className="text-xl font-bold">Add player to roster</p>
+
+                      <div className="mt-5 grid gap-4 md:grid-cols-2">
+                        <div className="md:col-span-2">
+                          <label className="mb-2 block text-sm font-medium text-white/70">
+                            Team
+                          </label>
+                          <SelectPicker
+                            value={playerForm.team_id}
+                            onChange={(value) =>
+                              setPlayerForm((prev) => ({
+                                ...prev,
+                                team_id: value,
+                              }))
+                            }
+                            options={approvedTeams.map((team) => ({
+                              label: team.country,
+                              value: String(team.id),
+                              imageUrl: getFlagUrl(team.code),
+                            }))}
+                            placeholder="Select approved team"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-medium text-white/70">
+                            Roblox Username
+                          </label>
+                          <input
+                            value={playerForm.roblox_username}
+                            onChange={(e) =>
+                              setPlayerForm((prev) => ({
+                                ...prev,
+                                roblox_username: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                            placeholder="Player Roblox Username"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-medium text-white/70">
+                            Discord Username
+                          </label>
+                          <input
+                            value={playerForm.discord_username}
+                            onChange={(e) =>
+                              setPlayerForm((prev) => ({
+                                ...prev,
+                                discord_username: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                            placeholder="discorduser"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-medium text-white/70">
+                            Roblox User ID
+                          </label>
+                          <input
+                            value={playerForm.roblox_user_id}
+                            onChange={(e) =>
+                              setPlayerForm((prev) => ({
+                                ...prev,
+                                roblox_user_id: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                            placeholder="123456789"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-sm font-medium text-white/70">
+                            Role
+                          </label>
+                          <SelectPicker
+                            value={playerForm.role}
+                            onChange={(value) =>
+                              setPlayerForm((prev) => ({
+                                ...prev,
+                                role: value as TeamPlayerRole,
+                              }))
+                            }
+                            options={roleOptions}
+                            placeholder="Select role"
+                          />
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <button
+                            type="submit"
+                            className="w-full rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5"
+                          >
+                            Add Player
+                          </button>
+                        </div>
+                      </div>
+                    </form>
+
+                    <div className="mt-6 rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
+                      <p className="mb-4 text-xl font-bold">
+                        Edit team rosters
+                      </p>
+
+                      <div className="space-y-4">
+                        {approvedTeams.length === 0 ? (
+                          <p className="text-white/60">
+                            No approved teams yet.
+                          </p>
+                        ) : (
+                          approvedTeams.map((team) => {
+                            const players = getPlayersByTeam(team.id);
+                            const isOpen = selectedAdminTeamId === team.id;
+
+                            return (
+                              <div
+                                key={team.id}
+                                className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setSelectedAdminTeamId((prev) =>
+                                      prev === team.id ? null : team.id,
+                                    )
+                                  }
+                                  className="flex w-full items-center justify-between gap-4 rounded-[1rem] text-left focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+                                  aria-expanded={isOpen}
+                                  aria-label={isOpen ? `Hide roster for ${team.country}` : `Edit roster for ${team.country}`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <img
+                                      src={getFlagUrl(team.code)}
+                                      alt={`${team.country} flag`}
+                                      className="h-8 w-11 rounded-md object-cover"
+                                    />
+                                    <div>
+                                      <p className="font-semibold text-white">
+                                        {team.country}
+                                      </p>
+                                      <p className="text-sm text-white/55">
+                                        {players.length + 1} roster members
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <span className="text-sm text-emerald-300">
+                                    {isOpen ? "Hide roster" : "Edit roster"}
+                                  </span>
+                                </button>
+
+                                {isOpen ? (
+                                  <div className="mt-4 space-y-3">
+                                    <div className="rounded-2xl border border-white/10 bg-[#081712] p-3">
+                                      <div className="flex items-center gap-3">
+                                        <Avatar
+                                          robloxUserId={team.captain_roblox_id}
+                                          name={team.captain_name}
+                                        />
+                                        <div>
+                                          <p className="font-semibold text-white">
+                                            {team.captain_name}
+                                          </p>
+                                          <p className="text-sm text-white/60">
+                                            @{team.captain_discord}
+                                          </p>
+                                        </div>
+                                        <span className="ml-auto rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+                                          Captain
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {players.length === 0 ? (
+                                      <p className="text-sm text-white/60">
+                                        No extra players added yet.
+                                      </p>
+                                    ) : (
+                                      players.map((player) => (
+                                        <div
+                                          key={player.id}
+                                          className="rounded-2xl border border-white/10 bg-[#081712] p-4"
+                                        >
+                                          <div className="grid gap-3 md:grid-cols-2">
+                                            <input
+                                              defaultValue={
+                                                player.roblox_username
+                                              }
+                                              onBlur={(e) =>
+                                                handleUpdatePlayer(player.id, {
+                                                  roblox_username:
+                                                    e.target.value.trim(),
+                                                })
+                                              }
+                                              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none"
+                                              placeholder="Roblox Username"
+                                            />
+
+                                            <input
+                                              defaultValue={
+                                                player.discord_username
+                                              }
+                                              onBlur={(e) =>
+                                                handleUpdatePlayer(player.id, {
+                                                  discord_username:
+                                                    e.target.value
+                                                      .trim()
+                                                      .replace(/^@/, ""),
+                                                })
+                                              }
+                                              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none"
+                                              placeholder="Discord Username"
+                                            />
+
+                                            <input
+                                              defaultValue={
+                                                player.roblox_user_id
+                                              }
+                                              onBlur={(e) =>
+                                                handleUpdatePlayer(player.id, {
+                                                  roblox_user_id:
+                                                    e.target.value.trim(),
+                                                })
+                                              }
+                                              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none"
+                                              placeholder="Roblox User ID"
+                                            />
+
+                                            <select
+                                              defaultValue={player.role}
+                                              onChange={(e) =>
+                                                handleUpdatePlayer(player.id, {
+                                                  role: e.target
+                                                    .value as TeamPlayerRole,
+                                                })
+                                              }
+                                              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none"
+                                            >
+                                              <option value="Vice Captain">
+                                                Vice Captain
+                                              </option>
+                                              <option value="Player">
+                                                Player
+                                              </option>
+                                            </select>
+                                          </div>
+
+                                          <div className="mt-3 flex justify-end">
+                                            <button
+                                              type="button"
+                                              onClick={() =>
+                                                openConfirmDialog({
+                                                  title: "Remove Player",
+                                                  message: `Are you sure you want to remove ${player.roblox_username} from the roster?`,
+                                                  confirmLabel: "Remove",
+                                                  onConfirm: () => handleDeletePlayer(player.id),
+                                                })
+                                              }
+                                              className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:bg-red-400/15"
+                                            >
+                                              Remove Player
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))
+                                    )}
+                                  </div>
+                                ) : null}
+                              </div>
+                            );
+                          })
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-
-                </div>
                   <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
                     <p className="mb-4 text-xl font-bold">Manage matches</p>
                     <div className="space-y-4">
@@ -1782,69 +2977,135 @@ export default function SAVLSitePage() {
                         <p className="text-white/60">No matches created yet.</p>
                       ) : (
                         matches.map((match) => {
-                          const draft = matchDrafts[match.id]
+                          const draft = matchDrafts[match.id];
 
                           return (
-                            <div key={match.id} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                            <div
+                              key={match.id}
+                              className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                            >
                               <div className="grid gap-4">
                                 <div className="flex flex-wrap items-center gap-3">
+                                  {draft?.stage || match.stage ? (
+                                    <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                                      {draft?.stage || match.stage}
+                                    </span>
+                                  ) : null}
+
                                   <span className="font-semibold">
                                     {match.home_country} vs {match.away_country}
                                   </span>
-                                  <span className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${getStatusBadgeClass(draft?.status ?? match.status)}`}>
+                                  <span
+                                    className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${getStatusBadgeClass(draft?.status ?? match.status)}`}
+                                  >
                                     {draft?.status ?? match.status}
                                   </span>
                                 </div>
 
+                                <div>
+                                  <label className="mb-2 block text-sm text-white/70">
+                                    Stage
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={draft?.stage ?? match.stage ?? ""}
+                                    onChange={(e) =>
+                                      updateMatchDraft(match.id, {
+                                        stage: e.target.value,
+                                      })
+                                    }
+                                    className="w-full rounded-2xl border border-white/10 bg-[#0B1712] px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30"
+                                    placeholder="Semifinals"
+                                  />
+                                </div>
+
                                 <div className="grid gap-3 md:grid-cols-2">
                                   <div>
-                                    <label className="mb-2 block text-sm text-white/70">Status</label>
+                                    <label className="mb-2 block text-sm text-white/70">
+                                      Status
+                                    </label>
                                     <SelectPicker
                                       value={draft?.status ?? match.status}
-                                      onChange={(value) => updateMatchDraft(match.id, { status: value as MatchStatus })}
+                                      onChange={(value) =>
+                                        updateMatchDraft(match.id, {
+                                          status: value as MatchStatus,
+                                        })
+                                      }
                                       options={statusOptions}
                                       placeholder="Select status"
                                     />
                                   </div>
 
                                   <div>
-                                    <label className="mb-2 block text-sm text-white/70">Date</label>
+                                    <label className="mb-2 block text-sm text-white/70">
+                                      Date
+                                    </label>
                                     <input
                                       type="date"
-                                      value={draft?.match_date ?? match.match_date}
-                                      onChange={(e) => updateMatchDraft(match.id, { match_date: e.target.value })}
+                                      value={
+                                        draft?.match_date ?? match.match_date
+                                      }
+                                      onChange={(e) =>
+                                        updateMatchDraft(match.id, {
+                                          match_date: e.target.value,
+                                        })
+                                      }
                                       className="w-full rounded-2xl border border-white/10 bg-[#0B1712] px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30"
                                     />
                                   </div>
 
                                   <div>
-                                    <label className="mb-2 block text-sm text-white/70">Time</label>
+                                    <label className="mb-2 block text-sm text-white/70">
+                                      Time
+                                    </label>
                                     <input
                                       type="time"
-                                      value={draft?.match_time ?? match.match_time}
-                                      onChange={(e) => updateMatchDraft(match.id, { match_time: e.target.value })}
+                                      value={
+                                        draft?.match_time ?? match.match_time
+                                      }
+                                      onChange={(e) =>
+                                        updateMatchDraft(match.id, {
+                                          match_time: e.target.value,
+                                        })
+                                      }
                                       className="w-full rounded-2xl border border-white/10 bg-[#0B1712] px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30"
                                     />
                                   </div>
 
                                   <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                      <label className="mb-2 block text-sm text-white/70">{match.home_country}</label>
+                                      <label className="mb-2 block text-sm text-white/70">
+                                        {match.home_country}
+                                      </label>
                                       <input
                                         type="number"
                                         min="0"
-                                        value={draft?.home_score ?? match.home_score}
-                                        onChange={(e) => updateMatchDraft(match.id, { home_score: Number(e.target.value) })}
+                                        value={
+                                          draft?.home_score ?? match.home_score
+                                        }
+                                        onChange={(e) =>
+                                          updateMatchDraft(match.id, {
+                                            home_score: Number(e.target.value),
+                                          })
+                                        }
                                         className="w-full rounded-2xl border border-white/10 bg-[#0B1712] px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30"
                                       />
                                     </div>
                                     <div>
-                                      <label className="mb-2 block text-sm text-white/70">{match.away_country}</label>
+                                      <label className="mb-2 block text-sm text-white/70">
+                                        {match.away_country}
+                                      </label>
                                       <input
                                         type="number"
                                         min="0"
-                                        value={draft?.away_score ?? match.away_score}
-                                        onChange={(e) => updateMatchDraft(match.id, { away_score: Number(e.target.value) })}
+                                        value={
+                                          draft?.away_score ?? match.away_score
+                                        }
+                                        onChange={(e) =>
+                                          updateMatchDraft(match.id, {
+                                            away_score: Number(e.target.value),
+                                          })
+                                        }
                                         className="w-full rounded-2xl border border-white/10 bg-[#0B1712] px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30"
                                       />
                                     </div>
@@ -1861,7 +3122,14 @@ export default function SAVLSitePage() {
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => handleDeleteMatch(match.id)}
+                                    onClick={() =>
+                                      openConfirmDialog({
+                                        title: "Delete Match",
+                                        message: `Are you sure you want to delete ${match.home_country} vs ${match.away_country}?`,
+                                        confirmLabel: "Delete",
+                                        onConfirm: () => handleDeleteMatch(match.id),
+                                      })
+                                    }
                                     className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
                                   >
                                     Delete Match
@@ -1869,7 +3137,7 @@ export default function SAVLSitePage() {
                                 </div>
                               </div>
                             </div>
-                          )
+                          );
                         })
                       )}
                     </div>
@@ -1895,48 +3163,98 @@ export default function SAVLSitePage() {
           </div>
         </div>
       </footer>
-    {successDialog.open ? (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
-        <div className="w-full max-w-md rounded-[2rem] border border-emerald-400/25 bg-[#071A13] p-6 shadow-[0_20px_80px_rgba(16,185,129,0.18)]">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-400/25 bg-emerald-400/15">
-              <svg
-                viewBox="0 0 24 24"
-                className="h-6 w-6 text-emerald-300"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
+      {successDialog.open ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[2rem] border border-emerald-400/25 bg-[#071A13] p-6 shadow-[0_20px_80px_rgba(16,185,129,0.18)]">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-emerald-400/25 bg-emerald-400/15">
+                <svg
+                  viewBox="0 0 24 24"
+                  className="h-6 w-6 text-emerald-300"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <h3 className="text-xl font-black text-white">
+                  {successDialog.title}
+                </h3>
+                <p className="mt-2 text-sm leading-6 text-white/75">
+                  {successDialog.message}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() =>
+                  setSuccessDialog({
+                    open: false,
+                    title: "",
+                    message: "",
+                  })
+                }
+                className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-black transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] active:translate-y-0"
               >
-                <path d="M20 6L9 17l-5-5" />
-              </svg>
+                Close
+              </button>
             </div>
-
-            <div className="min-w-0 flex-1">
-              <h3 className="text-xl font-black text-white">{successDialog.title}</h3>
-              <p className="mt-2 text-sm leading-6 text-white/75">{successDialog.message}</p>
-            </div>
-          </div>
-
-          <div className="mt-6 flex justify-end">
-            <button
-              type="button"
-              onClick={() =>
-                setSuccessDialog({
-                  open: false,
-                  title: "",
-                  message: "",
-                })
-              }
-              className="rounded-2xl bg-emerald-500 px-5 py-3 text-sm font-semibold text-black transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] active:translate-y-0"
-            >
-              Close
-            </button>
           </div>
         </div>
-      </div>
-    ) : null}
+      ) : null}
+      {confirmDialog.open ? (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[2rem] border border-red-400/20 bg-[#071A13] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
+            <h3 className="text-xl font-black text-white">{confirmDialog.title}</h3>
+            <p className="mt-3 text-sm leading-6 text-white/75">
+              {confirmDialog.message}
+            </p>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setConfirmDialog({
+                    open: false,
+                    title: "",
+                    message: "",
+                    confirmLabel: "Confirm",
+                    onConfirm: null,
+                  })
+                }
+                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition duration-200 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  const action = confirmDialog.onConfirm;
+                  setConfirmDialog({
+                    open: false,
+                    title: "",
+                    message: "",
+                    confirmLabel: "Confirm",
+                    onConfirm: null,
+                  });
+                  if (action) await action();
+                }}
+                className="rounded-2xl border border-red-400/20 bg-red-400/10 px-5 py-3 text-sm font-semibold text-red-300 transition duration-200 hover:bg-red-400/15 focus:outline-none focus:ring-2 focus:ring-red-400/40"
+              >
+                {confirmDialog.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
-  )
+  );
 }
