@@ -99,6 +99,7 @@ const COUNTRIES: Country[] = [
   { name: "France", code: "fr" },
   { name: "Germany", code: "de" },
   { name: "Iran", code: "ir" },
+  { name: "Israel", code: "il" },
   { name: "Italy", code: "it" },
   { name: "Japan", code: "jp" },
   { name: "Mexico", code: "mx" },
