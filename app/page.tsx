@@ -111,7 +111,7 @@ const COUNTRIES: Country[] = [
   { name: "Russia", code: "ru" },
   { name: "Serbia", code: "rs" },
   { name: "Slovenia", code: "si" },
-  { name: "South Korea", code: "kr" },
+  { name: "Korea", code: "kr" },
   { name: "Spain", code: "es" },
   { name: "Thailand", code: "th" },
   { name: "Turkey", code: "tr" },
