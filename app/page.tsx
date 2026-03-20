@@ -111,7 +111,7 @@ const COUNTRIES: Country[] = [
   { name: "Russia", code: "ru" },
   { name: "Serbia", code: "rs" },
   { name: "Slovenia", code: "si" },
-  { name: "Korea", code: "kr" },
+  { name: "South Korea", code: "kr" },
   { name: "Spain", code: "es" },
   { name: "Thailand", code: "th" },
   { name: "Turkey", code: "tr" },
@@ -179,6 +179,28 @@ function scrollToSection(id: string) {
       behavior: "smooth",
     });
   }, 50);
+}
+
+function getPlayerRoleOrder(role: TeamPlayerRole) {
+  if (role === "Vice Captain") return 0;
+  return 1;
+}
+
+function sortTeamPlayers(players: TeamPlayer[]) {
+  return [...players].sort((a, b) => {
+    const roleDiff = getPlayerRoleOrder(a.role) - getPlayerRoleOrder(b.role);
+    if (roleDiff !== 0) return roleDiff;
+
+    return a.roblox_username.localeCompare(b.roblox_username);
+  });
+}
+
+function getRosterRoleBadgeClass(role: TeamPlayerRole) {
+  if (role === "Vice Captain") {
+    return "border-sky-400/20 bg-sky-400/10 text-sky-300";
+  }
+
+  return "border-white/10 bg-white/5 text-white/75";
 }
 
 function Avatar({
@@ -482,7 +504,9 @@ function TeamCard({
                       @{player.discord_username}
                     </p>
                   </div>
-                  <span className="ml-auto rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-white/75">
+                  <span
+                    className={`ml-auto rounded-full border px-3 py-1 text-xs font-semibold ${getRosterRoleBadgeClass(player.role)}`}
+                  >
                     {player.role}
                   </span>
                 </div>
@@ -1177,7 +1201,9 @@ export default function SAVLSitePage() {
   }
 
   function getPlayersByTeam(teamId: number) {
-    return teamPlayers.filter((player) => player.team_id === teamId);
+    return sortTeamPlayers(
+      teamPlayers.filter((player) => player.team_id === teamId),
+    );
   }
 
   function getStaffById(staffId: number | null) {
