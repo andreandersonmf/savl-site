@@ -655,7 +655,7 @@ function TeamCard({
             className="h-3 w-3 rounded-full border border-white/20"
             style={{ backgroundColor: team.brick_color_hex }}
           />
-          <span>{team.brick_color_name}</span>
+          <span>{team.brick_color_number}</span>
         </div>
       ) : null}
       <button
