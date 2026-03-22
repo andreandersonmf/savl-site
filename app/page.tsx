@@ -3499,7 +3499,7 @@ export default function SAVLSitePage() {
                                           className="h-4 w-4 rounded-full border border-white/20"
                                           style={{ backgroundColor: team.brick_color_hex }}
                                         />
-                                        <span>{team.brick_color_name}</span>
+                                        <span>{team.brick_color_number}</span>
                                         {team.brick_color_number ? (
                                           <span className="text-white/45">#{team.brick_color_number}</span>
                                         ) : null}
