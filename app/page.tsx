@@ -20,6 +20,9 @@ type Team = {
   approved: boolean;
   approved_at?: string | null;
   created_at: string;
+  brick_color_name?: string | null;
+  brick_color_hex?: string | null;
+  brick_color_number?: number | null;
 };
 
 type MatchStatus = "Scheduled" | "Live" | "Finished";
@@ -85,6 +88,12 @@ type StaffApplication = {
   created_at: string;
 };
 
+type BrickColor = {
+  name: string;
+  number: number;
+  hex: string;
+};
+
 const COUNTRIES: Country[] = [
   { name: "Argentina", code: "ar" },
   { name: "Australia", code: "au" },
@@ -119,6 +128,217 @@ const COUNTRIES: Country[] = [
   { name: "United Kingdom", code: "gb" },
   { name: "United States", code: "us" },
   { name: "Venezuela", code: "ve" },
+];
+
+const BRICK_COLORS: BrickColor[] = [
+  { name: "White", number: 1, hex: "#F2F3F3" },
+  { name: "Grey", number: 2, hex: "#A1A5A2" },
+  { name: "Light yellow", number: 3, hex: "#F9E999" },
+  { name: "Brick yellow", number: 5, hex: "#D7C59A" },
+  { name: "Light green (Mint)", number: 6, hex: "#C2DAB8" },
+  { name: "Light reddish violet", number: 9, hex: "#E8BAC8" },
+  { name: "Pastel Blue", number: 11, hex: "#80BBDB" },
+  { name: "Light orange brown", number: 12, hex: "#CB8442" },
+  { name: "Nougat", number: 18, hex: "#CC8E69" },
+  { name: "Bright red", number: 21, hex: "#C4281C" },
+  { name: "Med. reddish violet", number: 22, hex: "#C470A0" },
+  { name: "Bright blue", number: 23, hex: "#0D69AC" },
+  { name: "Bright yellow", number: 24, hex: "#F5CD30" },
+  { name: "Earth orange", number: 25, hex: "#624732" },
+  { name: "Black", number: 26, hex: "#1B2A35" },
+  { name: "Dark grey", number: 27, hex: "#6D6E6C" },
+  { name: "Dark green", number: 28, hex: "#287F47" },
+  { name: "Medium green", number: 29, hex: "#A1C48C" },
+  { name: "Lig. Yellowich orange", number: 36, hex: "#F3CF9B" },
+  { name: "Bright green", number: 37, hex: "#4B974B" },
+  { name: "Dark orange", number: 38, hex: "#A05F35" },
+  { name: "Light bluish violet", number: 39, hex: "#C1CADE" },
+  { name: "Transparent", number: 40, hex: "#ECECEC" },
+  { name: "Tr. Red", number: 41, hex: "#CD544B" },
+  { name: "Tr. Lg blue", number: 42, hex: "#C1DFF0" },
+  { name: "Tr. Blue", number: 43, hex: "#7BB6E8" },
+  { name: "Tr. Yellow", number: 44, hex: "#F7F18D" },
+  { name: "Light blue", number: 45, hex: "#B4D2E4" },
+  { name: "Tr. Flu. Reddish orange", number: 47, hex: "#D9856C" },
+  { name: "Tr. Green", number: 48, hex: "#84B68D" },
+  { name: "Tr. Flu. Green", number: 49, hex: "#F8F184" },
+  { name: "Phosph. White", number: 50, hex: "#ECE8DE" },
+  { name: "Light red", number: 100, hex: "#EEC4B6" },
+  { name: "Medium red", number: 101, hex: "#DA867A" },
+  { name: "Medium blue", number: 102, hex: "#6E99CA" },
+  { name: "Light grey", number: 103, hex: "#C7C1B7" },
+  { name: "Bright violet", number: 104, hex: "#6B327C" },
+  { name: "Br. yellowish orange", number: 105, hex: "#E29B40" },
+  { name: "Bright orange", number: 106, hex: "#DA8541" },
+  { name: "Bright bluish green", number: 107, hex: "#008F9C" },
+  { name: "Earth yellow", number: 108, hex: "#685C43" },
+  { name: "Bright bluish violet", number: 110, hex: "#435493" },
+  { name: "Tr. Brown", number: 111, hex: "#BFB7B1" },
+  { name: "Medium bluish violet", number: 112, hex: "#6874AC" },
+  { name: "Tr. Medi. reddish violet", number: 113, hex: "#E5ADC8" },
+  { name: "Med. yellowish green", number: 115, hex: "#C7D23C" },
+  { name: "Med. bluish green", number: 116, hex: "#55A5AF" },
+  { name: "Light bluish green", number: 118, hex: "#B7D7D5" },
+  { name: "Br. yellowish green", number: 119, hex: "#A4BD47" },
+  { name: "Lig. yellowish green", number: 120, hex: "#D9E4A7" },
+  { name: "Med. yellowish orange", number: 121, hex: "#E7AC58" },
+  { name: "Br. reddish orange", number: 123, hex: "#D36F4C" },
+  { name: "Bright reddish violet", number: 124, hex: "#923978" },
+  { name: "Light orange", number: 125, hex: "#EAB892" },
+  { name: "Tr. Bright bluish violet", number: 126, hex: "#A5A5CB" },
+  { name: "Gold", number: 127, hex: "#DCBC81" },
+  { name: "Dark nougat", number: 128, hex: "#AE7A59" },
+  { name: "Silver", number: 131, hex: "#9CA3A8" },
+  { name: "Neon orange", number: 133, hex: "#D5733D" },
+  { name: "Neon green", number: 134, hex: "#D8DD56" },
+  { name: "Sand blue", number: 135, hex: "#74869D" },
+  { name: "Sand violet", number: 136, hex: "#877C90" },
+  { name: "Medium orange", number: 137, hex: "#E09864" },
+  { name: "Sand yellow", number: 138, hex: "#958A73" },
+  { name: "Earth blue", number: 140, hex: "#203A56" },
+  { name: "Earth green", number: 141, hex: "#27462D" },
+  { name: "Tr. Flu. Blue", number: 143, hex: "#CFE2F7" },
+  { name: "Sand blue metallic", number: 145, hex: "#7988A1" },
+  { name: "Sand violet metallic", number: 146, hex: "#958EA3" },
+  { name: "Sand yellow metallic", number: 147, hex: "#938767" },
+  { name: "Dark grey metallic", number: 148, hex: "#575857" },
+  { name: "Black metallic", number: 149, hex: "#161D32" },
+  { name: "Light grey metallic", number: 150, hex: "#ABADAC" },
+  { name: "Sand green", number: 151, hex: "#789082" },
+  { name: "Sand red", number: 153, hex: "#957977" },
+  { name: "Dark red", number: 154, hex: "#7B2E2F" },
+  { name: "Tr. Flu. Yellow", number: 157, hex: "#FFF67B" },
+  { name: "Tr. Flu. Red", number: 158, hex: "#E1A4C2" },
+  { name: "Gun metallic", number: 168, hex: "#756C62" },
+  { name: "Red flip/flop", number: 176, hex: "#97695B" },
+  { name: "Yellow flip/flop", number: 178, hex: "#B48455" },
+  { name: "Silver flip/flop", number: 179, hex: "#898788" },
+  { name: "Curry", number: 180, hex: "#D7A94B" },
+  { name: "Fire Yellow", number: 190, hex: "#F9D62E" },
+  { name: "Flame yellowish orange", number: 191, hex: "#E8AB2D" },
+  { name: "Reddish brown", number: 192, hex: "#694028" },
+  { name: "Flame reddish orange", number: 193, hex: "#CF6024" },
+  { name: "Medium stone grey", number: 194, hex: "#A3A2A5" },
+  { name: "Royal blue", number: 195, hex: "#4667A4" },
+  { name: "Dark Royal blue", number: 196, hex: "#23478B" },
+  { name: "Bright reddish lilac", number: 198, hex: "#8E4285" },
+  { name: "Dark stone grey", number: 199, hex: "#635F62" },
+  { name: "Lemon metalic", number: 200, hex: "#828A5D" },
+  { name: "Light stone grey", number: 208, hex: "#E5E4DF" },
+  { name: "Dark Curry", number: 209, hex: "#B08E44" },
+  { name: "Faded green", number: 210, hex: "#709578" },
+  { name: "Turquoise", number: 211, hex: "#79B5B5" },
+  { name: "Light Royal blue", number: 212, hex: "#9FC3E9" },
+  { name: "Medium Royal blue", number: 213, hex: "#6C81B7" },
+  { name: "Rust", number: 216, hex: "#904C2A" },
+  { name: "Brown", number: 217, hex: "#7C5C46" },
+  { name: "Reddish lilac", number: 218, hex: "#96709F" },
+  { name: "Lilac", number: 219, hex: "#6B629B" },
+  { name: "Light lilac", number: 220, hex: "#A7A9CE" },
+  { name: "Bright purple", number: 221, hex: "#CD6298" },
+  { name: "Light purple", number: 222, hex: "#E4ADC8" },
+  { name: "Light pink", number: 223, hex: "#DC9095" },
+  { name: "Light brick yellow", number: 224, hex: "#F0D5A0" },
+  { name: "Warm yellowish orange", number: 225, hex: "#EBB87F" },
+  { name: "Cool yellow", number: 226, hex: "#FDEA8D" },
+  { name: "Dove blue", number: 232, hex: "#7DBBDD" },
+  { name: "Medium lilac", number: 268, hex: "#342B75" },
+  { name: "Slime green", number: 301, hex: "#506D54" },
+  { name: "Smoky grey", number: 302, hex: "#5B5D69" },
+  { name: "Dark blue", number: 303, hex: "#0010B0" },
+  { name: "Parsley green", number: 304, hex: "#2C651D" },
+  { name: "Steel blue", number: 305, hex: "#527CAE" },
+  { name: "Storm blue", number: 306, hex: "#335882" },
+  { name: "Lapis", number: 307, hex: "#102ADC" },
+  { name: "Dark indigo", number: 308, hex: "#3D1585" },
+  { name: "Sea green", number: 309, hex: "#348E40" },
+  { name: "Shamrock", number: 310, hex: "#5B9A4C" },
+  { name: "Fossil", number: 311, hex: "#9FA1AC" },
+  { name: "Mulberry", number: 312, hex: "#592259" },
+  { name: "Forest green", number: 313, hex: "#1F801D" },
+  { name: "Cadet blue", number: 314, hex: "#9FADC0" },
+  { name: "Electric blue", number: 315, hex: "#0989CF" },
+  { name: "Eggplant", number: 316, hex: "#7B007B" },
+  { name: "Moss", number: 317, hex: "#7C9C6B" },
+  { name: "Artichoke", number: 318, hex: "#8AAB85" },
+  { name: "Sage green", number: 319, hex: "#B9C4B1" },
+  { name: "Ghost grey", number: 320, hex: "#CACBD1" },
+  { name: "Lilac", number: 321, hex: "#A75E9B" },
+  { name: "Plum", number: 322, hex: "#7B2F7B" },
+  { name: "Olivine", number: 323, hex: "#94BE81" },
+  { name: "Laurel green", number: 324, hex: "#A8BD99" },
+  { name: "Quill grey", number: 325, hex: "#DFDFDE" },
+  { name: "Crimson", number: 327, hex: "#970000" },
+  { name: "Mint", number: 328, hex: "#B1E5A6" },
+  { name: "Baby blue", number: 329, hex: "#98C2DB" },
+  { name: "Carnation pink", number: 330, hex: "#FF98DC" },
+  { name: "Persimmon", number: 331, hex: "#FF5959" },
+  { name: "Maroon", number: 332, hex: "#750000" },
+  { name: "Gold", number: 333, hex: "#EFB838" },
+  { name: "Daisy orange", number: 334, hex: "#F8D96D" },
+  { name: "Pearl", number: 335, hex: "#E7E7EC" },
+  { name: "Fog", number: 336, hex: "#C7D4E4" },
+  { name: "Salmon", number: 337, hex: "#FF9494" },
+  { name: "Terra Cotta", number: 338, hex: "#BE6862" },
+  { name: "Cocoa", number: 339, hex: "#562424" },
+  { name: "Wheat", number: 340, hex: "#F1E7C7" },
+  { name: "Buttermilk", number: 341, hex: "#FEF3BB" },
+  { name: "Mauve", number: 342, hex: "#E0B2D0" },
+  { name: "Sunrise", number: 343, hex: "#D490BD" },
+  { name: "Tawny", number: 344, hex: "#965555" },
+  { name: "Rust", number: 345, hex: "#8F4C2A" },
+  { name: "Cashmere", number: 346, hex: "#D3BE96" },
+  { name: "Khaki", number: 347, hex: "#E2DCBC" },
+  { name: "Lily white", number: 348, hex: "#EDEAEA" },
+  { name: "Seashell", number: 349, hex: "#E9DADA" },
+  { name: "Burgundy", number: 350, hex: "#883E3E" },
+  { name: "Cork", number: 351, hex: "#BC9B5D" },
+  { name: "Burlap", number: 352, hex: "#C7AC78" },
+  { name: "Beige", number: 353, hex: "#CABFA3" },
+  { name: "Oyster", number: 354, hex: "#BBB3B2" },
+  { name: "Pine Cone", number: 355, hex: "#6C584B" },
+  { name: "Fawn brown", number: 356, hex: "#A0844F" },
+  { name: "Hurricane grey", number: 357, hex: "#958988" },
+  { name: "Cloudy grey", number: 358, hex: "#ABA89E" },
+  { name: "Linen", number: 359, hex: "#AF9483" },
+  { name: "Copper", number: 360, hex: "#966766" },
+  { name: "Dirt brown", number: 361, hex: "#564236" },
+  { name: "Bronze", number: 362, hex: "#7E683F" },
+  { name: "Flint", number: 363, hex: "#69665C" },
+  { name: "Dark taupe", number: 364, hex: "#5A4C42" },
+  { name: "Burnt Sienna", number: 365, hex: "#6A3909" },
+  { name: "Institutional white", number: 1001, hex: "#F8F8F8" },
+  { name: "Mid gray", number: 1002, hex: "#CDCDCD" },
+  { name: "Really black", number: 1003, hex: "#111111" },
+  { name: "Really red", number: 1004, hex: "#FF0000" },
+  { name: "Deep orange", number: 1005, hex: "#FFB000" },
+  { name: "Alder", number: 1006, hex: "#B480FF" },
+  { name: "Dusty Rose", number: 1007, hex: "#A34B4B" },
+  { name: "Olive", number: 1008, hex: "#C1BE42" },
+  { name: "New Yeller", number: 1009, hex: "#FFFF00" },
+  { name: "Really blue", number: 1010, hex: "#0000FF" },
+  { name: "Navy blue", number: 1011, hex: "#002060" },
+  { name: "Deep blue", number: 1012, hex: "#2154B9" },
+  { name: "Cyan", number: 1013, hex: "#04AFEC" },
+  { name: "CGA brown", number: 1014, hex: "#AA5500" },
+  { name: "Magenta", number: 1015, hex: "#AA00AA" },
+  { name: "Pink", number: 1016, hex: "#FF66CC" },
+  { name: "Deep orange", number: 1017, hex: "#FFAF00" },
+  { name: "Teal", number: 1018, hex: "#12EED4" },
+  { name: "Toothpaste", number: 1019, hex: "#00FFFF" },
+  { name: "Lime green", number: 1020, hex: "#00FF00" },
+  { name: "Camo", number: 1021, hex: "#3A7D15" },
+  { name: "Grime", number: 1022, hex: "#7F8E64" },
+  { name: "Lavender", number: 1023, hex: "#8C5B9F" },
+  { name: "Pastel light blue", number: 1024, hex: "#AFDDFF" },
+  { name: "Pastel orange", number: 1025, hex: "#FFC9C9" },
+  { name: "Pastel violet", number: 1026, hex: "#B1A7FF" },
+  { name: "Pastel blue-green", number: 1027, hex: "#9FF3E9" },
+  { name: "Pastel green", number: 1028, hex: "#CCFFCC" },
+  { name: "Pastel yellow", number: 1029, hex: "#FFFFCC" },
+  { name: "Pastel brown", number: 1030, hex: "#FFCC99" },
+  { name: "Royal purple", number: 1031, hex: "#6225D1" },
+  { name: "Hot pink", number: 1032, hex: "#FF00BF" },
 ];
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -278,6 +498,12 @@ function Avatar({
   );
 }
 
+function getBrickColorByNumber(number: string) {
+  return BRICK_COLORS.find(
+    (color) => String(color.number) === number
+  ) || null;
+}
+
 function SelectPicker({
   value,
   onChange,
@@ -422,7 +648,16 @@ function TeamCard({
   onToggle: () => void;
 }) {
   return (
-    <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-5 transition duration-200 hover:-translate-y-1 hover:bg-white/[0.07]">
+    <div className="relative rounded-[1.75rem] border border-white/10 bg-white/5 p-5 transition duration-200 hover:-translate-y-1 hover:bg-white/[0.07]">
+      {team.brick_color_name && team.brick_color_hex ? (
+        <div className="absolute right-5 top-5 flex items-center gap-2 rounded-full border border-white/10 bg-[#081712] px-3 py-1.5 text-xs font-semibold text-white/85">
+          <span
+            className="h-3 w-3 rounded-full border border-white/20"
+            style={{ backgroundColor: team.brick_color_hex }}
+          />
+          <span>{team.brick_color_name}</span>
+        </div>
+      ) : null}
       <button
         type="button"
         onClick={onToggle}
@@ -466,6 +701,20 @@ function TeamCard({
           <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">
             Team Roster
           </p>
+
+          {team.brick_color_name && team.brick_color_hex ? (
+            <div className="mb-4 flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80">
+              <span
+                className="h-4 w-4 rounded-full border border-white/20"
+                style={{ backgroundColor: team.brick_color_hex }}
+              />
+              <span className="font-medium">Brick Color:</span>
+              <span>{team.brick_color_name}</span>
+              {team.brick_color_number ? (
+                <span className="text-white/50">#{team.brick_color_number}</span>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="space-y-3">
             <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
@@ -800,6 +1049,7 @@ export default function SAVLSitePage() {
     captain_name: "",
     captain_discord: "",
     captain_roblox_id: "",
+    brick_color_name: "",
   });
 
   const [registerConfirmations, setRegisterConfirmations] = useState({
@@ -818,6 +1068,7 @@ export default function SAVLSitePage() {
     captain_name: "",
     captain_discord: "",
     captain_roblox_id: "",
+    brick_color_name: "",
   });
 
   const [matchForm, setMatchForm] = useState({
@@ -1174,6 +1425,13 @@ export default function SAVLSitePage() {
     }));
   }, [approvedMediaMembers]);
 
+  const brickColorOptions = useMemo<SelectOption[]>(() => {
+    return BRICK_COLORS.map((color) => ({
+      label: `${color.name} (#${color.number})`,
+      value: String(color.number),
+    }));
+  }, []);
+
   function showNotice(text: string, isAdmin = false) {
     if (isAdmin) {
       setAdminNotice(text);
@@ -1300,6 +1558,7 @@ export default function SAVLSitePage() {
       captain_name: string;
       captain_discord: string;
       captain_roblox_id: string;
+      brick_color_name: string;
     },
     isAdmin = false,
   ) {
@@ -1316,6 +1575,13 @@ export default function SAVLSitePage() {
     const selectedCountry = getCountryByName(payload.country);
     if (!selectedCountry) {
       showNotice("Select a valid country.", isAdmin);
+      return false;
+    }
+
+    const selectedBrickColor = getBrickColorByNumber(payload.brick_color_name);
+
+    if (!selectedBrickColor) {
+      showNotice("Select a valid Brick Color.", isAdmin);
       return false;
     }
 
@@ -1351,6 +1617,10 @@ export default function SAVLSitePage() {
       captain_roblox_id: cleanRobloxReference,
       approved: isAdmin,
       approved_at: isAdmin ? new Date().toISOString() : null,
+
+      brick_color_name: selectedBrickColor.name,
+      brick_color_hex: selectedBrickColor.hex,
+      brick_color_number: selectedBrickColor.number,
     });
 
     if (error) {
@@ -1458,14 +1728,20 @@ export default function SAVLSitePage() {
       return;
     }
 
-    const { country, captain_name, captain_discord, captain_roblox_id } =
-      registerForm;
+    const {
+      country,
+      captain_name,
+      captain_discord,
+      captain_roblox_id,
+      brick_color_name,
+    } = registerForm;
 
     if (
       !country ||
       !captain_name.trim() ||
       !captain_discord.trim() ||
-      !captain_roblox_id.trim()
+      !captain_roblox_id.trim() ||
+      !brick_color_name
     ) {
       showNotice("Fill in all fields before submitting.");
       return;
@@ -1491,6 +1767,7 @@ export default function SAVLSitePage() {
         captain_name: "",
         captain_discord: "",
         captain_roblox_id: "",
+        brick_color_name: "",
       });
 
       setRegisterConfirmations({
@@ -1503,13 +1780,20 @@ export default function SAVLSitePage() {
   async function handleAdminAddTeam(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const { country, captain_name, captain_discord, captain_roblox_id } =
-      adminTeamForm;
+    const {
+      country,
+      captain_name,
+      captain_discord,
+      captain_roblox_id,
+      brick_color_name,
+    } = adminTeamForm;
+
     if (
       !country ||
       !captain_name.trim() ||
       !captain_discord.trim() ||
-      !captain_roblox_id.trim()
+      !captain_roblox_id.trim() ||
+      !brick_color_name
     ) {
       showNotice("Fill in all team fields.", true);
       return;
@@ -1522,6 +1806,7 @@ export default function SAVLSitePage() {
         captain_name: "",
         captain_discord: "",
         captain_roblox_id: "",
+        brick_color_name: "",
       });
     }
   }
@@ -1839,6 +2124,33 @@ export default function SAVLSitePage() {
         : "Team registrations are now closed.",
       true,
     );
+  }
+
+  async function handleUpdateTeamBrickColor(teamId: number, brickColorName: string) {
+    if (!supabase) return;
+
+    const selectedBrickColor = getBrickColorByNumber(brickColorName);
+    if (!selectedBrickColor) {
+      showNotice("Select a valid Brick Color.", true);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("teams")
+      .update({
+        brick_color_name: selectedBrickColor.name,
+        brick_color_hex: selectedBrickColor.hex,
+        brick_color_number: selectedBrickColor.number,
+      })
+      .eq("id", teamId);
+
+    if (error) {
+      showNotice(error.message, true);
+      return;
+    }
+
+    await reloadTeams();
+    showNotice("Brick Color updated successfully.", true);
   }
 
   return (
@@ -2387,6 +2699,20 @@ export default function SAVLSitePage() {
                     />
                   </div>
 
+                  <div className="md:col-span-2">
+                    <label className="mb-2 block text-sm font-medium text-white/70">
+                      Brick Color
+                    </label>
+                    <SelectPicker
+                      value={registerForm.brick_color_name}
+                      onChange={(value) =>
+                        setRegisterForm((prev) => ({ ...prev, brick_color_name: value }))
+                      }
+                      options={brickColorOptions}
+                      placeholder="Select a Brick Color"
+                    />
+                  </div>
+
                   <div>
                     <label className="mb-2 block text-sm font-medium text-white/70">
                       Captain Roblox Username
@@ -2835,6 +3161,23 @@ export default function SAVLSitePage() {
 
                       <div>
                         <label className="mb-2 block text-sm font-medium text-white/70">
+                          Brick Color
+                        </label>
+                        <SelectPicker
+                          value={adminTeamForm.brick_color_name}
+                          onChange={(value) =>
+                            setAdminTeamForm((prev) => ({
+                              ...prev,
+                              brick_color_name: value,
+                            }))
+                          }
+                          options={brickColorOptions}
+                          placeholder="Select a Brick Color"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
                           Captain Roblox Username
                         </label>
                         <input
@@ -3148,6 +3491,31 @@ export default function SAVLSitePage() {
                                           </div>
                                         </div>
                                       </div>
+                                    </div>
+
+                                    {team.brick_color_name && team.brick_color_hex ? (
+                                      <div className="mt-3 flex items-center gap-2 text-sm text-white/75">
+                                        <span
+                                          className="h-4 w-4 rounded-full border border-white/20"
+                                          style={{ backgroundColor: team.brick_color_hex }}
+                                        />
+                                        <span>{team.brick_color_name}</span>
+                                        {team.brick_color_number ? (
+                                          <span className="text-white/45">#{team.brick_color_number}</span>
+                                        ) : null}
+                                      </div>
+                                    ) : null}
+
+                                    <div className="mt-4">
+                                      <label className="mb-2 block text-sm font-medium text-white/70">
+                                        Brick Color
+                                      </label>
+                                      <SelectPicker
+                                        value={team.brick_color_name ?? ""}
+                                        onChange={(value) => handleUpdateTeamBrickColor(team.id, value)}
+                                        options={brickColorOptions}
+                                        placeholder="Select a Brick Color"
+                                      />
                                     </div>
 
                                     <div className="flex flex-wrap gap-2">
