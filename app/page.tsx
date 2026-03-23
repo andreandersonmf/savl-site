@@ -1425,12 +1425,40 @@ export default function SAVLSitePage() {
     }));
   }, [approvedMediaMembers]);
 
-  const brickColorOptions = useMemo<SelectOption[]>(() => {
-    return BRICK_COLORS.map((color) => ({
-      label: `${color.name} (#${color.number})`,
-      value: String(color.number),
-    }));
-  }, []);
+  const usedBrickNumbers = useMemo(() => {
+    return new Set(
+      teams
+        .map((team) => team.brick_color_number)
+        .filter((number): number is number => number !== null && number !== undefined)
+    );
+  }, [teams]);
+
+  const registerBrickColorOptions = useMemo<SelectOption[]>(() => {
+    return BRICK_COLORS
+      .filter((color) => !usedBrickNumbers.has(color.number))
+      .map((color) => ({
+        label: `${color.name} (#${color.number})`,
+        value: String(color.number),
+      }));
+  }, [usedBrickNumbers]);
+
+  function getAdminBrickColorOptions(teamId: number): SelectOption[] {
+    const currentTeam = teams.find((team) => team.id === teamId);
+
+    return BRICK_COLORS
+      .filter((color) => {
+        if (currentTeam?.brick_color_number === color.number) return true;
+        return !teams.some(
+          (team) =>
+            team.id !== teamId &&
+            team.brick_color_number === color.number
+        );
+      })
+      .map((color) => ({
+        label: `${color.name} (#${color.number})`,
+        value: String(color.number),
+      }));
+  }
 
   function showNotice(text: string, isAdmin = false) {
     if (isAdmin) {
@@ -1606,6 +1634,15 @@ export default function SAVLSitePage() {
 
     if (!cleanCaptain || !cleanDiscord || !cleanRobloxReference) {
       showNotice("Fill in all fields before submitting.", isAdmin);
+      return false;
+    }
+
+    if (
+      teams.some(
+        (team) => team.brick_color_number === selectedBrickColor.number
+      )
+    ) {
+      showNotice("This Brick Color is already being used by another team.", isAdmin);
       return false;
     }
 
@@ -2708,7 +2745,7 @@ export default function SAVLSitePage() {
                       onChange={(value) =>
                         setRegisterForm((prev) => ({ ...prev, brick_color_name: value }))
                       }
-                      options={brickColorOptions}
+                      options={registerBrickColorOptions}
                       placeholder="Select a Brick Color"
                     />
                   </div>
@@ -3171,7 +3208,7 @@ export default function SAVLSitePage() {
                               brick_color_name: value,
                             }))
                           }
-                          options={brickColorOptions}
+                          options={registerBrickColorOptions}
                           placeholder="Select a Brick Color"
                         />
                       </div>
@@ -3513,7 +3550,7 @@ export default function SAVLSitePage() {
                                       <SelectPicker
                                         value={team.brick_color_name ?? ""}
                                         onChange={(value) => handleUpdateTeamBrickColor(team.id, value)}
-                                        options={brickColorOptions}
+                                        options={getAdminBrickColorOptions(team.id)}
                                         placeholder="Select a Brick Color"
                                       />
                                     </div>
