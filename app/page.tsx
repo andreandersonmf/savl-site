@@ -676,18 +676,38 @@ function TeamCard({
 
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-lg font-bold">{team.country}</h3>
-            <div className="mt-2 flex items-center gap-3 text-sm text-white/70">
-              <Avatar
-                robloxUserId={team.captain_roblox_id}
-                name={team.captain_name}
-              />
-              <div className="min-w-0">
-                <p className="truncate">Captain {team.captain_name}</p>
-                <p className="truncate text-white/55">
-                  @{team.captain_discord}
-                </p>
-              </div>
-            </div>
+              {team.captain_name?.trim() &&
+              team.captain_discord?.trim() &&
+              String(team.captain_roblox_id || "").trim() ? (
+
+                <div className="flex items-center gap-3 text-sm text-white/70">
+                  <Avatar
+                    robloxUserId={team.captain_roblox_id}
+                    name={team.captain_name}
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate">Captain {team.captain_name}</p>
+                    <p className="truncate text-white/55">
+                      @{team.captain_discord}
+                    </p>
+                  </div>
+                </div>
+
+              ) : (
+
+                <div className="flex items-center gap-3 text-sm text-red-300">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-red-400/20 bg-red-400/10 text-xs font-bold">
+                    ?
+                  </div>
+                  <div>
+                    <p className="font-semibold">No captain assigned</p>
+                    <p className="text-xs text-red-200/70">
+                      This team needs a captain
+                    </p>
+                  </div>
+                </div>
+
+              )}
             <p className="mt-3 text-xs uppercase tracking-[0.18em] text-emerald-300">
               {expanded ? "Hide roster" : "View roster"} • {players.length + 1}{" "}
               members
@@ -717,19 +737,31 @@ function TeamCard({
           ) : null}
 
           <div className="space-y-3">
-            <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
-              <Avatar
-                robloxUserId={team.captain_roblox_id}
-                name={team.captain_name}
-              />
-              <div className="min-w-0">
-                <p className="font-semibold text-white">{team.captain_name}</p>
-                <p className="text-sm text-white/60">@{team.captain_discord}</p>
-              </div>
-              <span className="ml-auto rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
-                Captain
-              </span>
-            </div>
+            {team.captain_name?.trim() &&
+              team.captain_discord?.trim() &&
+              String(team.captain_roblox_id || "").trim() ? (
+
+                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+                  <Avatar
+                    robloxUserId={team.captain_roblox_id}
+                    name={team.captain_name}
+                  />
+                  <div className="min-w-0">
+                    <p className="font-semibold text-white">{team.captain_name}</p>
+                    <p className="text-sm text-white/60">@{team.captain_discord}</p>
+                  </div>
+                  <span className="ml-auto rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+                    Captain
+                  </span>
+                </div>
+
+              ) : (
+
+                <div className="rounded-2xl border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-300">
+                  No captain assigned.
+                </div>
+
+              )}
 
             {players.length === 0 ? (
               <p className="text-sm text-white/55">
@@ -1013,6 +1045,14 @@ function getStaffRoleLabel(role: StaffRole) {
   return role === "Referee" ? "Referee" : "Media";
 }
 
+function cleanDiscordUsername(value: string) {
+  return value.trim().replace(/^@/, "");
+}
+
+function isNumericId(value: string) {
+  return /^\d+$/.test(value.trim());
+}
+
 export default function SAVLSitePage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<MatchRow[]>([]);
@@ -1114,6 +1154,17 @@ export default function SAVLSitePage() {
     commitment_confirmed: false,
     rulebook_confirmed: false,
   });
+
+  const [captainForm, setCaptainForm] = useState({
+    team_id: "",
+    captain_name: "",
+    captain_discord: "",
+    captain_roblox_id: "",
+    old_captain_new_role: "Player" as TeamPlayerRole,
+  });
+
+  const [removingCaptain, setRemovingCaptain] = useState(false);
+  const [savingCaptainChange, setSavingCaptainChange] = useState(false);
 
   async function reloadTeams() {
     if (!supabase) return;
@@ -1861,6 +1912,178 @@ export default function SAVLSitePage() {
     showNotice("Team removed.", true);
   }
 
+  async function handleChangeCaptain(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!supabase) return;
+
+    const teamId = Number(captainForm.team_id);
+    const cleanCaptainName = captainForm.captain_name.trim();
+    const cleanCaptainDiscord = cleanDiscordUsername(captainForm.captain_discord);
+    const cleanCaptainRobloxId = captainForm.captain_roblox_id.trim();
+
+    if (!teamId || !cleanCaptainName || !cleanCaptainDiscord || !cleanCaptainRobloxId) {
+      showNotice("Fill in all captain fields.", true);
+      return;
+    }
+
+    if (!isNumericId(cleanCaptainRobloxId)) {
+      showNotice("Enter a valid Roblox User ID for the new captain.", true);
+      return;
+    }
+
+    const team = teams.find((item) => item.id === teamId);
+    if (!team) {
+      showNotice("Team not found.", true);
+      return;
+    }
+
+    const sameAsCurrentCaptain =
+      normalizeText(team.captain_name) === normalizeText(cleanCaptainName) &&
+      normalizeText(team.captain_discord) === normalizeText(cleanCaptainDiscord) &&
+      String(team.captain_roblox_id).trim() === cleanCaptainRobloxId;
+
+    if (sameAsCurrentCaptain) {
+      showNotice("This player is already the captain of this team.", true);
+      return;
+    }
+
+    const playerAlreadyInAnotherTeam = teamPlayers.find(
+      (player) =>
+        player.team_id !== teamId &&
+        (
+          normalizeText(player.discord_username) === normalizeText(cleanCaptainDiscord) ||
+          String(player.roblox_user_id).trim() === cleanCaptainRobloxId
+        )
+    );
+
+    if (playerAlreadyInAnotherTeam) {
+      showNotice("This player is already registered in another roster.", true);
+      return;
+    }
+
+    const captainAlreadyInAnotherTeam = teams.find(
+      (item) =>
+        item.id !== teamId &&
+        (
+          normalizeText(item.captain_discord) === normalizeText(cleanCaptainDiscord) ||
+          String(item.captain_roblox_id).trim() === cleanCaptainRobloxId
+        )
+    );
+
+    if (captainAlreadyInAnotherTeam) {
+      showNotice("This player is already registered as captain of another team.", true);
+      return;
+    }
+
+    setSavingCaptainChange(true);
+
+    const existingRosterPlayer = teamPlayers.find(
+      (player) =>
+        player.team_id === teamId &&
+        (
+          normalizeText(player.discord_username) === normalizeText(cleanCaptainDiscord) ||
+          String(player.roblox_user_id).trim() === cleanCaptainRobloxId
+        )
+    );
+
+    if (existingRosterPlayer) {
+      const { error: deleteNewCaptainFromRosterError } = await supabase
+        .from("team_players")
+        .delete()
+        .eq("id", existingRosterPlayer.id);
+
+      if (deleteNewCaptainFromRosterError) {
+        setSavingCaptainChange(false);
+        showNotice(deleteNewCaptainFromRosterError.message, true);
+        return;
+      }
+    }
+
+    const shouldDemoteOldCaptain =
+      team.captain_name.trim() &&
+      cleanDiscordUsername(team.captain_discord).trim() &&
+      String(team.captain_roblox_id).trim();
+
+    if (shouldDemoteOldCaptain) {
+      const { error: insertOldCaptainError } = await supabase
+        .from("team_players")
+        .insert({
+          team_id: team.id,
+          roblox_username: team.captain_name.trim(),
+          roblox_user_id: String(team.captain_roblox_id).trim(),
+          discord_username: cleanDiscordUsername(team.captain_discord),
+          role: captainForm.old_captain_new_role,
+        });
+
+      if (insertOldCaptainError) {
+        setSavingCaptainChange(false);
+        showNotice(insertOldCaptainError.message, true);
+        return;
+      }
+    }
+
+    const { error: updateTeamError } = await supabase
+      .from("teams")
+      .update({
+        captain_name: cleanCaptainName,
+        captain_discord: cleanCaptainDiscord,
+        captain_roblox_id: cleanCaptainRobloxId,
+      })
+      .eq("id", team.id);
+
+    setSavingCaptainChange(false);
+
+    if (updateTeamError) {
+      showNotice(updateTeamError.message, true);
+      return;
+    }
+
+    await reloadTeams();
+    await reloadTeamPlayers();
+
+    setCaptainForm({
+      team_id: "",
+      captain_name: "",
+      captain_discord: "",
+      captain_roblox_id: "",
+      old_captain_new_role: "Player",
+    });
+
+    showNotice("Captain changed successfully.", true);
+  }
+
+  async function handleRemoveCaptain(teamId: number) {
+    if (!supabase) return;
+
+    const team = teams.find((item) => item.id === teamId);
+    if (!team) {
+      showNotice("Team not found.", true);
+      return;
+    }
+
+    setRemovingCaptain(true);
+
+    const { error } = await supabase
+      .from("teams")
+      .update({
+        captain_name: "",
+        captain_discord: "",
+        captain_roblox_id: "",
+      })
+      .eq("id", teamId);
+
+    setRemovingCaptain(false);
+
+    if (error) {
+      showNotice(error.message, true);
+      return;
+    }
+
+    await reloadTeams();
+    showNotice("Captain removed successfully.", true);
+  }
+
   async function handleCreateMatch(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -2016,7 +2239,7 @@ export default function SAVLSitePage() {
     const cleanTeamId = Number(playerForm.team_id);
     const cleanUsername = playerForm.roblox_username.trim();
     const cleanUserId = playerForm.roblox_user_id.trim();
-    const cleanDiscord = playerForm.discord_username.trim().replace(/^@/, "");
+    const cleanDiscord = cleanDiscordUsername(playerForm.discord_username);
 
     if (
       !cleanTeamId ||
@@ -2029,8 +2252,45 @@ export default function SAVLSitePage() {
       return;
     }
 
-    if (!/^\d+$/.test(cleanUserId)) {
+    if (!isNumericId(cleanUserId)) {
       showNotice("Enter a valid Roblox User ID (numbers only).", true);
+      return;
+    }
+
+    const team = teams.find((item) => item.id === cleanTeamId);
+    if (!team) {
+      showNotice("Team not found.", true);
+      return;
+    }
+
+    const duplicateInRoster = teamPlayers.find(
+      (player) =>
+        normalizeText(player.discord_username) === normalizeText(cleanDiscord) ||
+        String(player.roblox_user_id).trim() === cleanUserId
+    );
+
+    if (duplicateInRoster) {
+      showNotice("This player is already registered in a roster.", true);
+      return;
+    }
+
+    const teamHasSameCaptain =
+      normalizeText(team.captain_discord) === normalizeText(cleanDiscord) ||
+      String(team.captain_roblox_id).trim() === cleanUserId;
+
+    if (teamHasSameCaptain) {
+      showNotice("This player is already the captain of this team.", true);
+      return;
+    }
+
+    const playerIsCaptainSomewhereElse = teams.find(
+      (item) =>
+        normalizeText(item.captain_discord) === normalizeText(cleanDiscord) ||
+        String(item.captain_roblox_id).trim() === cleanUserId
+    );
+
+    if (playerIsCaptainSomewhereElse) {
+      showNotice("This player is already registered as a captain.", true);
       return;
     }
 
@@ -3480,6 +3740,23 @@ export default function SAVLSitePage() {
                                       >
                                         Reject
                                       </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          openConfirmDialog({
+                                            title: "Remove Captain",
+                                            message: "Are you sure you want to remove the current captain from this team?",
+                                            confirmLabel: "Remove Captain",
+                                            onConfirm: async () => {
+                                              await handleRemoveCaptain(team.id);
+                                            },
+                                          })
+                                        }
+                                        className="rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-400/15"
+                                      >
+                                        Remove Captain
+                                      </button>
                                     </div>
                                   </div>
                                 </div>
@@ -3837,6 +4114,115 @@ export default function SAVLSitePage() {
                           </div>
                         </form>
 
+                        <div className="rounded-[1.5rem] border border-white/10 bg-[#0B1712] p-5">
+                          <h3 className="text-lg font-bold text-white">Change Team Captain</h3>
+                          <p className="mt-1 text-sm text-white/60">
+                            Replace the current captain without deleting the team.
+                          </p>
+
+                          <form onSubmit={handleChangeCaptain} className="mt-4 space-y-4">
+                            <div>
+                              <label className="mb-2 block text-sm font-medium text-white/80">
+                                Team
+                              </label>
+                              <SelectPicker
+                                value={captainForm.team_id}
+                                onChange={(value) =>
+                                  setCaptainForm((prev) => ({
+                                    ...prev,
+                                    team_id: value,
+                                  }))
+                                }
+                                options={teams.map((team) => ({
+                                  label: team.country,
+                                  value: String(team.id),
+                                  imageUrl: getFlagUrl(team.code),
+                                }))}
+                                placeholder="Select a team"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="mb-2 block text-sm font-medium text-white/80">
+                                New Captain Name
+                              </label>
+                              <input
+                                type="text"
+                                value={captainForm.captain_name}
+                                onChange={(event) =>
+                                  setCaptainForm((prev) => ({
+                                    ...prev,
+                                    captain_name: event.target.value,
+                                  }))
+                                }
+                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
+                                placeholder="Roblox username"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="mb-2 block text-sm font-medium text-white/80">
+                                New Captain Discord
+                              </label>
+                              <input
+                                type="text"
+                                value={captainForm.captain_discord}
+                                onChange={(event) =>
+                                  setCaptainForm((prev) => ({
+                                    ...prev,
+                                    captain_discord: event.target.value,
+                                  }))
+                                }
+                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
+                                placeholder="@discorduser"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="mb-2 block text-sm font-medium text-white/80">
+                                New Captain Roblox User ID
+                              </label>
+                              <input
+                                type="text"
+                                value={captainForm.captain_roblox_id}
+                                onChange={(event) =>
+                                  setCaptainForm((prev) => ({
+                                    ...prev,
+                                    captain_roblox_id: event.target.value,
+                                  }))
+                                }
+                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
+                                placeholder="Numbers only"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="mb-2 block text-sm font-medium text-white/80">
+                                Old Captain New Role
+                              </label>
+                              <SelectPicker
+                                value={captainForm.old_captain_new_role}
+                                onChange={(value) =>
+                                  setCaptainForm((prev) => ({
+                                    ...prev,
+                                    old_captain_new_role: value as TeamPlayerRole,
+                                  }))
+                                }
+                                options={roleOptions}
+                                placeholder="Select a role"
+                              />
+                            </div>
+
+                            <button
+                              type="submit"
+                              disabled={savingCaptainChange}
+                              className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-5 py-3 font-semibold text-emerald-300 transition hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {savingCaptainChange ? "Saving..." : "Change Captain"}
+                            </button>
+                          </form>
+                        </div>
+
                         <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
                           <p className="mb-4 text-xl font-bold">Edit team rosters</p>
 
@@ -3877,7 +4263,13 @@ export default function SAVLSitePage() {
                                         <div>
                                           <p className="font-semibold text-white">{team.country}</p>
                                           <p className="text-sm text-white/55">
-                                            {players.length + 1} roster members
+                                            {players.length + (
+                                              team.captain_name?.trim() &&
+                                              team.captain_discord?.trim() &&
+                                              String(team.captain_roblox_id || "").trim()
+                                                ? 1
+                                                : 0
+                                            )} roster members
                                           </p>
                                         </div>
                                       </div>
