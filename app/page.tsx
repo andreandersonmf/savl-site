@@ -10,6 +10,8 @@ type Country = {
   code: string;
 };
 
+type GroupLetter = "A" | "B" | "C" | "D";
+
 type Team = {
   id: number;
   country: string;
@@ -23,6 +25,7 @@ type Team = {
   brick_color_name?: string | null;
   brick_color_hex?: string | null;
   brick_color_number?: number | null;
+  group_letter?: GroupLetter | null;
 };
 
 type MatchStatus = "Scheduled" | "Live" | "Finished";
@@ -361,6 +364,20 @@ function getCountryByName(name: string) {
 
 function getFlagUrl(code: string) {
   return `https://flagcdn.com/w160/${code}.png`;
+}
+
+function getTeamGroup(teamCountry: string, teams: Team[]) {
+  const team = teams.find(
+    (item) => normalizeText(item.country) === normalizeText(teamCountry)
+  );
+  return team?.group_letter ?? null;
+}
+
+function getGroupBadgeClass(group: GroupLetter) {
+  if (group === "A") return "border-sky-400/20 bg-sky-400/10 text-sky-300";
+  if (group === "B") return "border-emerald-400/20 bg-emerald-400/10 text-emerald-300";
+  if (group === "C") return "border-amber-400/20 bg-amber-400/10 text-amber-300";
+  return "border-fuchsia-400/20 bg-fuchsia-400/10 text-fuchsia-300";
 }
 
 function formatDate(date: string) {
@@ -1075,6 +1092,14 @@ export default function SAVLSitePage() {
   const [expandedTeamId, setExpandedTeamId] = useState<number | null>(null);
   const [registrationsOpen, setRegistrationsOpen] = useState(true);
   const [togglingRegistrations, setTogglingRegistrations] = useState(false);
+  const [filterTeam, setFilterTeam] = useState("All");
+  const [filterGroup, setFilterGroup] = useState("All");
+  const [standingsView, setStandingsView] = useState<"Global" | GroupLetter>("Global");
+
+  const [teamGroupForm, setTeamGroupForm] = useState({
+    team_id: "",
+    group_letter: "",
+  });
 
   const [playerForm, setPlayerForm] = useState({
     team_id: "",
@@ -1335,6 +1360,30 @@ export default function SAVLSitePage() {
     }));
   }, [approvedTeams]);
 
+  const groupOptions: SelectOption[] = [
+    { label: "Group A", value: "A" },
+    { label: "Group B", value: "B" },
+    { label: "Group C", value: "C" },
+    { label: "Group D", value: "D" },
+  ];
+
+  const teamFilterOptions = useMemo<SelectOption[]>(() => {
+    return approvedTeams.map((team) => ({
+      label: team.country,
+      value: team.country,
+      imageUrl: getFlagUrl(team.code),
+    }));
+  }, [approvedTeams]);
+
+  const groupedTeams = useMemo(() => {
+    return {
+      A: approvedTeams.filter((team) => team.group_letter === "A"),
+      B: approvedTeams.filter((team) => team.group_letter === "B"),
+      C: approvedTeams.filter((team) => team.group_letter === "C"),
+      D: approvedTeams.filter((team) => team.group_letter === "D"),
+    };
+  }, [approvedTeams]);
+
   const availableStages = useMemo(() => {
     const stages = Array.from(
       new Set(
@@ -1352,9 +1401,23 @@ export default function SAVLSitePage() {
       const statusOk = filterStatus === "All" || match.status === filterStatus;
       const stageOk =
         filterStage === "All" || (match.stage?.trim() ?? "") === filterStage;
-      return statusOk && stageOk;
+
+      const teamOk =
+        filterTeam === "All" ||
+        normalizeText(match.home_country) === normalizeText(filterTeam) ||
+        normalizeText(match.away_country) === normalizeText(filterTeam);
+
+      const homeGroup = getTeamGroup(match.home_country, teams);
+      const awayGroup = getTeamGroup(match.away_country, teams);
+
+      const groupOk =
+        filterGroup === "All" ||
+        homeGroup === filterGroup ||
+        awayGroup === filterGroup;
+
+      return statusOk && stageOk && teamOk && groupOk;
     });
-  }, [filterStatus, filterStage, matches]);
+  }, [filterStatus, filterStage, filterTeam, filterGroup, matches, teams]);
 
   const standings = useMemo(() => {
     const map = new Map<
@@ -1440,6 +1503,99 @@ export default function SAVLSitePage() {
       })
       .map((team, index) => ({ ...team, position: index + 1 }));
   }, [approvedTeams, matches]);
+
+  const standingsFiltered = useMemo(() => {
+    const teamsBase =
+      standingsView === "Global"
+        ? approvedTeams
+        : approvedTeams.filter((team) => team.group_letter === standingsView);
+
+    const validCountries = new Set(teamsBase.map((team) => team.country));
+
+    const map = new Map<
+      string,
+      {
+        country: string;
+        code: string;
+        played: number;
+        wins: number;
+        losses: number;
+        setsWon: number;
+        setsLost: number;
+        setDiff: number;
+        points: number;
+      }
+    >();
+
+    for (const team of teamsBase) {
+      map.set(team.country, {
+        country: team.country,
+        code: team.code,
+        played: 0,
+        wins: 0,
+        losses: 0,
+        setsWon: 0,
+        setsLost: 0,
+        setDiff: 0,
+        points: 0,
+      });
+    }
+
+    for (const match of matches) {
+      if (match.status !== "Finished") continue;
+      if (!validCountries.has(match.home_country) || !validCountries.has(match.away_country)) continue;
+
+      const home = map.get(match.home_country);
+      const away = map.get(match.away_country);
+      if (!home || !away) continue;
+
+      const homeSets = match.home_score;
+      const awaySets = match.away_score;
+
+      home.played += 1;
+      away.played += 1;
+
+      home.setsWon += homeSets;
+      home.setsLost += awaySets;
+      away.setsWon += awaySets;
+      away.setsLost += homeSets;
+
+      home.setDiff = home.setsWon - home.setsLost;
+      away.setDiff = away.setsWon - away.setsLost;
+
+      if (homeSets > awaySets) {
+        home.wins += 1;
+        away.losses += 1;
+
+        if (homeSets === 3 && awaySets === 2) {
+          home.points += 2;
+          away.points += 1;
+        } else {
+          home.points += 3;
+        }
+      } else if (awaySets > homeSets) {
+        away.wins += 1;
+        home.losses += 1;
+
+        if (awaySets === 3 && homeSets === 2) {
+          away.points += 2;
+          home.points += 1;
+        } else {
+          away.points += 3;
+        }
+      }
+    }
+
+    return Array.from(map.values())
+      .sort((a, b) => {
+        if (b.points !== a.points) return b.points - a.points;
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        if (b.setDiff !== a.setDiff) return b.setDiff - a.setDiff;
+        if (b.setsWon !== a.setsWon) return b.setsWon - a.setsWon;
+        return a.country.localeCompare(b.country);
+      })
+      .map((team, index) => ({ ...team, position: index + 1 }));
+  }, [approvedTeams, matches, standingsView]);
 
   const approvedStaff = useMemo(() => {
     return staffApplications.filter((staff) => staff.approved);
@@ -2450,6 +2606,40 @@ export default function SAVLSitePage() {
     showNotice("Brick Color updated successfully.", true);
   }
 
+  async function handleAssignTeamGroup(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!supabase) return;
+
+    const teamId = Number(teamGroupForm.team_id);
+    const groupLetter = teamGroupForm.group_letter as GroupLetter;
+
+    if (!teamId || !groupLetter) {
+      showNotice("Select a team and a group.", true);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("teams")
+      .update({
+        group_letter: groupLetter,
+      })
+      .eq("id", teamId);
+
+    if (error) {
+      showNotice(error.message, true);
+      return;
+    }
+
+    await reloadTeams();
+
+    setTeamGroupForm({
+      team_id: "",
+      group_letter: "",
+    });
+
+    showNotice("Team group updated successfully.", true);
+  }
+
   return (
     <div className="min-h-screen bg-[#03110D] text-white selection:bg-emerald-400/20 selection:text-white">
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#03110D]/90 backdrop-blur">
@@ -2473,6 +2663,7 @@ export default function SAVLSitePage() {
             <AnimatedNavButton label="Home" targetId="home" />
             <AnimatedNavButton label="Teams" targetId="teams" />
             <AnimatedNavButton label="Schedule" targetId="schedule" />
+            <AnimatedNavButton label="Groups" targetId="groups" />
             <AnimatedNavButton label="Standings" targetId="standings" />
             <AnimatedNavButton label="Register" targetId="register" />
             <AnimatedNavButton label="Admin" targetId="admin" />
@@ -2668,6 +2859,36 @@ export default function SAVLSitePage() {
                 </h2>
               </div>
 
+              <div className="min-w-[240px]">
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                  Filter by team
+                </label>
+                <SelectPicker
+                  value={filterTeam}
+                  onChange={setFilterTeam}
+                  options={[
+                    { label: "All teams", value: "All" },
+                    ...teamFilterOptions,
+                  ]}
+                  placeholder="Select team"
+                />
+              </div>
+
+              <div className="min-w-[220px]">
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                  Filter by group
+                </label>
+                <SelectPicker
+                  value={filterGroup}
+                  onChange={setFilterGroup}
+                  options={[
+                    { label: "All groups", value: "All" },
+                    ...groupOptions,
+                  ]}
+                  placeholder="Select group"
+                />
+              </div>
+
               <div className="flex flex-col gap-4 md:flex-row md:items-end">
                 <div className="min-w-[220px]">
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
@@ -2709,6 +2930,8 @@ export default function SAVLSitePage() {
                   onClick={() => {
                     setFilterStatus("All");
                     setFilterStage("All");
+                    setFilterTeam("All");
+                    setFilterGroup("All");
                   }}
                   className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/10"
                 >
@@ -2849,24 +3072,105 @@ export default function SAVLSitePage() {
         </section>
 
         <section
-          id="standings"
+          id="groups"
           className="mx-auto max-w-7xl scroll-mt-28 px-6 py-16"
         >
           <div className="mb-8">
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
-              League Table
+              Group Stage
             </p>
-            <h2 className="mt-2 text-3xl font-black md:text-4xl">Standings</h2>
+            <h2 className="mt-2 text-3xl font-black md:text-4xl">Groups</h2>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            {(["A", "B", "C", "D"] as GroupLetter[]).map((group) => {
+              const teamsInGroup = groupedTeams[group];
+
+              return (
+                <div
+                  key={group}
+                  className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6"
+                >
+                  <div className="mb-5 flex items-center justify-between">
+                    <h3 className="text-xl font-black text-white">Group {group}</h3>
+                    <span
+                      className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${getGroupBadgeClass(group)}`}
+                    >
+                      {teamsInGroup.length} team{teamsInGroup.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
+
+                  {teamsInGroup.length === 0 ? (
+                    <p className="text-sm text-white/55">No teams assigned yet.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {teamsInGroup.map((team) => (
+                        <div
+                          key={team.id}
+                          className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3"
+                        >
+                          <img
+                            src={getFlagUrl(team.code)}
+                            alt={`${team.country} flag`}
+                            className="h-8 w-11 rounded-md object-cover"
+                          />
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-white">
+                              {team.country}
+                            </p>
+                            <p className="text-xs text-white/55">
+                              Captain: {team.captain_name || "Not set"}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+
+        <section
+          id="standings"
+          className="mx-auto max-w-7xl scroll-mt-28 px-6 py-16"
+        >
+          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
+                League Table
+              </p>
+              <h2 className="mt-2 text-3xl font-black md:text-4xl">Standings</h2>
+            </div>
+
+            <div className="min-w-[220px]">
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                Ranking view
+              </label>
+              <SelectPicker
+                value={standingsView}
+                onChange={(value) => setStandingsView(value as "Global" | GroupLetter)}
+                options={[
+                  { label: "Global", value: "Global" },
+                  { label: "Group A", value: "A" },
+                  { label: "Group B", value: "B" },
+                  { label: "Group C", value: "C" },
+                  { label: "Group D", value: "D" },
+                ]}
+                placeholder="Select ranking"
+              />
+            </div>
           </div>
 
           <div className="space-y-4 md:hidden">
-            {standings.length === 0 ? (
+            {standingsFiltered.length === 0 ? (
               <div className="rounded-[1.5rem] border border-white/10 bg-[#0B1712] px-6 py-8 text-white/60">
                 Standings will appear after teams register and matches are
                 finished.
               </div>
             ) : (
-              standings.map((team) => (
+              standingsFiltered.map((team) => (
                 <StandingsCard key={team.country} team={team} />
               ))
             )}
@@ -2885,12 +3189,12 @@ export default function SAVLSitePage() {
             <span>PTS</span>
           </div>
 
-          {standings.length === 0 ? (
+          {standingsFiltered.length === 0 ? (
             <div className="px-6 py-8 text-white/60">
               Standings will appear after teams register and matches are finished.
             </div>
           ) : (
-            standings.map((team) => (
+            standingsFiltered.map((team) => (
               <div
                 key={team.country}
                 className="grid grid-cols-[0.5fr_2fr_0.8fr_0.8fr_0.8fr_0.9fr_0.9fr_0.9fr_0.9fr] items-center border-b border-white/5 px-6 py-5 text-sm last:border-none"
@@ -3529,6 +3833,63 @@ export default function SAVLSitePage() {
                         className="rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5"
                       >
                         Add Team
+                      </button>
+                    </div>
+                  </form>
+
+                  <form
+                    onSubmit={handleAssignTeamGroup}
+                    className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6"
+                  >
+                    <p className="text-xl font-bold">Assign team to group</p>
+                    <p className="mt-2 text-sm text-white/60">
+                      Add an approved team to Group A, B, C or D.
+                    </p>
+
+                    <div className="mt-5 grid gap-4">
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Approved team
+                        </label>
+                        <SelectPicker
+                          value={teamGroupForm.team_id}
+                          onChange={(value) =>
+                            setTeamGroupForm((prev) => ({
+                              ...prev,
+                              team_id: value,
+                            }))
+                          }
+                          options={approvedTeams.map((team) => ({
+                            label: `${team.country}${team.group_letter ? ` (Group ${team.group_letter})` : ""}`,
+                            value: String(team.id),
+                            imageUrl: getFlagUrl(team.code),
+                          }))}
+                          placeholder="Select a team"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Group
+                        </label>
+                        <SelectPicker
+                          value={teamGroupForm.group_letter}
+                          onChange={(value) =>
+                            setTeamGroupForm((prev) => ({
+                              ...prev,
+                              group_letter: value,
+                            }))
+                          }
+                          options={groupOptions}
+                          placeholder="Select group"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5"
+                      >
+                        Save Group
                       </button>
                     </div>
                   </form>
