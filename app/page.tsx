@@ -44,6 +44,17 @@ type MatchRow = {
   referee_id: number | null;
   media_id: number | null;
   created_at: string;
+
+  set1_home: number | null;
+  set1_away: number | null;
+  set2_home: number | null;
+  set2_away: number | null;
+  set3_home: number | null;
+  set3_away: number | null;
+  set4_home: number | null;
+  set4_away: number | null;
+  set5_home: number | null;
+  set5_away: number | null;
 };
 
 type SelectOption = {
@@ -62,6 +73,17 @@ type MatchDraft = {
   away_score: number;
   referee_id: number | null;
   media_id: number | null;
+
+  set1_home: number | null;
+  set1_away: number | null;
+  set2_home: number | null;
+  set2_away: number | null;
+  set3_home: number | null;
+  set3_away: number | null;
+  set4_home: number | null;
+  set4_away: number | null;
+  set5_home: number | null;
+  set5_away: number | null;
 };
 
 type TeamPlayerRole = "Vice Captain" | "Player";
@@ -1070,6 +1092,135 @@ function isNumericId(value: string) {
   return /^\d+$/.test(value.trim());
 }
 
+function toNullableNumber(value: string | number | null | undefined) {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") return Number.isNaN(value) ? null : value;
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const parsed = Number(trimmed);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function getMatchSets(source: {
+  set1_home?: number | null;
+  set1_away?: number | null;
+  set2_home?: number | null;
+  set2_away?: number | null;
+  set3_home?: number | null;
+  set3_away?: number | null;
+  set4_home?: number | null;
+  set4_away?: number | null;
+  set5_home?: number | null;
+  set5_away?: number | null;
+}) {
+  return [
+    { home: source.set1_home ?? null, away: source.set1_away ?? null },
+    { home: source.set2_home ?? null, away: source.set2_away ?? null },
+    { home: source.set3_home ?? null, away: source.set3_away ?? null },
+    { home: source.set4_home ?? null, away: source.set4_away ?? null },
+    { home: source.set5_home ?? null, away: source.set5_away ?? null },
+  ];
+}
+
+function calculateSetWins(source: {
+  set1_home?: number | null;
+  set1_away?: number | null;
+  set2_home?: number | null;
+  set2_away?: number | null;
+  set3_home?: number | null;
+  set3_away?: number | null;
+  set4_home?: number | null;
+  set4_away?: number | null;
+  set5_home?: number | null;
+  set5_away?: number | null;
+}) {
+  const sets = getMatchSets(source);
+
+  let homeScore = 0;
+  let awayScore = 0;
+
+  for (const set of sets) {
+    if (set.home === null || set.away === null) continue;
+    if (set.home === set.away) continue;
+
+    if (set.home > set.away) {
+      homeScore += 1;
+    } else {
+      awayScore += 1;
+    }
+  }
+
+  return { homeScore, awayScore };
+}
+
+function calculatePointsTotals(source: {
+  set1_home?: number | null;
+  set1_away?: number | null;
+  set2_home?: number | null;
+  set2_away?: number | null;
+  set3_home?: number | null;
+  set3_away?: number | null;
+  set4_home?: number | null;
+  set4_away?: number | null;
+  set5_home?: number | null;
+  set5_away?: number | null;
+}) {
+  const sets = getMatchSets(source);
+
+  let homePoints = 0;
+  let awayPoints = 0;
+
+  for (const set of sets) {
+    if (set.home === null || set.away === null) continue;
+
+    homePoints += set.home;
+    awayPoints += set.away;
+  }
+
+  return {
+    homePoints,
+    awayPoints,
+    pointsDiff: homePoints - awayPoints,
+  };
+}
+
+function getWinnerCountryFromSets(
+  source: {
+    set1_home?: number | null;
+    set1_away?: number | null;
+    set2_home?: number | null;
+    set2_away?: number | null;
+    set3_home?: number | null;
+    set3_away?: number | null;
+    set4_home?: number | null;
+    set4_away?: number | null;
+    set5_home?: number | null;
+    set5_away?: number | null;
+  },
+  homeCountry: string,
+  awayCountry: string,
+  status: MatchStatus,
+) {
+  if (status !== "Finished") return null;
+
+  const { homeScore, awayScore } = calculateSetWins(source);
+
+  if (homeScore > awayScore) return homeCountry;
+  if (awayScore > homeScore) return awayCountry;
+  return null;
+}
+
+function formatSetScores(match: MatchRow) {
+  const sets = getMatchSets(match);
+
+  return sets
+    .filter((set) => set.home !== null && set.away !== null)
+    .map((set) => `${set.home}-${set.away}`)
+    .join(", ");
+}
+
 export default function SAVLSitePage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<MatchRow[]>([]);
@@ -1143,8 +1294,17 @@ export default function SAVLSitePage() {
     match_date: "",
     match_time: "",
     status: "Scheduled" as MatchStatus,
-    home_score: "0",
-    away_score: "0",
+
+    set1_home: "",
+    set1_away: "",
+    set2_home: "",
+    set2_away: "",
+    set3_home: "",
+    set3_away: "",
+    set4_home: "",
+    set4_away: "",
+    set5_home: "",
+    set5_away: "",
   });
 
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -1275,6 +1435,17 @@ export default function SAVLSitePage() {
               away_score: match.away_score,
               referee_id: match.referee_id ?? null,
               media_id: match.media_id ?? null,
+
+              set1_home: match.set1_home ?? null,
+              set1_away: match.set1_away ?? null,
+              set2_home: match.set2_home ?? null,
+              set2_away: match.set2_away ?? null,
+              set3_home: match.set3_home ?? null,
+              set3_away: match.set3_away ?? null,
+              set4_home: match.set4_home ?? null,
+              set4_away: match.set4_away ?? null,
+              set5_home: match.set5_home ?? null,
+              set5_away: match.set5_away ?? null,
             }
           ]),
         ),
@@ -1691,6 +1862,18 @@ export default function SAVLSitePage() {
         ...patch,
       },
     }));
+  }
+
+  function updateMatchDraftNumber(
+    matchId: number,
+    field: keyof MatchDraft,
+    value: string,
+  ) {
+    const trimmed = value.trim();
+
+    updateMatchDraft(matchId, {
+      [field]: trimmed === "" ? null : Number(trimmed),
+    } as Partial<MatchDraft>);
   }
 
   function getPlayersByTeam(teamId: number) {
@@ -2264,16 +2447,27 @@ export default function SAVLSitePage() {
       return;
     }
 
-    const homeScore = Number(matchForm.home_score);
-    const awayScore = Number(matchForm.away_score);
-    const winnerCountry =
-      matchForm.status === "Finished"
-        ? homeScore > awayScore
-          ? matchForm.home_country
-          : awayScore > homeScore
-            ? matchForm.away_country
-            : null
-        : null;
+    const setsPayload = {
+      set1_home: toNullableNumber(matchForm.set1_home),
+      set1_away: toNullableNumber(matchForm.set1_away),
+      set2_home: toNullableNumber(matchForm.set2_home),
+      set2_away: toNullableNumber(matchForm.set2_away),
+      set3_home: toNullableNumber(matchForm.set3_home),
+      set3_away: toNullableNumber(matchForm.set3_away),
+      set4_home: toNullableNumber(matchForm.set4_home),
+      set4_away: toNullableNumber(matchForm.set4_away),
+      set5_home: toNullableNumber(matchForm.set5_home),
+      set5_away: toNullableNumber(matchForm.set5_away),
+    };
+
+    const { homeScore, awayScore } = calculateSetWins(setsPayload);
+
+    const winnerCountry = getWinnerCountryFromSets(
+      setsPayload,
+      matchForm.home_country,
+      matchForm.away_country,
+      matchForm.status,
+    );
 
     const { error } = await supabase.from("matches").insert({
       home_country: matchForm.home_country,
@@ -2287,6 +2481,8 @@ export default function SAVLSitePage() {
       winner_country: winnerCountry,
       referee_id: null,
       media_id: null,
+
+      ...setsPayload,
     });
 
     if (error) {
@@ -2295,6 +2491,7 @@ export default function SAVLSitePage() {
     }
 
     await reloadMatches();
+
     setMatchForm({
       home_country: "",
       away_country: "",
@@ -2302,9 +2499,19 @@ export default function SAVLSitePage() {
       match_date: "",
       match_time: "",
       status: "Scheduled",
-      home_score: "0",
-      away_score: "0",
+
+      set1_home: "",
+      set1_away: "",
+      set2_home: "",
+      set2_away: "",
+      set3_home: "",
+      set3_away: "",
+      set4_home: "",
+      set4_away: "",
+      set5_home: "",
+      set5_away: "",
     });
+
     showNotice("Match created successfully.", true);
   }
 
@@ -2315,14 +2522,14 @@ export default function SAVLSitePage() {
     const draft = matchDrafts[matchId];
     if (!current || !draft) return;
 
-    const winnerCountry =
-      draft.status === "Finished"
-        ? draft.home_score > draft.away_score
-          ? current.home_country
-          : draft.away_score > draft.home_score
-            ? current.away_country
-            : null
-        : null;
+    const { homeScore, awayScore } = calculateSetWins(draft);
+
+    const winnerCountry = getWinnerCountryFromSets(
+      draft,
+      current.home_country,
+      current.away_country,
+      draft.status,
+    );
 
     const { error } = await supabase
       .from("matches")
@@ -2331,11 +2538,22 @@ export default function SAVLSitePage() {
         stage: draft.stage,
         match_date: draft.match_date,
         match_time: draft.match_time,
-        home_score: draft.home_score,
-        away_score: draft.away_score,
+        home_score: homeScore,
+        away_score: awayScore,
         winner_country: winnerCountry,
         referee_id: draft.referee_id,
         media_id: draft.media_id,
+
+        set1_home: draft.set1_home,
+        set1_away: draft.set1_away,
+        set2_home: draft.set2_home,
+        set2_away: draft.set2_away,
+        set3_home: draft.set3_home,
+        set3_away: draft.set3_away,
+        set4_home: draft.set4_home,
+        set4_away: draft.set4_away,
+        set5_home: draft.set5_home,
+        set5_away: draft.set5_away,
       })
       .eq("id", matchId);
 
@@ -3991,34 +4209,54 @@ export default function SAVLSitePage() {
                         />
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <div>
-                          <label className="mb-2 block text-sm font-medium text-white/70">
-                            Home Score
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            name="home_score"
-                            value={matchForm.home_score}
-                            onChange={handleMatchFormChange}
-                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                          />
+                      <div className="md:col-span-2">
+                        <label className="mb-3 block text-sm font-medium text-white/70">
+                          Set Scores
+                        </label>
+
+                        <div className="grid gap-3">
+                          {[1, 2, 3, 4, 5].map((setNumber) => (
+                            <div key={setNumber} className="grid grid-cols-[90px_1fr_1fr] gap-3 items-end">
+                              <p className="text-sm font-semibold text-white/70">Set {setNumber}</p>
+
+                              <div>
+                                <label className="mb-2 block text-xs font-medium text-white/50">
+                                  Home
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  name={`set${setNumber}_home`}
+                                  value={matchForm[`set${setNumber}_home` as keyof typeof matchForm] as string}
+                                  onChange={handleMatchFormChange}
+                                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                                  placeholder="25"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="mb-2 block text-xs font-medium text-white/50">
+                                  Away
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  name={`set${setNumber}_away`}
+                                  value={matchForm[`set${setNumber}_away` as keyof typeof matchForm] as string}
+                                  onChange={handleMatchFormChange}
+                                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                                  placeholder="22"
+                                />
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                        <div>
-                          <label className="mb-2 block text-sm font-medium text-white/70">
-                            Away Score
-                          </label>
-                          <input
-                            type="number"
-                            min="0"
-                            name="away_score"
-                            value={matchForm.away_score}
-                            onChange={handleMatchFormChange}
-                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                          />
-                        </div>
+
+                        <p className="mt-3 text-xs text-white/45">
+                          The set result in matches and standings will be calculated automatically from these values.
+                        </p>
                       </div>
+
                       <div className="md:col-span-2">
                         <button
                           type="submit"
@@ -5004,6 +5242,67 @@ export default function SAVLSitePage() {
                                     </div>
                                   </div>
                                 ) : null}
+
+                                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                                  <p className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                                    Set Results
+                                  </p>
+
+                                  <div className="grid gap-4 md:grid-cols-5">
+                                    {[
+                                      { label: "Set 1", homeField: "set1_home_points", awayField: "set1_away_points" },
+                                      { label: "Set 2", homeField: "set2_home_points", awayField: "set2_away_points" },
+                                      { label: "Set 3", homeField: "set3_home_points", awayField: "set3_away_points" },
+                                      { label: "Set 4", homeField: "set4_home_points", awayField: "set4_away_points" },
+                                      { label: "Set 5", homeField: "set5_home_points", awayField: "set5_away_points" },
+                                    ].map((setItem) => (
+                                      <div
+                                        key={setItem.label}
+                                        className="rounded-2xl border border-white/10 bg-[#081712] p-3"
+                                      >
+                                        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/50">
+                                          {setItem.label}
+                                        </p>
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            placeholder="Home"
+                                            value={
+                                              matchDrafts[match.id]?.[setItem.homeField as keyof MatchDraft] ?? ""
+                                            }
+                                            onChange={(e) =>
+                                              updateMatchDraftNumber(
+                                                match.id,
+                                                setItem.homeField as keyof MatchDraft,
+                                                e.target.value,
+                                              )
+                                            }
+                                            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                                          />
+
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            placeholder="Away"
+                                            value={
+                                              matchDrafts[match.id]?.[setItem.awayField as keyof MatchDraft] ?? ""
+                                            }
+                                            onChange={(e) =>
+                                              updateMatchDraftNumber(
+                                                match.id,
+                                                setItem.awayField as keyof MatchDraft,
+                                                e.target.value,
+                                              )
+                                            }
+                                            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                                          />
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
 
                                 <div className="flex flex-wrap gap-3">
                                   <button
