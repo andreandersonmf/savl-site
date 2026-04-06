@@ -5293,18 +5293,25 @@ const standings = useMemo<StandingRow[]>(() => {
                                   </p>
                                   <p className="mt-3 text-xs text-white/55">
                                     Set scores preview: {formatSetScores({
-                                      set1_home: toNullableNumber(matchForm.set1_home),
-                                      set1_away: toNullableNumber(matchForm.set1_away),
-                                      set2_home: toNullableNumber(matchForm.set2_home),
-                                      set2_away: toNullableNumber(matchForm.set2_away),
-                                      set3_home: toNullableNumber(matchForm.set3_home),
-                                      set3_away: toNullableNumber(matchForm.set3_away),
-                                      set4_home: toNullableNumber(matchForm.set4_home),
-                                      set4_away: toNullableNumber(matchForm.set4_away),
-                                      set5_home: toNullableNumber(matchForm.set5_home),
-                                      set5_away: toNullableNumber(matchForm.set5_away),
+                                      set1_home: matchDrafts[match.id]?.set1_home ?? null,
+                                      set1_away: matchDrafts[match.id]?.set1_away ?? null,
+                                      set2_home: matchDrafts[match.id]?.set2_home ?? null,
+                                      set2_away: matchDrafts[match.id]?.set2_away ?? null,
+                                      set3_home: matchDrafts[match.id]?.set3_home ?? null,
+                                      set3_away: matchDrafts[match.id]?.set3_away ?? null,
+                                      set4_home: matchDrafts[match.id]?.set4_home ?? null,
+                                      set4_away: matchDrafts[match.id]?.set4_away ?? null,
+                                      set5_home: matchDrafts[match.id]?.set5_home ?? null,
+                                      set5_away: matchDrafts[match.id]?.set5_away ?? null,
                                     }) || "-"}
                                   </p>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => saveMatchDraft(match.id)}
+                                  >
+                                    Save Match
+                                  </button>
 
                                   <div className="grid gap-4 md:grid-cols-5">
                                     {[
