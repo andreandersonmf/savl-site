@@ -1032,18 +1032,7 @@ function getMatchResultStyles(match: MatchRow) {
 function StandingsCard({
   team,
 }: {
-  team: {
-    country: string;
-    code: string;
-    played: number;
-    wins: number;
-    losses: number;
-    setsWon: number;
-    setsLost: number;
-    setDiff: number;
-    points: number;
-    position: number;
-  };
+  team: StandingRow;
 }) {
   return (
     <div className="rounded-[1.5rem] border border-white/10 bg-[#0B1712] p-5 md:hidden">
@@ -3442,7 +3431,7 @@ const standings = useMemo<StandingRow[]>(() => {
           </div>
 
         <div className="hidden overflow-hidden rounded-[2rem] border border-white/10 bg-[#0B1712] md:block">
-          <div className="grid grid-cols-[0.5fr_2fr_0.8fr_0.8fr_0.8fr_0.9fr_0.9fr_0.9fr_0.9fr] border-b border-white/10 px-6 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/50">
+          <div className="grid grid-cols-[0.5fr_2fr_0.8fr_0.8fr_0.8fr_0.9fr_0.9fr_0.9fr_0.9fr_0.9fr] border-b border-white/10 px-6 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/50">
             <span>#</span>
             <span>Team</span>
             <span>P</span>
@@ -5319,11 +5308,11 @@ const standings = useMemo<StandingRow[]>(() => {
 
                                   <div className="grid gap-4 md:grid-cols-5">
                                     {[
-                                      { label: "Set 1", homeField: "set1_home_points", awayField: "set1_away_points" },
-                                      { label: "Set 2", homeField: "set2_home_points", awayField: "set2_away_points" },
-                                      { label: "Set 3", homeField: "set3_home_points", awayField: "set3_away_points" },
-                                      { label: "Set 4", homeField: "set4_home_points", awayField: "set4_away_points" },
-                                      { label: "Set 5", homeField: "set5_home_points", awayField: "set5_away_points" },
+                                      { label: "Set 1", homeField: "set1_home", awayField: "set1_away" },
+                                      { label: "Set 2", homeField: "set2_home", awayField: "set2_away" },
+                                      { label: "Set 3", homeField: "set3_home", awayField: "set3_away" },
+                                      { label: "Set 4", homeField: "set4_home", awayField: "set4_away" },
+                                      { label: "Set 5", homeField: "set5_home", awayField: "set5_away" },
                                     ].map((setItem) => (
                                       <div
                                         key={setItem.label}
@@ -5338,9 +5327,7 @@ const standings = useMemo<StandingRow[]>(() => {
                                             type="number"
                                             min="0"
                                             placeholder="Home"
-                                            value={
-                                              matchDrafts[match.id]?.[setItem.homeField as keyof MatchDraft] ?? ""
-                                            }
+                                            value={matchDrafts[match.id]?.[setItem.homeField as keyof MatchDraft] ?? ""}
                                             onChange={(e) =>
                                               updateMatchDraftNumber(
                                                 match.id,
@@ -5348,16 +5335,14 @@ const standings = useMemo<StandingRow[]>(() => {
                                                 e.target.value,
                                               )
                                             }
-                                            className="h-14 w-full appearance-none rounded-2xl border border-white/10 bg-[#0B1712] px-4 text-center text-lg font-semibold text-white outline-none transition duration-200 [appearance:textfield] hover:border-emerald-400/30 focus:border-emerald-400/50 focus:ring-2 focus:ring-emerald-400/20 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                            className="h-14 w-full rounded-2xl border border-white/10 bg-white/5 px-3 text-center text-white placeholder:text-white/25 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
                                           />
 
                                           <input
                                             type="number"
                                             min="0"
                                             placeholder="Away"
-                                            value={
-                                              matchDrafts[match.id]?.[setItem.awayField as keyof MatchDraft] ?? ""
-                                            }
+                                            value={matchDrafts[match.id]?.[setItem.awayField as keyof MatchDraft] ?? ""}
                                             onChange={(e) =>
                                               updateMatchDraftNumber(
                                                 match.id,
@@ -5365,7 +5350,7 @@ const standings = useMemo<StandingRow[]>(() => {
                                                 e.target.value,
                                               )
                                             }
-                                            className="h-14 w-full appearance-none rounded-2xl border border-white/10 bg-[#0B1712] px-4 text-center text-lg font-semibold text-white outline-none transition duration-200 [appearance:textfield] hover:border-emerald-400/30 focus:border-emerald-400/50 focus:ring-2 focus:ring-emerald-400/20 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                            className="h-14 w-full rounded-2xl border border-white/10 bg-white/5 px-3 text-center text-white placeholder:text-white/25 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
                                           />
                                         </div>
                                       </div>
