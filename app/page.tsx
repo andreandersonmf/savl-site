@@ -57,6 +57,22 @@ type MatchRow = {
   set5_away: number | null;
 };
 
+type StandingRow = {
+  country: string;
+  code: string;
+  played: number;
+  wins: number;
+  losses: number;
+  setsWon: number;
+  setsLost: number;
+  setDiff: number;
+  pointsFor: number;
+  pointsAgainst: number;
+  ptsDiff: number;
+  points: number;
+  position: number;
+};
+
 type SelectOption = {
   label: string;
   value: string;
@@ -118,6 +134,8 @@ type BrickColor = {
   number: number;
   hex: string;
 };
+
+
 
 const COUNTRIES: Country[] = [
   { name: "Argentina", code: "ar" },
@@ -1050,7 +1068,7 @@ function StandingsCard({
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-3 text-sm text-white/75">
+      <div className="mt-4 grid grid-cols-4 gap-3 text-sm text-white/75">
         <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3 text-center">
           <p className="text-xs uppercase tracking-[0.18em] text-white/45">
             W-L
@@ -1073,6 +1091,14 @@ function StandingsCard({
           </p>
           <p className="mt-1 font-semibold text-white">
             {team.setDiff > 0 ? `+${team.setDiff}` : team.setDiff}
+          </p>
+        </div>
+        <div className="rounded-xl border border-white/8 bg-white/[0.03] p-3 text-center">
+          <p className="text-xs uppercase tracking-[0.18em] text-white/45">
+            PD
+          </p>
+          <p className="mt-1 font-semibold text-white">
+            {team.ptsDiff > 0 ? `+${team.ptsDiff}` : team.ptsDiff}
           </p>
         </div>
       </div>
@@ -1212,8 +1238,19 @@ function getWinnerCountryFromSets(
   return null;
 }
 
-function formatSetScores(match: MatchRow) {
-  const sets = getMatchSets(match);
+function formatSetScores(source: {
+  set1_home?: number | null;
+  set1_away?: number | null;
+  set2_home?: number | null;
+  set2_away?: number | null;
+  set3_home?: number | null;
+  set3_away?: number | null;
+  set4_home?: number | null;
+  set4_away?: number | null;
+  set5_home?: number | null;
+  set5_away?: number | null;
+}) {
+  const sets = getMatchSets(source);
 
   return sets
     .filter((set) => set.home !== null && set.away !== null)
@@ -1590,92 +1627,94 @@ export default function SAVLSitePage() {
     });
   }, [filterStatus, filterStage, filterTeam, filterGroup, matches, teams]);
 
-  const standings = useMemo(() => {
-    const map = new Map<
-      string,
-      {
-        country: string;
-        code: string;
-        played: number;
-        wins: number;
-        losses: number;
-        setsWon: number;
-        setsLost: number;
-        setDiff: number;
-        points: number;
+
+const standings = useMemo<StandingRow[]>(() => {
+  const map = new Map<string, Omit<StandingRow, "position">>();
+
+  for (const team of approvedTeams) {
+    map.set(team.country, {
+      country: team.country,
+      code: team.code,
+      played: 0,
+      wins: 0,
+      losses: 0,
+      setsWon: 0,
+      setsLost: 0,
+      setDiff: 0,
+      pointsFor: 0,
+      pointsAgainst: 0,
+      ptsDiff: 0,
+      points: 0,
+    });
+  }
+
+  for (const match of matches) {
+    if (match.status !== "Finished") continue;
+
+    const home = map.get(match.home_country);
+    const away = map.get(match.away_country);
+    if (!home || !away) continue;
+
+    const homeSets = match.home_score;
+    const awaySets = match.away_score;
+
+    const { homePoints, awayPoints } = calculatePointsTotals(match);
+
+    home.played += 1;
+    away.played += 1;
+
+    home.setsWon += homeSets;
+    home.setsLost += awaySets;
+    away.setsWon += awaySets;
+    away.setsLost += homeSets;
+
+    home.pointsFor += homePoints;
+    home.pointsAgainst += awayPoints;
+    away.pointsFor += awayPoints;
+    away.pointsAgainst += homePoints;
+
+    home.setDiff = home.setsWon - home.setsLost;
+    away.setDiff = away.setsWon - away.setsLost;
+
+    home.ptsDiff = home.pointsFor - home.pointsAgainst;
+    away.ptsDiff = away.pointsFor - away.pointsAgainst;
+
+    if (homeSets > awaySets) {
+      home.wins += 1;
+      away.losses += 1;
+
+      if (homeSets === 3 && awaySets === 2) {
+        home.points += 2;
+        away.points += 1;
+      } else {
+        home.points += 3;
       }
-    >();
+    } else if (awaySets > homeSets) {
+      away.wins += 1;
+      home.losses += 1;
 
-    for (const team of approvedTeams) {
-      map.set(team.country, {
-        country: team.country,
-        code: team.code,
-        played: 0,
-        wins: 0,
-        losses: 0,
-        setsWon: 0,
-        setsLost: 0,
-        setDiff: 0,
-        points: 0,
-      });
-    }
-
-    for (const match of matches) {
-      if (match.status !== "Finished") continue;
-
-      const home = map.get(match.home_country);
-      const away = map.get(match.away_country);
-      if (!home || !away) continue;
-
-      const homeSets = match.home_score;
-      const awaySets = match.away_score;
-
-      home.played += 1;
-      away.played += 1;
-
-      home.setsWon += homeSets;
-      home.setsLost += awaySets;
-      away.setsWon += awaySets;
-      away.setsLost += homeSets;
-
-      home.setDiff = home.setsWon - home.setsLost;
-      away.setDiff = away.setsWon - away.setsLost;
-
-      if (homeSets > awaySets) {
-        home.wins += 1;
-        away.losses += 1;
-
-        if (homeSets === 3 && awaySets === 2) {
-          home.points += 2;
-          away.points += 1;
-        } else {
-          home.points += 3;
-        }
-      } else if (awaySets > homeSets) {
-        away.wins += 1;
-        home.losses += 1;
-
-        if (awaySets === 3 && homeSets === 2) {
-          away.points += 2;
-          home.points += 1;
-        } else {
-          away.points += 3;
-        }
+      if (awaySets === 3 && homeSets === 2) {
+        away.points += 2;
+        home.points += 1;
+      } else {
+        away.points += 3;
       }
     }
+  }
 
-    return Array.from(map.values())
-      .sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points;
-        if (b.wins !== a.wins) return b.wins - a.wins;
-        if (b.setDiff !== a.setDiff) return b.setDiff - a.setDiff;
-        if (b.setsWon !== a.setsWon) return b.setsWon - a.setsWon;
-        return a.country.localeCompare(b.country);
-      })
-      .map((team, index) => ({ ...team, position: index + 1 }));
-  }, [approvedTeams, matches]);
+  return Array.from(map.values())
+    .sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      if (b.setDiff !== a.setDiff) return b.setDiff - a.setDiff;
+      if (b.ptsDiff !== a.ptsDiff) return b.ptsDiff - a.ptsDiff;
+      if (b.setsWon !== a.setsWon) return b.setsWon - a.setsWon;
+      return a.country.localeCompare(b.country);
+    })
+    .map((team, index) => ({ ...team, position: index + 1 }));
+}, [approvedTeams, matches]);
 
-  const standingsFiltered = useMemo(() => {
+  const standingsFiltered = useMemo<StandingRow[]>(() => {
     const teamsBase =
       standingsView === "Global"
         ? approvedTeams
@@ -1683,20 +1722,7 @@ export default function SAVLSitePage() {
 
     const validCountries = new Set(teamsBase.map((team) => team.country));
 
-    const map = new Map<
-      string,
-      {
-        country: string;
-        code: string;
-        played: number;
-        wins: number;
-        losses: number;
-        setsWon: number;
-        setsLost: number;
-        setDiff: number;
-        points: number;
-      }
-    >();
+    const map = new Map<string, Omit<StandingRow, "position">>();
 
     for (const team of teamsBase) {
       map.set(team.country, {
@@ -1708,6 +1734,9 @@ export default function SAVLSitePage() {
         setsWon: 0,
         setsLost: 0,
         setDiff: 0,
+        pointsFor: 0,
+        pointsAgainst: 0,
+        ptsDiff: 0,
         points: 0,
       });
     }
@@ -1723,6 +1752,8 @@ export default function SAVLSitePage() {
       const homeSets = match.home_score;
       const awaySets = match.away_score;
 
+      const { homePoints, awayPoints } = calculatePointsTotals(match);
+
       home.played += 1;
       away.played += 1;
 
@@ -1731,8 +1762,16 @@ export default function SAVLSitePage() {
       away.setsWon += awaySets;
       away.setsLost += homeSets;
 
+      home.pointsFor += homePoints;
+      home.pointsAgainst += awayPoints;
+      away.pointsFor += awayPoints;
+      away.pointsAgainst += homePoints;
+
       home.setDiff = home.setsWon - home.setsLost;
       away.setDiff = away.setsWon - away.setsLost;
+
+      home.ptsDiff = home.pointsFor - home.pointsAgainst;
+      away.ptsDiff = away.pointsFor - away.pointsAgainst;
 
       if (homeSets > awaySets) {
         home.wins += 1;
@@ -1762,6 +1801,7 @@ export default function SAVLSitePage() {
         if (b.points !== a.points) return b.points - a.points;
         if (b.wins !== a.wins) return b.wins - a.wins;
         if (b.setDiff !== a.setDiff) return b.setDiff - a.setDiff;
+        if (b.ptsDiff !== a.ptsDiff) return b.ptsDiff - a.ptsDiff;
         if (b.setsWon !== a.setsWon) return b.setsWon - a.setsWon;
         return a.country.localeCompare(b.country);
       })
@@ -3234,9 +3274,16 @@ export default function SAVLSitePage() {
                           </span>
                         </p>
                         {match.status === "Finished" ? (
-                          <p className="mt-1 text-xs text-white/55">
-                            Final score: {match.home_score} - {match.away_score}
-                          </p>
+                          <div className="mt-1 space-y-1 text-xs text-white/55">
+                            <p>
+                              Final score: {match.home_score} - {match.away_score}
+                            </p>
+                            {formatSetScores(match) ? (
+                              <p>
+                                Set scores: {formatSetScores(match)}
+                              </p>
+                            ) : null}
+                          </div>
                         ) : null}
                         {referee || media ? (
                           <div className="mt-3 space-y-2">
@@ -3404,6 +3451,7 @@ export default function SAVLSitePage() {
             <span>SW</span>
             <span>SL</span>
             <span>SD</span>
+            <span>PD</span>
             <span>PTS</span>
           </div>
 
@@ -3415,7 +3463,7 @@ export default function SAVLSitePage() {
             standingsFiltered.map((team) => (
               <div
                 key={team.country}
-                className="grid grid-cols-[0.5fr_2fr_0.8fr_0.8fr_0.8fr_0.9fr_0.9fr_0.9fr_0.9fr] items-center border-b border-white/5 px-6 py-5 text-sm last:border-none"
+                className="grid grid-cols-[0.5fr_2fr_0.8fr_0.8fr_0.8fr_0.9fr_0.9fr_0.9fr_0.9fr_0.9fr] items-center border-b border-white/5 px-6 py-5 text-sm last:border-none"
               >
                 <span className="font-semibold text-white">{team.position}</span>
                 <span className="flex items-center gap-3 font-semibold text-white">
@@ -3434,6 +3482,9 @@ export default function SAVLSitePage() {
                 <span className="text-white/75">
                   {team.setDiff > 0 ? `+${team.setDiff}` : team.setDiff}
                 </span>
+                <span className="text-white/75">
+                  {team.ptsDiff > 0 ? `+${team.ptsDiff}` : team.ptsDiff}
+                </span>
                 <span className="font-semibold text-emerald-300">{team.points}</span>
               </div>
             ))
@@ -3444,7 +3495,11 @@ export default function SAVLSitePage() {
           <p>
             <strong>P</strong>: Played • <strong>W</strong>: Wins • <strong>L</strong>: Losses •{" "}
             <strong>SW</strong>: Sets Won • <strong>SL</strong>: Sets Lost •{" "}
-            <strong>SD</strong>: Set Difference • <strong>PTS</strong>: Points
+            <strong>SD</strong>: Set Difference • <strong>PD</strong>: Point Difference •{" "}
+            <strong>PTS</strong>: League Points
+          </p>
+          <p className="mt-2">
+            <strong>Tiebreaker order:</strong> League Points, Wins, Set Difference, Point Difference, Sets Won.
           </p>
           <p className="mt-2">
             <strong>Points system:</strong> 3 points for a 3-0 or 3-1 win, 2 points for a 3-2 win, 1 point for a 2-3 loss.
@@ -5246,6 +5301,20 @@ export default function SAVLSitePage() {
                                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                                   <p className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">
                                     Set Results
+                                  </p>
+                                  <p className="mt-3 text-xs text-white/55">
+                                    Set scores preview: {formatSetScores({
+                                      set1_home: toNullableNumber(matchForm.set1_home),
+                                      set1_away: toNullableNumber(matchForm.set1_away),
+                                      set2_home: toNullableNumber(matchForm.set2_home),
+                                      set2_away: toNullableNumber(matchForm.set2_away),
+                                      set3_home: toNullableNumber(matchForm.set3_home),
+                                      set3_away: toNullableNumber(matchForm.set3_away),
+                                      set4_home: toNullableNumber(matchForm.set4_home),
+                                      set4_away: toNullableNumber(matchForm.set4_away),
+                                      set5_home: toNullableNumber(matchForm.set5_home),
+                                      set5_away: toNullableNumber(matchForm.set5_away),
+                                    }) || "-"}
                                   </p>
 
                                   <div className="grid gap-4 md:grid-cols-5">
