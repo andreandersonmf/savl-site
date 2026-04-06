@@ -5348,7 +5348,7 @@ const standings = useMemo<StandingRow[]>(() => {
                                                 e.target.value,
                                               )
                                             }
-                                            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                                            className="h-14 w-full appearance-none rounded-2xl border border-white/10 bg-[#0B1712] px-4 text-center text-lg font-semibold text-white outline-none transition duration-200 [appearance:textfield] hover:border-emerald-400/30 focus:border-emerald-400/50 focus:ring-2 focus:ring-emerald-400/20 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                           />
 
                                           <input
@@ -5365,7 +5365,7 @@ const standings = useMemo<StandingRow[]>(() => {
                                                 e.target.value,
                                               )
                                             }
-                                            className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                                            className="h-14 w-full appearance-none rounded-2xl border border-white/10 bg-[#0B1712] px-4 text-center text-lg font-semibold text-white outline-none transition duration-200 [appearance:textfield] hover:border-emerald-400/30 focus:border-emerald-400/50 focus:ring-2 focus:ring-emerald-400/20 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                           />
                                         </div>
                                       </div>
