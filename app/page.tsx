@@ -1351,6 +1351,9 @@ export default function SAVLSitePage() {
     [],
   );
 
+  const [adminFilterStatus, setAdminFilterStatus] = useState<"All" | MatchStatus>("All");
+  const [adminFilterStage, setAdminFilterStage] = useState("All");
+
   const [submittingStaffApplication, setSubmittingStaffApplication] =
     useState(false);
 
@@ -1616,8 +1619,19 @@ export default function SAVLSitePage() {
     });
   }, [filterStatus, filterStage, filterTeam, filterGroup, matches, teams]);
 
+  const adminFilteredMatches = useMemo(() => {
+    return matches.filter((match) => {
+      const statusOk =
+        adminFilterStatus === "All" || match.status === adminFilterStatus;
 
-const standings = useMemo<StandingRow[]>(() => {
+      const stageOk =
+        adminFilterStage === "All" || (match.stage?.trim() ?? "") === adminFilterStage;
+
+      return statusOk && stageOk;
+    });
+  }, [matches, adminFilterStatus, adminFilterStage]);
+
+  const standings = useMemo<StandingRow[]>(() => {
   const map = new Map<string, Omit<StandingRow, "position">>();
 
   for (const team of approvedTeams) {
@@ -3106,6 +3120,35 @@ const standings = useMemo<StandingRow[]>(() => {
                 </h2>
               </div>
 
+              <div className="mb-6 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={() => setFilterStage("All")}
+                  className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition duration-200 ${
+                    filterStage === "All"
+                      ? "border-emerald-400/30 bg-emerald-400/15 text-emerald-300"
+                      : "border-white/10 bg-white/5 text-white/75 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  All
+                </button>
+
+                {availableStages.map((stage) => (
+                  <button
+                    key={stage}
+                    type="button"
+                    onClick={() => setFilterStage(stage)}
+                    className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition duration-200 ${
+                      filterStage === stage
+                        ? "border-emerald-400/30 bg-emerald-400/15 text-emerald-300"
+                        : "border-white/10 bg-white/5 text-white/75 hover:bg-white/10 hover:text-white"
+                    }`}
+                  >
+                    {stage}
+                  </button>
+                ))}
+              </div>
+
               <div className="min-w-[240px]">
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
                   Filter by team
@@ -3151,24 +3194,6 @@ const standings = useMemo<StandingRow[]>(() => {
                       ...statusOptions,
                     ]}
                     placeholder="Select status"
-                  />
-                </div>
-
-                <div className="min-w-[240px]">
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                    Filter by stage
-                  </label>
-                  <SelectPicker
-                    value={filterStage}
-                    onChange={setFilterStage}
-                    options={[
-                      { label: "All stages", value: "All" },
-                      ...availableStages.map((stage) => ({
-                        label: stage,
-                        value: stage,
-                      })),
-                    ]}
-                    placeholder="Select stage"
                   />
                 </div>
 
@@ -5037,10 +5062,12 @@ const standings = useMemo<StandingRow[]>(() => {
                   <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
                     <p className="mb-4 text-xl font-bold">Manage matches</p>
                     <div className="space-y-4">
-                      {matches.length === 0 ? (
-                        <p className="text-white/60">No matches created yet.</p>
+                      {adminFilteredMatches.length === 0 ? (
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/60">
+                          No matches found with the selected filters.
+                        </div>
                       ) : (
-                        matches.map((match) => {
+                        adminFilteredMatches.map((match) => {
                           const draft = matchDrafts[match.id];
 
                           return (
@@ -5064,7 +5091,57 @@ const standings = useMemo<StandingRow[]>(() => {
                                   >
                                     {draft?.status ?? match.status}
                                   </span>
-                                </div>
+                                </div>    
+
+                                <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                                  <div className="flex flex-col gap-4 md:flex-row md:items-end">
+                                    <div className="min-w-[220px]">
+                                      <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                                        Filter by status
+                                      </label>
+                                      <SelectPicker
+                                        value={adminFilterStatus}
+                                        onChange={(value) =>
+                                          setAdminFilterStatus(value as "All" | MatchStatus)
+                                        }
+                                        options={[
+                                          { label: "All statuses", value: "All" },
+                                          ...statusOptions,
+                                        ]}
+                                        placeholder="Select status"
+                                      />
+                                    </div>
+
+                                    <div className="min-w-[240px]">
+                                      <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                                        Filter by stage
+                                      </label>
+                                      <SelectPicker
+                                        value={adminFilterStage}
+                                        onChange={setAdminFilterStage}
+                                        options={[
+                                          { label: "All stages", value: "All" },
+                                          ...availableStages.map((stage) => ({
+                                            label: stage,
+                                            value: stage,
+                                          })),
+                                        ]}
+                                        placeholder="Select stage"
+                                      />
+                                    </div>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setAdminFilterStatus("All");
+                                        setAdminFilterStage("All");
+                                      }}
+                                      className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/10"
+                                    >
+                                      Clear Filters
+                                    </button>
+                                  </div>
+                                </div>                          
 
                                 <div>
                                   <label className="mb-2 block text-sm text-white/70">
