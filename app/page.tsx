@@ -5072,6 +5072,44 @@ export default function SAVLSitePage() {
                   <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
                     <p className="mb-4 text-xl font-bold">Manage matches</p>
                     <div className="space-y-4">
+                        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                          <div className="flex flex-col gap-4 md:flex-row md:items-end">
+                            <div className="min-w-[220px]">
+                              <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                                Filter by status
+                                </label>
+                                <SelectPicker
+                                  value={adminFilterStatus}
+                                  onChange={(value) =>
+                                    setAdminFilterStatus(value as "All" | MatchStatus)
+                                  }
+                                  options={[
+                                    { label: "All statuses", value: "All" },
+                                    ...statusOptions,
+                                  ]}
+                                  placeholder="Select status"
+                                />
+                              </div>
+
+                              <div className="min-w-[240px]">
+                              <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                                  Filter by stage
+                                </label>
+                                <SelectPicker
+                                  value={adminFilterStage}
+                                  onChange={setAdminFilterStage}
+                                  options={[
+                                    { label: "All stages", value: "All" },
+                                    ...availableStages.map((stage) => ({
+                                      label: stage,
+                                      value: stage,
+                                    })),
+                                  ]}
+                                  placeholder="Select stage"
+                                />
+                              </div>
+                            </div>
+                          </div>    
                       {adminFilteredMatches.length === 0 ? (
                         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/60">
                           No matches found with the selected filters.
@@ -5084,7 +5122,7 @@ export default function SAVLSitePage() {
                             <div
                               key={match.id}
                               className="rounded-2xl border border-white/10 bg-white/5 p-4"
-                            >
+                            >       
                               <div className="grid gap-4">
                                 <div className="flex flex-wrap items-center gap-3">
                                   {draft?.stage || match.stage ? (
@@ -5101,45 +5139,6 @@ export default function SAVLSitePage() {
                                   >
                                     {draft?.status ?? match.status}
                                   </span>
-                                </div>    
-
-                                <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-                                  <div className="flex flex-col gap-4 md:flex-row md:items-end">
-                                    <div className="min-w-[220px]">
-                                      <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                                        Filter by status
-                                      </label>
-                                      <SelectPicker
-                                        value={adminFilterStatus}
-                                        onChange={(value) =>
-                                          setAdminFilterStatus(value as "All" | MatchStatus)
-                                        }
-                                        options={[
-                                          { label: "All statuses", value: "All" },
-                                          ...statusOptions,
-                                        ]}
-                                        placeholder="Select status"
-                                      />
-                                    </div>
-
-                                    <div className="min-w-[240px]">
-                                      <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                                        Filter by stage
-                                      </label>
-                                      <SelectPicker
-                                        value={adminFilterStage}
-                                        onChange={setAdminFilterStage}
-                                        options={[
-                                          { label: "All stages", value: "All" },
-                                          ...availableStages.map((stage) => ({
-                                            label: stage,
-                                            value: stage,
-                                          })),
-                                        ]}
-                                        placeholder="Select stage"
-                                      />
-                                    </div>
-                                  </div>
                                 </div>                          
 
                                 <div>
