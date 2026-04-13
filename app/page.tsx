@@ -3107,88 +3107,88 @@ export default function SAVLSitePage() {
             </div>
           )}
         </section>
-
+        
         <section id="schedule" className="scroll-mt-28 bg-white/[0.03] py-16">
-          <div className="mb-8 space-y-6">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
-                Fixtures
-              </p>
-              <h2 className="mt-2 text-3xl font-black md:text-4xl">
-                Upcoming Matches
-              </h2>
-            </div>
+          <div className="mx-auto max-w-7xl px-6">
+            <div className="mb-8 space-y-6">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
+                  Fixtures
+                </p>
+                <h2 className="mt-2 text-3xl font-black md:text-4xl">
+                  Upcoming Matches
+                </h2>
+              </div>
 
-            <div>
-              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                Filter by stage
-              </p>
+              <div>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                  Filter by stage
+                </p>
 
-              <div className="flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={() => setFilterStage("All")}
-                  className={`inline-flex min-h-[52px] items-center justify-center whitespace-nowrap rounded-2xl border px-5 py-3 text-sm font-semibold transition duration-200 ${
-                    filterStage === "All"
-                      ? "border-emerald-400/35 bg-[#062019] text-emerald-300 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.18),0_0_18px_rgba(16,185,129,0.08)]"
-                      : "border-white/10 bg-white/5 text-white/80 hover:-translate-y-0.5 hover:border-emerald-400/20 hover:bg-white/10 hover:text-white"
-                  }`}
-                >
-                  All
-                </button>
-
-                {availableStages.map((stage) => (
+                <div className="flex flex-wrap gap-3">
                   <button
-                    key={stage}
                     type="button"
-                    onClick={() => setFilterStage(stage)}
+                    onClick={() => setFilterStage("All")}
                     className={`inline-flex min-h-[52px] items-center justify-center whitespace-nowrap rounded-2xl border px-5 py-3 text-sm font-semibold transition duration-200 ${
-                      filterStage === stage
+                      filterStage === "All"
                         ? "border-emerald-400/35 bg-[#062019] text-emerald-300 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.18),0_0_18px_rgba(16,185,129,0.08)]"
                         : "border-white/10 bg-white/5 text-white/80 hover:-translate-y-0.5 hover:border-emerald-400/20 hover:bg-white/10 hover:text-white"
                     }`}
                   >
-                    {stage}
+                    All
                   </button>
-                ))}
+
+                  {availableStages.map((stage) => (
+                    <button
+                      key={stage}
+                      type="button"
+                      onClick={() => setFilterStage(stage)}
+                      className={`inline-flex min-h-[52px] items-center justify-center whitespace-nowrap rounded-2xl border px-5 py-3 text-sm font-semibold transition duration-200 ${
+                        filterStage === stage
+                          ? "border-emerald-400/35 bg-[#062019] text-emerald-300 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.18),0_0_18px_rgba(16,185,129,0.08)]"
+                          : "border-white/10 bg-white/5 text-white/80 hover:-translate-y-0.5 hover:border-emerald-400/20 hover:bg-white/10 hover:text-white"
+                      }`}
+                    >
+                      {stage}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
+            <div className="mb-8 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+              <div className="grid gap-4 md:grid-cols-2 xl:flex xl:flex-1 xl:flex-wrap xl:items-end">
+                <div className="min-w-[220px] xl:flex-1">
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                    Filter by team
+                  </label>
+                  <SelectPicker
+                    value={filterTeam}
+                    onChange={setFilterTeam}
+                    options={[
+                      { label: "All teams", value: "All" },
+                      ...teamFilterOptions,
+                    ]}
+                    placeholder="Select team"
+                  />
+                </div>
 
-          <div className="mb-8 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-            <div className="grid gap-4 md:grid-cols-2 xl:flex xl:flex-1 xl:flex-wrap xl:items-end"></div>
-              <div className="min-w-[240px]">
-                <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                  Filter by team
-                </label>
-                <SelectPicker
-                  value={filterTeam}
-                  onChange={setFilterTeam}
-                  options={[
-                    { label: "All teams", value: "All" },
-                    ...teamFilterOptions,
-                  ]}
-                  placeholder="Select team"
-                />
-              </div>
+                <div className="min-w-[220px] xl:flex-1">
+                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                    Filter by group
+                  </label>
+                  <SelectPicker
+                    value={filterGroup}
+                    onChange={setFilterGroup}
+                    options={[
+                      { label: "All groups", value: "All" },
+                      ...groupOptions,
+                    ]}
+                    placeholder="Select group"
+                  />
+                </div>
 
-              <div className="min-w-[220px]">
-                <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                  Filter by group
-                </label>
-                <SelectPicker
-                  value={filterGroup}
-                  onChange={setFilterGroup}
-                  options={[
-                    { label: "All groups", value: "All" },
-                    ...groupOptions,
-                  ]}
-                  placeholder="Select group"
-                />
-              </div>
-
-              <div className="flex flex-col gap-4 md:flex-row md:items-end">
-                <div className="min-w-[220px]">
+                <div className="min-w-[220px] xl:flex-1">
                   <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
                     Filter by status
                   </label>
@@ -3204,20 +3204,20 @@ export default function SAVLSitePage() {
                     placeholder="Select status"
                   />
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setFilterStatus("All");
-                    setFilterStage("All");
-                    setFilterTeam("All");
-                    setFilterGroup("All");
-                  }}
-                  className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/10"
-                >
-                  Clear Filters
-                </button>
               </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterStatus("All");
+                  setFilterStage("All");
+                  setFilterTeam("All");
+                  setFilterGroup("All");
+                }}
+                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white/80 transition duration-200 hover:-translate-y-0.5 hover:border-emerald-400/20 hover:bg-white/10 hover:text-white"
+              >
+                Clear Filters
+              </button>
             </div>
 
             <div className="space-y-4 md:hidden">
@@ -3295,18 +3295,18 @@ export default function SAVLSitePage() {
                             {match.away_country}
                           </span>
                         </p>
+
                         {match.status === "Finished" ? (
                           <div className="mt-1 space-y-1 text-xs text-white/55">
                             <p>
                               Final score: {match.home_score} - {match.away_score}
                             </p>
                             {formatSetScores(match) ? (
-                              <p>
-                                Set scores: {formatSetScores(match)}
-                              </p>
+                              <p>Set scores: {formatSetScores(match)}</p>
                             ) : null}
                           </div>
                         ) : null}
+
                         {referee || media ? (
                           <div className="mt-3 space-y-2">
                             {referee ? (
@@ -3337,6 +3337,7 @@ export default function SAVLSitePage() {
                           </div>
                         ) : null}
                       </div>
+
                       <div className="text-white/75">
                         {formatDate(match.match_date)}
                       </div>
@@ -3357,6 +3358,7 @@ export default function SAVLSitePage() {
             </div>
           </div>
         </section>
+
 
         <section
           id="groups"
