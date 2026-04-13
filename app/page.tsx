@@ -3109,25 +3109,29 @@ export default function SAVLSitePage() {
         </section>
 
         <section id="schedule" className="scroll-mt-28 bg-white/[0.03] py-16">
-          <div className="mx-auto max-w-7xl px-6">
-            <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
-                  Fixtures
-                </p>
-                <h2 className="mt-2 text-3xl font-black md:text-4xl">
-                  Upcoming Matches
-                </h2>
-              </div>
+          <div className="mb-8 space-y-6">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
+                Fixtures
+              </p>
+              <h2 className="mt-2 text-3xl font-black md:text-4xl">
+                Upcoming Matches
+              </h2>
+            </div>
 
-              <div className="mb-6 flex flex-wrap gap-3">
+            <div>
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                Filter by stage
+              </p>
+
+              <div className="flex flex-wrap gap-3">
                 <button
                   type="button"
                   onClick={() => setFilterStage("All")}
-                  className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition duration-200 ${
+                  className={`inline-flex min-h-[52px] items-center justify-center whitespace-nowrap rounded-2xl border px-5 py-3 text-sm font-semibold transition duration-200 ${
                     filterStage === "All"
-                      ? "border-emerald-400/30 bg-emerald-400/15 text-emerald-300"
-                      : "border-white/10 bg-white/5 text-white/75 hover:bg-white/10 hover:text-white"
+                      ? "border-emerald-400/35 bg-[#062019] text-emerald-300 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.18),0_0_18px_rgba(16,185,129,0.08)]"
+                      : "border-white/10 bg-white/5 text-white/80 hover:-translate-y-0.5 hover:border-emerald-400/20 hover:bg-white/10 hover:text-white"
                   }`}
                 >
                   All
@@ -3138,17 +3142,21 @@ export default function SAVLSitePage() {
                     key={stage}
                     type="button"
                     onClick={() => setFilterStage(stage)}
-                    className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition duration-200 ${
+                    className={`inline-flex min-h-[52px] items-center justify-center whitespace-nowrap rounded-2xl border px-5 py-3 text-sm font-semibold transition duration-200 ${
                       filterStage === stage
-                        ? "border-emerald-400/30 bg-emerald-400/15 text-emerald-300"
-                        : "border-white/10 bg-white/5 text-white/75 hover:bg-white/10 hover:text-white"
+                        ? "border-emerald-400/35 bg-[#062019] text-emerald-300 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.18),0_0_18px_rgba(16,185,129,0.08)]"
+                        : "border-white/10 bg-white/5 text-white/80 hover:-translate-y-0.5 hover:border-emerald-400/20 hover:bg-white/10 hover:text-white"
                     }`}
                   >
                     {stage}
                   </button>
                 ))}
               </div>
+            </div>
 
+
+          <div className="mb-8 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div className="grid gap-4 md:grid-cols-2 xl:flex xl:flex-1 xl:flex-wrap xl:items-end"></div>
               <div className="min-w-[240px]">
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
                   Filter by team
@@ -5129,17 +5137,6 @@ export default function SAVLSitePage() {
                                         placeholder="Select stage"
                                       />
                                     </div>
-
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setAdminFilterStatus("All");
-                                        setAdminFilterStage("All");
-                                      }}
-                                      className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/10"
-                                    >
-                                      Clear Filters
-                                    </button>
                                   </div>
                                 </div>                          
 
