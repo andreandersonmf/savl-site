@@ -165,6 +165,7 @@ const COUNTRIES: Country[] = [
   { name: "Slovenia", code: "si" },
   { name: "South Korea", code: "kr" },
   { name: "Spain", code: "es" },
+  { name: "Switzerland", code: "ch" },
   { name: "Thailand", code: "th" },
   { name: "Turkey", code: "tr" },
   { name: "Ukraine", code: "ua" },
