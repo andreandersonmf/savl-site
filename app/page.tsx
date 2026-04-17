@@ -1381,8 +1381,6 @@ export default function SAVLSitePage() {
   const [savingCaptainChange, setSavingCaptainChange] = useState(false);
 
   async function reloadTeams() {
-    console.log("supabaseUrl from app:", supabaseUrl);
-    console.log("has supabaseKey:", !!supabaseKey);
 
     if (!supabase) {
       console.error("Supabase client is null");
