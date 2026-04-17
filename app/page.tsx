@@ -1381,15 +1381,26 @@ export default function SAVLSitePage() {
   const [savingCaptainChange, setSavingCaptainChange] = useState(false);
 
   async function reloadTeams() {
-    if (!supabase) return;
+    if (!supabase) {
+      console.error("Supabase client is null");
+      return;
+    }
 
     const result = await supabase
       .from("teams")
       .select("*")
       .order("country", { ascending: true });
-    if (!result.error && result.data) {
-      setTeams(result.data as Team[]);
+
+    console.log("reloadTeams result:", result);
+
+    if (result.error) {
+      console.error("reloadTeams error:", result.error);
+      setNotice(`Teams error: ${result.error.message}`);
+      return;
     }
+
+    console.log("teams loaded:", result.data);
+    setTeams((result.data ?? []) as Team[]);
   }
 
   function showSuccessDialog(title: string, message: string) {
