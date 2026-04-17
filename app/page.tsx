@@ -1403,6 +1403,11 @@ export default function SAVLSitePage() {
     setTeams((result.data ?? []) as Team[]);
   }
 
+  useEffect(() => {
+    console.log("supabaseUrl from app:", supabaseUrl);
+    console.log("has supabaseKey:", !!supabaseKey);
+  }, []);
+
   function showSuccessDialog(title: string, message: string) {
     setSuccessDialog({
       open: true,
