@@ -1381,6 +1381,9 @@ export default function SAVLSitePage() {
   const [savingCaptainChange, setSavingCaptainChange] = useState(false);
 
   async function reloadTeams() {
+    console.log("supabaseUrl from app:", supabaseUrl);
+    console.log("has supabaseKey:", !!supabaseKey);
+
     if (!supabase) {
       console.error("Supabase client is null");
       return;
@@ -1402,11 +1405,6 @@ export default function SAVLSitePage() {
     console.log("teams loaded:", result.data);
     setTeams((result.data ?? []) as Team[]);
   }
-
-  useEffect(() => {
-    console.log("supabaseUrl from app:", supabaseUrl);
-    console.log("has supabaseKey:", !!supabaseKey);
-  }, []);
 
   function showSuccessDialog(title: string, message: string) {
     setSuccessDialog({
