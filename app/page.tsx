@@ -1248,6 +1248,101 @@ function formatSetScores(source: {
     .join(", ");
 }
 
+function isPlayoffsMatch(match: { stage?: string | null }) {
+  return normalizeText(match.stage ?? "").startsWith("playoffs:");
+}
+
+function buildStandings(
+  teamsBase: Team[],
+  matchesBase: MatchRow[],
+): StandingRow[] {
+  const validCountries = new Set(teamsBase.map((team) => team.country));
+  const map = new Map<string, Omit<StandingRow, "position">>();
+
+  for (const team of teamsBase) {
+    map.set(team.country, {
+      country: team.country,
+      code: team.code,
+      played: 0,
+      wins: 0,
+      losses: 0,
+      setsWon: 0,
+      setsLost: 0,
+      setDiff: 0,
+      pointsFor: 0,
+      pointsAgainst: 0,
+      ptsDiff: 0,
+      points: 0,
+    });
+  }
+
+  for (const match of matchesBase) {
+    if (match.status !== "Finished") continue;
+    if (!validCountries.has(match.home_country)) continue;
+    if (!validCountries.has(match.away_country)) continue;
+
+    const home = map.get(match.home_country);
+    const away = map.get(match.away_country);
+    if (!home || !away) continue;
+
+    const homeSets = match.home_score;
+    const awaySets = match.away_score;
+    const { homePoints, awayPoints } = calculatePointsTotals(match);
+
+    home.played += 1;
+    away.played += 1;
+
+    home.setsWon += homeSets;
+    home.setsLost += awaySets;
+    away.setsWon += awaySets;
+    away.setsLost += homeSets;
+
+    home.pointsFor += homePoints;
+    home.pointsAgainst += awayPoints;
+    away.pointsFor += awayPoints;
+    away.pointsAgainst += homePoints;
+
+    home.setDiff = home.setsWon - home.setsLost;
+    away.setDiff = away.setsWon - away.setsLost;
+
+    home.ptsDiff = home.pointsFor - home.pointsAgainst;
+    away.ptsDiff = away.pointsFor - away.pointsAgainst;
+
+    if (homeSets > awaySets) {
+      home.wins += 1;
+      away.losses += 1;
+
+      if (homeSets === 3 && awaySets === 2) {
+        home.points += 2;
+        away.points += 1;
+      } else {
+        home.points += 3;
+      }
+    } else if (awaySets > homeSets) {
+      away.wins += 1;
+      home.losses += 1;
+
+      if (awaySets === 3 && homeSets === 2) {
+        away.points += 2;
+        home.points += 1;
+      } else {
+        away.points += 3;
+      }
+    }
+  }
+
+  return Array.from(map.values())
+    .sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      if (b.setDiff !== a.setDiff) return b.setDiff - a.setDiff;
+      if (b.ptsDiff !== a.ptsDiff) return b.ptsDiff - a.ptsDiff;
+      if (b.setsWon !== a.setsWon) return b.setsWon - a.setsWon;
+      return a.country.localeCompare(b.country);
+    })
+    .map((team, index) => ({ ...team, position: index + 1 }));
+}
+
 export default function SAVLSitePage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<MatchRow[]>([]);
@@ -1272,7 +1367,10 @@ export default function SAVLSitePage() {
   const [togglingRegistrations, setTogglingRegistrations] = useState(false);
   const [filterTeam, setFilterTeam] = useState("All");
   const [filterGroup, setFilterGroup] = useState("All");
-  const [standingsView, setStandingsView] = useState<"Global" | GroupLetter>("Global");
+
+  type StandingsView = "Qualifiers" | "Playoffs" | GroupLetter;
+
+  const [standingsView, setStandingsView] = useState<StandingsView>("Qualifiers");
 
   const [teamGroupForm, setTeamGroupForm] = useState({
     team_id: "",
@@ -1644,185 +1742,56 @@ export default function SAVLSitePage() {
     });
   }, [matches, adminFilterStatus, adminFilterStage]);
 
-  const standings = useMemo<StandingRow[]>(() => {
-  const map = new Map<string, Omit<StandingRow, "position">>();
+  const qualifierMatches = useMemo(() => {
+    return matches.filter((match) => !isPlayoffsMatch(match));
+  }, [matches]);
 
-  for (const team of approvedTeams) {
-    map.set(team.country, {
-      country: team.country,
-      code: team.code,
-      played: 0,
-      wins: 0,
-      losses: 0,
-      setsWon: 0,
-      setsLost: 0,
-      setDiff: 0,
-      pointsFor: 0,
-      pointsAgainst: 0,
-      ptsDiff: 0,
-      points: 0,
-    });
-  }
+  const playoffMatches = useMemo(() => {
+    return matches.filter((match) => isPlayoffsMatch(match));
+  }, [matches]);
 
-  for (const match of matches) {
-    if (match.status !== "Finished") continue;
+  const qualifierStandings = useMemo<StandingRow[]>(() => {
+    return buildStandings(approvedTeams, qualifierMatches);
+  }, [approvedTeams, qualifierMatches]);
 
-    const home = map.get(match.home_country);
-    const away = map.get(match.away_country);
-    if (!home || !away) continue;
+  const playoffTeams = useMemo(() => {
+    return qualifierStandings
+      .slice(0, 8)
+      .map((standing) =>
+        approvedTeams.find((team) => team.country === standing.country),
+      )
+      .filter((team): team is Team => Boolean(team));
+  }, [approvedTeams, qualifierStandings]);
 
-    const homeSets = match.home_score;
-    const awaySets = match.away_score;
+  const playoffQualifiedCountries = useMemo(() => {
+    return new Set(playoffTeams.map((team) => team.country));
+  }, [playoffTeams]);
 
-    const { homePoints, awayPoints } = calculatePointsTotals(match);
-
-    home.played += 1;
-    away.played += 1;
-
-    home.setsWon += homeSets;
-    home.setsLost += awaySets;
-    away.setsWon += awaySets;
-    away.setsLost += homeSets;
-
-    home.pointsFor += homePoints;
-    home.pointsAgainst += awayPoints;
-    away.pointsFor += awayPoints;
-    away.pointsAgainst += homePoints;
-
-    home.setDiff = home.setsWon - home.setsLost;
-    away.setDiff = away.setsWon - away.setsLost;
-
-    home.ptsDiff = home.pointsFor - home.pointsAgainst;
-    away.ptsDiff = away.pointsFor - away.pointsAgainst;
-
-    if (homeSets > awaySets) {
-      home.wins += 1;
-      away.losses += 1;
-
-      if (homeSets === 3 && awaySets === 2) {
-        home.points += 2;
-        away.points += 1;
-      } else {
-        home.points += 3;
-      }
-    } else if (awaySets > homeSets) {
-      away.wins += 1;
-      home.losses += 1;
-
-      if (awaySets === 3 && homeSets === 2) {
-        away.points += 2;
-        home.points += 1;
-      } else {
-        away.points += 3;
-      }
-    }
-  }
-
-  return Array.from(map.values())
-    .sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      if (b.wins !== a.wins) return b.wins - a.wins;
-      if (b.setDiff !== a.setDiff) return b.setDiff - a.setDiff;
-      if (b.ptsDiff !== a.ptsDiff) return b.ptsDiff - a.ptsDiff;
-      if (b.setsWon !== a.setsWon) return b.setsWon - a.setsWon;
-      return a.country.localeCompare(b.country);
-    })
-    .map((team, index) => ({ ...team, position: index + 1 }));
-}, [approvedTeams, matches]);
+  const playoffStandings = useMemo<StandingRow[]>(() => {
+    return buildStandings(playoffTeams, playoffMatches);
+  }, [playoffTeams, playoffMatches]);
 
   const standingsFiltered = useMemo<StandingRow[]>(() => {
-    const teamsBase =
-      standingsView === "Global"
-        ? approvedTeams
-        : approvedTeams.filter((team) => team.group_letter === standingsView);
-
-    const validCountries = new Set(teamsBase.map((team) => team.country));
-
-    const map = new Map<string, Omit<StandingRow, "position">>();
-
-    for (const team of teamsBase) {
-      map.set(team.country, {
-        country: team.country,
-        code: team.code,
-        played: 0,
-        wins: 0,
-        losses: 0,
-        setsWon: 0,
-        setsLost: 0,
-        setDiff: 0,
-        pointsFor: 0,
-        pointsAgainst: 0,
-        ptsDiff: 0,
-        points: 0,
-      });
+    if (standingsView === "Playoffs") {
+      return playoffStandings;
     }
 
-    for (const match of matches) {
-      if (match.status !== "Finished") continue;
-      if (!validCountries.has(match.home_country) || !validCountries.has(match.away_country)) continue;
-
-      const home = map.get(match.home_country);
-      const away = map.get(match.away_country);
-      if (!home || !away) continue;
-
-      const homeSets = match.home_score;
-      const awaySets = match.away_score;
-
-      const { homePoints, awayPoints } = calculatePointsTotals(match);
-
-      home.played += 1;
-      away.played += 1;
-
-      home.setsWon += homeSets;
-      home.setsLost += awaySets;
-      away.setsWon += awaySets;
-      away.setsLost += homeSets;
-
-      home.pointsFor += homePoints;
-      home.pointsAgainst += awayPoints;
-      away.pointsFor += awayPoints;
-      away.pointsAgainst += homePoints;
-
-      home.setDiff = home.setsWon - home.setsLost;
-      away.setDiff = away.setsWon - away.setsLost;
-
-      home.ptsDiff = home.pointsFor - home.pointsAgainst;
-      away.ptsDiff = away.pointsFor - away.pointsAgainst;
-
-      if (homeSets > awaySets) {
-        home.wins += 1;
-        away.losses += 1;
-
-        if (homeSets === 3 && awaySets === 2) {
-          home.points += 2;
-          away.points += 1;
-        } else {
-          home.points += 3;
-        }
-      } else if (awaySets > homeSets) {
-        away.wins += 1;
-        home.losses += 1;
-
-        if (awaySets === 3 && homeSets === 2) {
-          away.points += 2;
-          home.points += 1;
-        } else {
-          away.points += 3;
-        }
-      }
+    if (standingsView === "Qualifiers") {
+      return qualifierStandings;
     }
 
-    return Array.from(map.values())
-      .sort((a, b) => {
-        if (b.points !== a.points) return b.points - a.points;
-        if (b.wins !== a.wins) return b.wins - a.wins;
-        if (b.setDiff !== a.setDiff) return b.setDiff - a.setDiff;
-        if (b.ptsDiff !== a.ptsDiff) return b.ptsDiff - a.ptsDiff;
-        if (b.setsWon !== a.setsWon) return b.setsWon - a.setsWon;
-        return a.country.localeCompare(b.country);
-      })
-      .map((team, index) => ({ ...team, position: index + 1 }));
-  }, [approvedTeams, matches, standingsView]);
+    const teamsInGroup = approvedTeams.filter(
+      (team) => team.group_letter === standingsView,
+    );
+
+    return buildStandings(teamsInGroup, qualifierMatches);
+  }, [
+    standingsView,
+    approvedTeams,
+    qualifierMatches,
+    qualifierStandings,
+    playoffStandings,
+  ]);
 
   const approvedStaff = useMemo(() => {
     return staffApplications.filter((staff) => staff.approved);
@@ -2503,6 +2472,16 @@ export default function SAVLSitePage() {
       return;
     }
 
+    if (normalizeText(matchForm.stage).startsWith("playoffs:")) {
+      if (
+        !playoffQualifiedCountries.has(matchForm.home_country) ||
+        !playoffQualifiedCountries.has(matchForm.away_country)
+      ) {
+        showNotice("Only Qualifiers top 1-8 teams can play Playoffs matches.", true);
+        return;
+      }
+    }
+
     const setsPayload = {
       set1_home: toNullableNumber(matchForm.set1_home),
       set1_away: toNullableNumber(matchForm.set1_away),
@@ -2577,6 +2556,16 @@ export default function SAVLSitePage() {
     const current = matches.find((match) => match.id === matchId);
     const draft = matchDrafts[matchId];
     if (!current || !draft) return;
+
+    if (normalizeText(draft.stage).startsWith("playoffs:")) {
+      if (
+        !playoffQualifiedCountries.has(current.home_country) ||
+        !playoffQualifiedCountries.has(current.away_country)
+      ) {
+        showNotice("Only Qualifiers top 1-8 teams can play Playoffs matches.", true);
+        return;
+      }
+    }
 
     const { homeScore, awayScore } = calculateSetWins(draft);
 
@@ -3452,14 +3441,15 @@ export default function SAVLSitePage() {
               </label>
               <SelectPicker
                 value={standingsView}
-                onChange={(value) => setStandingsView(value as "Global" | GroupLetter)}
-                options={[
-                  { label: "Global", value: "Global" },
-                  { label: "Group A", value: "A" },
-                  { label: "Group B", value: "B" },
-                  { label: "Group C", value: "C" },
-                  { label: "Group D", value: "D" },
-                ]}
+                  onChange={(value) => setStandingsView(value as StandingsView)}
+                  options={[
+                    { label: "Qualifiers", value: "Qualifiers" },
+                    { label: "Playoffs", value: "Playoffs" },
+                    { label: "Group A", value: "A" },
+                    { label: "Group B", value: "B" },
+                    { label: "Group C", value: "C" },
+                    { label: "Group D", value: "D" },
+                  ]}
                 placeholder="Select ranking"
               />
             </div>
