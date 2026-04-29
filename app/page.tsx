@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { ChevronDown, Trophy } from "lucide-react";
 
@@ -2928,6 +2929,14 @@ export default function SAVLSitePage() {
             <AnimatedNavButton label="Schedule" targetId="schedule" />
             <AnimatedNavButton label="Groups" targetId="groups" />
             <AnimatedNavButton label="Standings" targetId="standings" />
+
+            <Link
+              href="/stats"
+              className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
+            >
+              Stat Track
+            </Link>
+
             <AnimatedNavButton label="Register" targetId="register" />
             <AnimatedNavButton label="Admin" targetId="admin" />
           </nav>
@@ -3532,6 +3541,27 @@ export default function SAVLSitePage() {
             <strong>Points system:</strong> 3 points for a 3-0 or 3-1 win, 2 points for a 3-2 win, 1 point for a 2-3 loss.
           </p>
         </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-6 py-16">
+          <div className="rounded-[2rem] border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-8">
+            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
+              Stat Track
+            </p>
+            <h2 className="mt-2 text-3xl font-black md:text-4xl">
+              Player & Team Statistics
+            </h2>
+            <p className="mt-4 max-w-2xl text-white/65">
+              View set-by-set player stats, team totals, percentages, and leaderboards.
+            </p>
+
+            <Link
+              href="/stats"
+              className="mt-6 inline-flex rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.02] active:translate-y-0.5"
+            >
+              Open Stat Track
+            </Link>
+          </div>
         </section>
 
         <section
