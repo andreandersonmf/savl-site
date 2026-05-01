@@ -2911,7 +2911,7 @@ export default function SAVLSitePage() {
           <div className="flex min-w-0 items-center gap-4">
             <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/5">
               <Image
-                src="/savl-logo.jpg"
+                src="/savl-logo.png"
                 alt="SAVL logo"
                 fill
                 className="object-cover"
