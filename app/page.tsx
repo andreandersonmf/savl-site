@@ -2944,9 +2944,25 @@ export default function SAVLSitePage() {
       </header>
 
       <main>
-        {/* CORREÇÃO: Adicionado o id="home" para o botão de scroll funcionar */}
-        <section id="home" className="relative overflow-hidden scroll-mt-28">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.22),transparent_40%)]" />
+        <section
+          id="home"
+          className="relative isolate overflow-hidden scroll-mt-28 bg-[#03110D]"
+        >
+          <Image
+            src="/savl-gfx.png"
+            alt=""
+            fill
+            priority
+            sizes="100vw"
+            aria-hidden="true"
+            className="pointer-events-none z-0 select-none object-cover object-center opacity-30 blur-[1px] scale-105 md:opacity-40"
+          />
+
+          <div className="pointer-events-none absolute inset-0 z-[1] bg-[linear-gradient(90deg,rgba(3,17,13,0.94)_0%,rgba(3,17,13,0.72)_45%,rgba(3,17,13,0.84)_100%)]" />
+
+          <div className="pointer-events-none absolute inset-0 z-[2] bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.20),transparent_42%)]" />
+
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] h-36 bg-gradient-to-b from-transparent to-[#03110D]" />
 
           <div className="relative z-10 mx-auto grid max-w-7xl gap-10 px-6 py-20 md:grid-cols-2 md:items-center md:py-28">
             <div>
@@ -3002,25 +3018,27 @@ export default function SAVLSitePage() {
             </div>
 
             <div className="flex justify-center md:justify-end">
-              <div className="w-full max-w-xl rounded-[2rem] border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-8 shadow-2xl shadow-black/30">
-                <div className="rounded-[1.5rem] border border-emerald-400/15 bg-[#062019] p-8 text-center">
+              <div className="w-full max-w-xl rounded-[2rem] border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-8 shadow-2xl shadow-black/30 backdrop-blur-sm">
+                <div className="rounded-[1.5rem] border border-emerald-400/15 bg-[#062019]/90 p-8 text-center">
                   <div className="relative mx-auto h-40 w-40 overflow-hidden rounded-[2rem] border border-white/10 bg-[#03110D]">
                     <Image
-                      src="/savl-logo.jpg"
+                      src="/savl-logo.png"
                       alt="SAVL logo"
                       fill
                       className="object-cover"
                     />
                   </div>
+
                   <p className="mt-6 text-sm uppercase tracking-[0.35em] text-emerald-300">
                     Official League Hub
                   </p>
+
                   <p className="mt-3 text-white/65">
                     Built for registrations, standings, schedule viewing, and
                     admin control in one clean page.
                   </p>
-                  {/* CORREÇÃO: Ícones do Discord e YouTube com cores oficiais */}
-                  <div className="relative z-20 mt-6 flex items-center justify-center gap-6">
+
+                  <div className="relative z-20 mt-6 flex items-center justify-center gap-5 sm:gap-6">
                     <a
                       href="https://discord.gg/uvVkWBq74Q"
                       target="_blank"
@@ -3031,7 +3049,7 @@ export default function SAVLSitePage() {
                         <img
                           src="/discord.png"
                           alt="Discord"
-                          className="h-6 w-6"
+                          className="h-6 w-6 object-contain"
                         />
                       </div>
                       <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 group-hover:text-[#5865F2]">
@@ -3049,11 +3067,29 @@ export default function SAVLSitePage() {
                         <img
                           src="/youtube.png"
                           alt="YouTube"
-                          className="h-6 w-6"
+                          className="h-6 w-6 object-contain"
                         />
                       </div>
                       <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 group-hover:text-[#FF0000]">
                         YouTube
+                      </span>
+                    </a>
+
+                    <a
+                      href="https://challonge.com/pt_BR/communities/savl"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex flex-col items-center gap-2"
+                    >
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-[#FF7A1A]/10 text-[#FF7A1A] transition duration-200 group-hover:-translate-y-1 group-hover:bg-[#FF7A1A] group-hover:text-white">
+                        <img
+                          src="/challonge.png"
+                          alt="Challonge"
+                          className="h-8 w-8 scale-[1.25] object-contain"
+                        />
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 group-hover:text-[#FF7A1A]">
+                        Challonge
                       </span>
                     </a>
                   </div>
