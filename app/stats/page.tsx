@@ -62,6 +62,8 @@ type StatRow = {
   assists: number;
   spike_receives: number;
   serve_bfs: number;
+  receives: number;
+  dives: number;
   aces: number;
   misc_errors: number;
 };
@@ -78,6 +80,8 @@ type StatField = keyof Pick<
   | "assists"
   | "spike_receives"
   | "serve_bfs"
+  | "receives"
+  | "dives"
   | "aces"
   | "misc_errors"
 >;
@@ -99,6 +103,8 @@ const STAT_FIELDS: { key: StatField; label: string }[] = [
   { key: "assists", label: "Assists" },
   { key: "spike_receives", label: "Spike" },
   { key: "serve_bfs", label: "BFs" },
+  { key: "receives", label: "Rec" },
+  { key: "dives", label: "Dvs" },
   { key: "aces", label: "Aces" },
   { key: "misc_errors", label: "Misc Err" },
 ];
@@ -148,6 +154,8 @@ function zeroStatRow(
     assists: 0,
     spike_receives: 0,
     serve_bfs: 0,
+    receives: 0,
+    dives: 0,
     aces: 0,
     misc_errors: 0,
   };
@@ -171,6 +179,8 @@ function sumRows(rows: StatRow[]): StatRow | null {
       assists: total.assists + row.assists,
       spike_receives: total.spike_receives + row.spike_receives,
       serve_bfs: total.serve_bfs + row.serve_bfs,
+      receives: total.receives + row.receives,
+      dives: total.dives + row.dives,
       aces: total.aces + row.aces,
       misc_errors: total.misc_errors + row.misc_errors,
     }),
@@ -188,6 +198,8 @@ function sumRows(rows: StatRow[]): StatRow | null {
       assists: 0,
       spike_receives: 0,
       serve_bfs: 0,
+      receives: 0,
+      dives: 0,
       aces: 0,
       misc_errors: 0,
     },
@@ -475,6 +487,8 @@ export default function StatsPage() {
         assists: existing.assists,
         spike_receives: existing.spike_receives,
         serve_bfs: existing.serve_bfs,
+        receives: existing.receives,
+        dives: existing.dives,
         aces: existing.aces,
         misc_errors: existing.misc_errors,
       };
@@ -519,10 +533,12 @@ export default function StatsPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-[1400px] w-full text-sm">
+          <table className="min-w-[1580px] w-full border-separate border-spacing-0 text-sm">
             <thead className="bg-white/[0.03] text-xs uppercase tracking-[0.16em] text-white/45">
               <tr>
-                <th className="px-4 py-3 text-left">Player</th>
+                <th className="sticky left-0 z-30 min-w-[220px] bg-[#0B1712] px-4 py-3 text-left shadow-[8px_0_16px_rgba(0,0,0,0.35)]">
+                  Player
+                </th>
                 {STAT_FIELDS.map((field) => (
                   <th key={field.key} className="px-3 py-3 text-center">
                     {field.label}
@@ -547,7 +563,7 @@ export default function StatsPage() {
 
                 return (
                   <tr key={`${row.player_key}-${row.set_number}`} className="border-t border-white/5">
-                    <td className="whitespace-nowrap px-4 py-3 font-semibold text-white">
+                    <td className="sticky left-0 z-20 min-w-[220px] whitespace-nowrap bg-[#0B1712] px-4 py-3 font-semibold text-white shadow-[8px_0_16px_rgba(0,0,0,0.35)]">
                       {row.player_name}
                     </td>
 
@@ -616,7 +632,7 @@ export default function StatsPage() {
           {row.team_country} Team Totals
         </p>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <div>
             <p className="text-xs text-white/45">Total Kills</p>
             <p className="text-2xl font-black">{derived.totalKills}</p>
@@ -634,6 +650,15 @@ export default function StatsPage() {
           <div>
             <p className="text-xs text-white/45">Total Blocks</p>
             <p className="text-2xl font-black">{derived.totalBlocks}</p>
+          <div>
+            <p className="text-xs text-white/45">Rec</p>
+            <p className="text-2xl font-black">{row.receives}</p>
+          </div>
+
+          <div>
+            <p className="text-xs text-white/45">Dive</p>
+            <p className="text-2xl font-black">{row.dives}</p>
+          </div>
           </div>
         </div>
       </div>
@@ -840,7 +865,7 @@ export default function StatsPage() {
             <p className="text-white/55">No stats added yet.</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-[760px] w-full text-sm">
+              <table className="min-w-[960px] w-full text-sm">
                 <thead className="text-xs uppercase tracking-[0.16em] text-white/45">
                   <tr>
                     <th className="px-3 py-3 text-left">#</th>
@@ -849,6 +874,8 @@ export default function StatsPage() {
                     <th className="px-3 py-3 text-center">Total Kills</th>
                     <th className="px-3 py-3 text-center">FG%</th>
                     <th className="px-3 py-3 text-center">Blocks</th>
+                    <th className="px-3 py-3 text-center">Recs</th>
+                    <th className="px-3 py-3 text-center">Dives</th>
                     <th className="px-3 py-3 text-center">Aces</th>
                   </tr>
                 </thead>
@@ -868,6 +895,8 @@ export default function StatsPage() {
                           {derived.totalFg}
                         </td>
                         <td className="px-3 py-3 text-center">{derived.totalBlocks}</td>
+                        <td className="px-3 py-3 text-center">{row.receives}</td>
+                        <td className="px-3 py-3 text-center">{row.dives}</td>
                         <td className="px-3 py-3 text-center">{row.aces}</td>
                       </tr>
                     );
