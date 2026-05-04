@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { ChevronDown, Trophy } from "lucide-react";
+import { ChevronDown, Star, Trophy } from "lucide-react";
 
 type Country = {
   name: string;
@@ -44,6 +44,7 @@ type MatchRow = {
   winner_country: string | null;
   referee_id: number | null;
   media_id: number | null;
+  is_star_match: boolean;
   created_at: string;
 
   set1_home: number | null;
@@ -90,6 +91,7 @@ type MatchDraft = {
   away_score: number;
   referee_id: number | null;
   media_id: number | null;
+  is_star_match: boolean;
 
   set1_home: number | null;
   set1_away: number | null;
@@ -873,7 +875,23 @@ function ScheduleCard({
   const resultStyles = getMatchResultStyles(match);
 
   return (
-    <div className="rounded-[1.5rem] border border-white/10 bg-[#0B1712] p-5 md:hidden">
+    <div
+      className={`relative overflow-hidden rounded-[1.5rem] border p-5 md:hidden ${
+        match.is_star_match
+          ? "border-yellow-400/40 bg-gradient-to-br from-yellow-400/15 via-[#0B1712] to-[#0B1712] shadow-[0_0_28px_rgba(250,204,21,0.12)]"
+          : "border-white/10 bg-[#0B1712]"
+      }`}
+    >
+      {match.is_star_match ? (
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-yellow-400" />
+      ) : null}
+      {match.is_star_match ? (
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-yellow-400/30 bg-yellow-400/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.22em] text-yellow-300">
+          <Star className="h-3.5 w-3.5 fill-yellow-300" />
+          Star Match
+        </div>
+      ) : null}
+
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-sm font-semibold">
@@ -1420,6 +1438,7 @@ export default function SAVLSitePage() {
     match_date: "",
     match_time: "",
     status: "Scheduled" as MatchStatus,
+    is_star_match: false,
 
     set1_home: "",
     set1_away: "",
@@ -1576,6 +1595,7 @@ export default function SAVLSitePage() {
               away_score: match.away_score,
               referee_id: match.referee_id ?? null,
               media_id: match.media_id ?? null,
+              is_star_match: Boolean(match.is_star_match),
 
               set1_home: match.set1_home ?? null,
               set1_away: match.set1_away ?? null,
@@ -2517,6 +2537,7 @@ export default function SAVLSitePage() {
       winner_country: winnerCountry,
       referee_id: null,
       media_id: null,
+      is_star_match: matchForm.is_star_match,
 
       ...setsPayload,
     });
@@ -2535,6 +2556,7 @@ export default function SAVLSitePage() {
       match_date: "",
       match_time: "",
       status: "Scheduled",
+      is_star_match: false,
 
       set1_home: "",
       set1_away: "",
@@ -2589,6 +2611,7 @@ export default function SAVLSitePage() {
         winner_country: winnerCountry,
         referee_id: draft.referee_id,
         media_id: draft.media_id,
+        is_star_match: draft.is_star_match,
 
         set1_home: draft.set1_home,
         set1_away: draft.set1_away,
@@ -3306,9 +3329,19 @@ export default function SAVLSitePage() {
                   return (
                     <div
                       key={match.id}
-                      className="grid grid-cols-[2.2fr_1fr_1fr_1fr] items-center border-b border-white/5 px-6 py-5 text-sm last:border-none"
+                      className={`relative grid grid-cols-[2.2fr_1fr_1fr_1fr] items-center border-b px-6 py-5 text-sm last:border-none ${
+                        match.is_star_match
+                          ? "border-yellow-400/20 bg-yellow-400/[0.07]"
+                          : "border-white/5"
+                      }`}
                     >
                       <div>
+                        {match.is_star_match ? (
+                          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-yellow-400/30 bg-yellow-400/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.22em] text-yellow-300">
+                            <Star className="h-3.5 w-3.5 fill-yellow-300" />
+                            Star Match
+                          </div>
+                        ) : null}
                         {match.stage ? (
                           <p className="mb-1 text-xs uppercase tracking-[0.18em] text-emerald-300">
                             {match.stage}
@@ -4355,6 +4388,29 @@ export default function SAVLSitePage() {
                           options={statusOptions}
                           placeholder="Select status"
                         />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="flex items-start gap-3 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4 text-sm text-yellow-100">
+                          <input
+                            type="checkbox"
+                            checked={matchForm.is_star_match}
+                            onChange={(event) =>
+                              setMatchForm((prev) => ({
+                                ...prev,
+                                is_star_match: event.target.checked,
+                              }))
+                            }
+                            className="mt-1 h-4 w-4 rounded border-yellow-400/30 bg-transparent accent-yellow-400"
+                          />
+
+                          <span>
+                            <span className="block font-semibold text-yellow-300">
+                              Star Match
+                            </span>
+                            Mark this match as a featured match on the public schedule.
+                          </span>
+                        </label>
                       </div>
 
                       <div className="md:col-span-2">
@@ -5431,6 +5487,26 @@ export default function SAVLSitePage() {
                                   </div>
                                 ) : null}
 
+                                <label className="flex items-start gap-3 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4 text-sm text-yellow-100">
+                                  <input
+                                    type="checkbox"
+                                    checked={Boolean(matchDrafts[match.id]?.is_star_match)}
+                                    onChange={(event) =>
+                                      updateMatchDraft(match.id, {
+                                        is_star_match: event.target.checked,
+                                      })
+                                    }
+                                    className="mt-1 h-4 w-4 rounded border-yellow-400/30 bg-transparent accent-yellow-400"
+                                  />
+
+                                  <span>
+                                    <span className="block font-semibold text-yellow-300">
+                                      Star Match
+                                    </span>
+                                    Highlight this match in the public schedule.
+                                  </span>
+                                </label>
+
                                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                                   <p className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">
                                     Set Results
@@ -5458,13 +5534,13 @@ export default function SAVLSitePage() {
                                   </button>
 
                                   <div className="grid gap-4 md:grid-cols-5">
-                                    {[
+                                    {([
                                       { label: "Set 1", homeField: "set1_home", awayField: "set1_away" },
                                       { label: "Set 2", homeField: "set2_home", awayField: "set2_away" },
                                       { label: "Set 3", homeField: "set3_home", awayField: "set3_away" },
                                       { label: "Set 4", homeField: "set4_home", awayField: "set4_away" },
                                       { label: "Set 5", homeField: "set5_home", awayField: "set5_away" },
-                                    ].map((setItem) => (
+                                    ] as const).map((setItem) => (
                                       <div
                                         key={setItem.label}
                                         className="rounded-2xl border border-white/10 bg-[#081712] p-3"
@@ -5478,11 +5554,11 @@ export default function SAVLSitePage() {
                                             type="number"
                                             min="0"
                                             placeholder="Home"
-                                            value={matchDrafts[match.id]?.[setItem.homeField as keyof MatchDraft] ?? ""}
+                                            value={matchDrafts[match.id]?.[setItem.homeField] ?? ""}
                                             onChange={(e) =>
                                               updateMatchDraftNumber(
                                                 match.id,
-                                                setItem.homeField as keyof MatchDraft,
+                                                setItem.homeField,
                                                 e.target.value,
                                               )
                                             }
@@ -5493,11 +5569,11 @@ export default function SAVLSitePage() {
                                             type="number"
                                             min="0"
                                             placeholder="Away"
-                                            value={matchDrafts[match.id]?.[setItem.awayField as keyof MatchDraft] ?? ""}
+                                            value={matchDrafts[match.id]?.[setItem.awayField] ?? ""}
                                             onChange={(e) =>
                                               updateMatchDraftNumber(
                                                 match.id,
-                                                setItem.awayField as keyof MatchDraft,
+                                                setItem.awayField,
                                                 e.target.value,
                                               )
                                             }
