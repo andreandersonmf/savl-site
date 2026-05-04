@@ -636,28 +636,32 @@ export default function StatsPage() {
             <p className="text-xs text-white/45">Total Kills</p>
             <p className="text-2xl font-black">{derived.totalKills}</p>
           </div>
+
           <div>
             <p className="text-xs text-white/45">Total Attempts</p>
             <p className="text-2xl font-black">{derived.totalAttempts}</p>
           </div>
+
           <div>
             <p className="text-xs text-white/45">Total FG%</p>
             <p className="text-2xl font-black text-emerald-300">
               {derived.totalFg}
             </p>
           </div>
+
           <div>
             <p className="text-xs text-white/45">Total Blocks</p>
             <p className="text-2xl font-black">{derived.totalBlocks}</p>
+          </div>
+
           <div>
-            <p className="text-xs text-white/45">Rec</p>
+            <p className="text-xs text-white/45">Recs</p>
             <p className="text-2xl font-black">{row.receives}</p>
           </div>
 
           <div>
-            <p className="text-xs text-white/45">Dive</p>
+            <p className="text-xs text-white/45">Dives</p>
             <p className="text-2xl font-black">{row.dives}</p>
-          </div>
           </div>
         </div>
       </div>
