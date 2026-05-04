@@ -78,7 +78,6 @@ type StatField = keyof Pick<
   | "one_touches"
   | "kill_blocks"
   | "assists"
-  | "spike_receives"
   | "serve_bfs"
   | "receives"
   | "dives"
@@ -94,17 +93,16 @@ const supabase: SupabaseClient | null =
 
 const STAT_FIELDS: { key: StatField; label: string }[] = [
   { key: "spiking_errors", label: "Spk Err" },
-  { key: "ape_kills", label: "Ape K" },
+  { key: "ape_kills", label: "Ape Kills" },
   { key: "ape_attempts", label: "Ape Att" },
   { key: "kills", label: "Kills" },
-  { key: "attempts", label: "Att" },
+  { key: "attempts", label: "Spike Att" },
   { key: "one_touches", label: "One Touch" },
   { key: "kill_blocks", label: "Kill Blocks" },
   { key: "assists", label: "Assists" },
-  { key: "spike_receives", label: "Spike" },
   { key: "serve_bfs", label: "BFs" },
-  { key: "receives", label: "Rec" },
-  { key: "dives", label: "Dvs" },
+  { key: "receives", label: "Recs" },
+  { key: "dives", label: "Dives" },
   { key: "aces", label: "Aces" },
   { key: "misc_errors", label: "Misc Err" },
 ];
@@ -212,19 +210,20 @@ function percent(value: number, total: number) {
 }
 
 function getDerived(row: StatRow) {
+  const spikeAttempts = row.attempts;
   const totalKills = row.ape_kills + row.kills;
-  const totalAttempts = row.ape_attempts + row.attempts;
+  const totalAttempts = row.ape_attempts + spikeAttempts;
   const totalBlocks = row.one_touches + row.kill_blocks;
-  const servesTotal = row.spike_receives + row.serve_bfs;
+  const receiveTotal = row.receives + row.dives;
 
   return {
     apeFg: percent(row.ape_kills, row.ape_attempts),
-    killFg: percent(row.kills, row.attempts),
+    killFg: percent(row.kills, spikeAttempts),
     totalKills,
     totalAttempts,
     totalFg: percent(totalKills, totalAttempts),
     totalBlocks,
-    servesTotal,
+    receiveTotal,
   };
 }
 
@@ -485,7 +484,7 @@ export default function StatsPage() {
         one_touches: existing.one_touches,
         kill_blocks: existing.kill_blocks,
         assists: existing.assists,
-        spike_receives: existing.spike_receives,
+        spike_receives: 0,
         serve_bfs: existing.serve_bfs,
         receives: existing.receives,
         dives: existing.dives,
@@ -550,7 +549,7 @@ export default function StatsPage() {
                 <th className="px-3 py-3 text-center">Total Att</th>
                 <th className="px-3 py-3 text-center">Total FG%</th>
                 <th className="px-3 py-3 text-center">Total Blocks</th>
-                <th className="px-3 py-3 text-center">Serves Total</th>
+                <th className="px-3 py-3 text-center">Total Recs</th>
               </tr>
             </thead>
 
@@ -609,7 +608,7 @@ export default function StatsPage() {
                       {derived.totalBlocks}
                     </td>
                     <td className="px-3 py-3 text-center text-white/75">
-                      {derived.servesTotal}
+                      {derived.receiveTotal}
                     </td>
                   </tr>
                 );
