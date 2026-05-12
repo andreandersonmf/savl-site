@@ -45,6 +45,7 @@ type MatchRow = {
   referee_id: number | null;
   media_id: number | null;
   is_star_match: boolean;
+  stats_finalized: boolean;
   created_at: string;
 
   set1_home: number | null;
@@ -137,8 +138,6 @@ type BrickColor = {
   number: number;
   hex: string;
 };
-
-
 
 const COUNTRIES: Country[] = [
   { name: "Argentina", code: "ar" },
@@ -412,15 +411,17 @@ function getFlagUrl(code: string) {
 
 function getTeamGroup(teamCountry: string, teams: Team[]) {
   const team = teams.find(
-    (item) => normalizeText(item.country) === normalizeText(teamCountry)
+    (item) => normalizeText(item.country) === normalizeText(teamCountry),
   );
   return team?.group_letter ?? null;
 }
 
 function getGroupBadgeClass(group: GroupLetter) {
   if (group === "A") return "border-sky-400/20 bg-sky-400/10 text-sky-300";
-  if (group === "B") return "border-emerald-400/20 bg-emerald-400/10 text-emerald-300";
-  if (group === "C") return "border-amber-400/20 bg-amber-400/10 text-amber-300";
+  if (group === "B")
+    return "border-emerald-400/20 bg-emerald-400/10 text-emerald-300";
+  if (group === "C")
+    return "border-amber-400/20 bg-amber-400/10 text-amber-300";
   return "border-fuchsia-400/20 bg-fuchsia-400/10 text-fuchsia-300";
 }
 
@@ -560,9 +561,7 @@ function Avatar({
 }
 
 function getBrickColorByNumber(number: string) {
-  return BRICK_COLORS.find(
-    (color) => String(color.number) === number
-  ) || null;
+  return BRICK_COLORS.find((color) => String(color.number) === number) || null;
 }
 
 function SelectPicker({
@@ -724,7 +723,11 @@ function TeamCard({
         onClick={onToggle}
         className="w-full rounded-[1rem] text-left focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
         aria-expanded={expanded}
-        aria-label={expanded ? `Hide roster for ${team.country}` : `View roster for ${team.country}`}
+        aria-label={
+          expanded
+            ? `Hide roster for ${team.country}`
+            : `View roster for ${team.country}`
+        }
       >
         <div className="flex items-center gap-4">
           <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#0D1F18]">
@@ -737,38 +740,34 @@ function TeamCard({
 
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-lg font-bold">{team.country}</h3>
-              {team.captain_name?.trim() &&
-              team.captain_discord?.trim() &&
-              String(team.captain_roblox_id || "").trim() ? (
-
-                <div className="flex items-center gap-3 text-sm text-white/70">
-                  <Avatar
-                    robloxUserId={team.captain_roblox_id}
-                    name={team.captain_name}
-                  />
-                  <div className="min-w-0">
-                    <p className="truncate">Captain {team.captain_name}</p>
-                    <p className="truncate text-white/55">
-                      @{team.captain_discord}
-                    </p>
-                  </div>
+            {team.captain_name?.trim() &&
+            team.captain_discord?.trim() &&
+            String(team.captain_roblox_id || "").trim() ? (
+              <div className="flex items-center gap-3 text-sm text-white/70">
+                <Avatar
+                  robloxUserId={team.captain_roblox_id}
+                  name={team.captain_name}
+                />
+                <div className="min-w-0">
+                  <p className="truncate">Captain {team.captain_name}</p>
+                  <p className="truncate text-white/55">
+                    @{team.captain_discord}
+                  </p>
                 </div>
-
-              ) : (
-
-                <div className="flex items-center gap-3 text-sm text-red-300">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-red-400/20 bg-red-400/10 text-xs font-bold">
-                    ?
-                  </div>
-                  <div>
-                    <p className="font-semibold">No captain assigned</p>
-                    <p className="text-xs text-red-200/70">
-                      This team needs a captain
-                    </p>
-                  </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 text-sm text-red-300">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border border-red-400/20 bg-red-400/10 text-xs font-bold">
+                  ?
                 </div>
-
-              )}
+                <div>
+                  <p className="font-semibold">No captain assigned</p>
+                  <p className="text-xs text-red-200/70">
+                    This team needs a captain
+                  </p>
+                </div>
+              </div>
+            )}
             <p className="mt-3 text-xs uppercase tracking-[0.18em] text-emerald-300">
               {expanded ? "Hide roster" : "View roster"} • {players.length + 1}{" "}
               members
@@ -792,37 +791,39 @@ function TeamCard({
               <span className="font-medium">Brick Color:</span>
               <span>{team.brick_color_name}</span>
               {team.brick_color_number ? (
-                <span className="text-white/50">#{team.brick_color_number}</span>
+                <span className="text-white/50">
+                  #{team.brick_color_number}
+                </span>
               ) : null}
             </div>
           ) : null}
 
           <div className="space-y-3">
             {team.captain_name?.trim() &&
-              team.captain_discord?.trim() &&
-              String(team.captain_roblox_id || "").trim() ? (
-
-                <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
-                  <Avatar
-                    robloxUserId={team.captain_roblox_id}
-                    name={team.captain_name}
-                  />
-                  <div className="min-w-0">
-                    <p className="font-semibold text-white">{team.captain_name}</p>
-                    <p className="text-sm text-white/60">@{team.captain_discord}</p>
-                  </div>
-                  <span className="ml-auto rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
-                    Captain
-                  </span>
+            team.captain_discord?.trim() &&
+            String(team.captain_roblox_id || "").trim() ? (
+              <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3">
+                <Avatar
+                  robloxUserId={team.captain_roblox_id}
+                  name={team.captain_name}
+                />
+                <div className="min-w-0">
+                  <p className="font-semibold text-white">
+                    {team.captain_name}
+                  </p>
+                  <p className="text-sm text-white/60">
+                    @{team.captain_discord}
+                  </p>
                 </div>
-
-              ) : (
-
-                <div className="rounded-2xl border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-300">
-                  No captain assigned.
-                </div>
-
-              )}
+                <span className="ml-auto rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+                  Captain
+                </span>
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-300">
+                No captain assigned.
+              </div>
+            )}
 
             {players.length === 0 ? (
               <p className="text-sm text-white/55">
@@ -902,7 +903,9 @@ function ScheduleCard({
                 className="h-5 w-7 rounded-sm object-cover"
               />
             ) : null}
-            <span className={`truncate ${match.status === "Finished" ? resultStyles.homeClass : "text-white"}`}>
+            <span
+              className={`truncate ${match.status === "Finished" ? resultStyles.homeClass : "text-white"}`}
+            >
               {match.home_country}
             </span>
           </div>
@@ -917,7 +920,9 @@ function ScheduleCard({
                 className="h-5 w-7 rounded-sm object-cover"
               />
             ) : null}
-            <span className={`truncate ${match.status === "Finished" ? resultStyles.awayClass : "text-white"}`}>
+            <span
+              className={`truncate ${match.status === "Finished" ? resultStyles.awayClass : "text-white"}`}
+            >
               {match.away_country}
             </span>
           </div>
@@ -1034,26 +1039,20 @@ function getMatchResultStyles(match: MatchRow) {
   const awayWon = match.away_score > match.home_score;
 
   return {
-    homeClass:
-      homeWon
-        ? "font-bold text-emerald-300"
-        : awayWon
-          ? "font-semibold text-red-300"
-          : "font-semibold text-white",
-    awayClass:
-      awayWon
-        ? "font-bold text-emerald-300"
-        : homeWon
-          ? "font-semibold text-red-300"
-          : "font-semibold text-white",
+    homeClass: homeWon
+      ? "font-bold text-emerald-300"
+      : awayWon
+        ? "font-semibold text-red-300"
+        : "font-semibold text-white",
+    awayClass: awayWon
+      ? "font-bold text-emerald-300"
+      : homeWon
+        ? "font-semibold text-red-300"
+        : "font-semibold text-white",
   };
 }
 
-function StandingsCard({
-  team,
-}: {
-  team: StandingRow;
-}) {
+function StandingsCard({ team }: { team: StandingRow }) {
   return (
     <div className="rounded-[1.5rem] border border-white/10 bg-[#0B1712] p-5 md:hidden">
       <div className="flex items-center justify-between gap-3">
@@ -1373,6 +1372,9 @@ export default function SAVLSitePage() {
   const [adminLogged, setAdminLogged] = useState(false);
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
+  const [statTrackLogged, setStatTrackLogged] = useState(false);
+  const [statTrackEmail, setStatTrackEmail] = useState("");
+  const [statTrackPassword, setStatTrackPassword] = useState("");
   const [matchDrafts, setMatchDrafts] = useState<Record<number, MatchDraft>>(
     {},
   );
@@ -1389,7 +1391,8 @@ export default function SAVLSitePage() {
 
   type StandingsView = "Qualifiers" | "Playoffs" | GroupLetter;
 
-  const [standingsView, setStandingsView] = useState<StandingsView>("Qualifiers");
+  const [standingsView, setStandingsView] =
+    useState<StandingsView>("Qualifiers");
 
   const [teamGroupForm, setTeamGroupForm] = useState({
     team_id: "",
@@ -1466,11 +1469,13 @@ export default function SAVLSitePage() {
     onConfirm: null,
   });
 
-  const [staffApplications, setStaffApplications] = useState<StaffApplication[]>(
-    [],
-  );
+  const [staffApplications, setStaffApplications] = useState<
+    StaffApplication[]
+  >([]);
 
-  const [adminFilterStatus, setAdminFilterStatus] = useState<"All" | MatchStatus>("All");
+  const [adminFilterStatus, setAdminFilterStatus] = useState<
+    "All" | MatchStatus
+  >("All");
   const [adminFilterStage, setAdminFilterStage] = useState("All");
 
   const [submittingStaffApplication, setSubmittingStaffApplication] =
@@ -1499,8 +1504,27 @@ export default function SAVLSitePage() {
   const [removingCaptain, setRemovingCaptain] = useState(false);
   const [savingCaptainChange, setSavingCaptainChange] = useState(false);
 
-  async function reloadTeams() {
+  async function getCurrentUserRole() {
+    if (!supabase) return null;
 
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return null;
+
+    const { data, error } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (error) return null;
+
+    return data?.role ?? null;
+  }
+
+  async function reloadTeams() {
     if (!supabase) {
       console.error("Supabase client is null");
       return;
@@ -1546,14 +1570,25 @@ export default function SAVLSitePage() {
       return;
     }
 
+    const role = await getCurrentUserRole();
+
+    if (role !== "admin") {
+      await supabase.auth.signOut();
+      showNotice("This login does not have admin permission.", true);
+      return;
+    }
+
     setAdminLogged(true);
+    setStatTrackLogged(false);
     setAdminEmail("");
     setAdminPassword("");
+
     await reloadTeams();
     await reloadMatches();
     await reloadTeamPlayers();
     await reloadLeagueSettings();
     await reloadStaffApplications();
+
     showNotice("Admin unlocked.", true);
   }
 
@@ -1561,12 +1596,16 @@ export default function SAVLSitePage() {
     if (!supabase) return;
 
     await supabase.auth.signOut();
+
     setAdminLogged(false);
+    setStatTrackLogged(false);
+
     await reloadTeams();
     await reloadMatches();
     await reloadTeamPlayers();
     await reloadLeagueSettings();
     await reloadStaffApplications();
+
     showNotice("Admin locked.", true);
   }
 
@@ -1607,11 +1646,55 @@ export default function SAVLSitePage() {
               set4_away: match.set4_away ?? null,
               set5_home: match.set5_home ?? null,
               set5_away: match.set5_away ?? null,
-            }
+            },
           ]),
         ),
       );
     }
+  }
+
+  async function handleStatTrackLogin(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!supabase) return;
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: statTrackEmail.trim(),
+      password: statTrackPassword,
+    });
+
+    if (error) {
+      showNotice(error.message, true);
+      return;
+    }
+
+    const role = await getCurrentUserRole();
+
+    if (role !== "stat_track") {
+      await supabase.auth.signOut();
+      showNotice("This login does not have Stat Track permission.", true);
+      return;
+    }
+
+    setStatTrackLogged(true);
+    setAdminLogged(false);
+    setStatTrackEmail("");
+    setStatTrackPassword("");
+
+    await reloadMatches();
+
+    showNotice("Stat Track unlocked.", true);
+  }
+
+  async function handleStatTrackLogout() {
+    if (!supabase) return;
+
+    await supabase.auth.signOut();
+
+    setStatTrackLogged(false);
+    await reloadMatches();
+
+    showNotice("Stat Track locked.", true);
   }
 
   useEffect(() => {
@@ -1752,15 +1835,27 @@ export default function SAVLSitePage() {
   }, [filterStatus, filterStage, filterTeam, filterGroup, matches, teams]);
 
   const adminFilteredMatches = useMemo(() => {
-    return matches.filter((match) => {
-      const statusOk =
-        adminFilterStatus === "All" || match.status === adminFilterStatus;
+    return matches
+      .filter((match) => {
+        const statusOk =
+          adminFilterStatus === "All" || match.status === adminFilterStatus;
 
-      const stageOk =
-        adminFilterStage === "All" || (match.stage?.trim() ?? "") === adminFilterStage;
+        const stageOk =
+          adminFilterStage === "All" ||
+          (match.stage?.trim() ?? "") === adminFilterStage;
 
-      return statusOk && stageOk;
-    });
+        return statusOk && stageOk;
+      })
+      .sort((a, b) => {
+        if (a.stats_finalized !== b.stats_finalized) {
+          return a.stats_finalized ? -1 : 1;
+        }
+
+        const dateA = `${a.match_date} ${a.match_time}`;
+        const dateB = `${b.match_date} ${b.match_time}`;
+
+        return dateA.localeCompare(dateB);
+      });
   }, [matches, adminFilterStatus, adminFilterStage]);
 
   const qualifierMatches = useMemo(() => {
@@ -1853,35 +1948,34 @@ export default function SAVLSitePage() {
     return new Set(
       teams
         .map((team) => team.brick_color_number)
-        .filter((number): number is number => number !== null && number !== undefined)
+        .filter(
+          (number): number is number => number !== null && number !== undefined,
+        ),
     );
   }, [teams]);
 
   const registerBrickColorOptions = useMemo<SelectOption[]>(() => {
-    return BRICK_COLORS
-      .filter((color) => !usedBrickNumbers.has(color.number))
-      .map((color) => ({
-        label: `${color.name} (#${color.number})`,
-        value: String(color.number),
-      }));
+    return BRICK_COLORS.filter(
+      (color) => !usedBrickNumbers.has(color.number),
+    ).map((color) => ({
+      label: `${color.name} (#${color.number})`,
+      value: String(color.number),
+    }));
   }, [usedBrickNumbers]);
 
   function getAdminBrickColorOptions(teamId: number): SelectOption[] {
     const currentTeam = teams.find((team) => team.id === teamId);
 
-    return BRICK_COLORS
-      .filter((color) => {
-        if (currentTeam?.brick_color_number === color.number) return true;
-        return !teams.some(
-          (team) =>
-            team.id !== teamId &&
-            team.brick_color_number === color.number
-        );
-      })
-      .map((color) => ({
-        label: `${color.name} (#${color.number})`,
-        value: String(color.number),
-      }));
+    return BRICK_COLORS.filter((color) => {
+      if (currentTeam?.brick_color_number === color.number) return true;
+      return !teams.some(
+        (team) =>
+          team.id !== teamId && team.brick_color_number === color.number,
+      );
+    }).map((color) => ({
+      label: `${color.name} (#${color.number})`,
+      value: String(color.number),
+    }));
   }
 
   function showNotice(text: string, isAdmin = false) {
@@ -2075,10 +2169,13 @@ export default function SAVLSitePage() {
 
     if (
       teams.some(
-        (team) => team.brick_color_number === selectedBrickColor.number
+        (team) => team.brick_color_number === selectedBrickColor.number,
       )
     ) {
-      showNotice("This Brick Color is already being used by another team.", isAdmin);
+      showNotice(
+        "This Brick Color is already being used by another team.",
+        isAdmin,
+      );
       return false;
     }
 
@@ -2127,7 +2224,9 @@ export default function SAVLSitePage() {
 
     const cleanRole = staffRegisterForm.role;
     const cleanRobloxUsername = staffRegisterForm.roblox_username.trim();
-    const cleanDiscord = staffRegisterForm.discord_username.trim().replace(/^@/, "");
+    const cleanDiscord = staffRegisterForm.discord_username
+      .trim()
+      .replace(/^@/, "");
     const cleanRobloxUserId = staffRegisterForm.roblox_user_id.trim();
 
     if (
@@ -2304,10 +2403,17 @@ export default function SAVLSitePage() {
 
     const teamId = Number(captainForm.team_id);
     const cleanCaptainName = captainForm.captain_name.trim();
-    const cleanCaptainDiscord = cleanDiscordUsername(captainForm.captain_discord);
+    const cleanCaptainDiscord = cleanDiscordUsername(
+      captainForm.captain_discord,
+    );
     const cleanCaptainRobloxId = captainForm.captain_roblox_id.trim();
 
-    if (!teamId || !cleanCaptainName || !cleanCaptainDiscord || !cleanCaptainRobloxId) {
+    if (
+      !teamId ||
+      !cleanCaptainName ||
+      !cleanCaptainDiscord ||
+      !cleanCaptainRobloxId
+    ) {
       showNotice("Fill in all captain fields.", true);
       return;
     }
@@ -2325,7 +2431,8 @@ export default function SAVLSitePage() {
 
     const sameAsCurrentCaptain =
       normalizeText(team.captain_name) === normalizeText(cleanCaptainName) &&
-      normalizeText(team.captain_discord) === normalizeText(cleanCaptainDiscord) &&
+      normalizeText(team.captain_discord) ===
+        normalizeText(cleanCaptainDiscord) &&
       String(team.captain_roblox_id).trim() === cleanCaptainRobloxId;
 
     if (sameAsCurrentCaptain) {
@@ -2336,10 +2443,9 @@ export default function SAVLSitePage() {
     const playerAlreadyInAnotherTeam = teamPlayers.find(
       (player) =>
         player.team_id !== teamId &&
-        (
-          normalizeText(player.discord_username) === normalizeText(cleanCaptainDiscord) ||
-          String(player.roblox_user_id).trim() === cleanCaptainRobloxId
-        )
+        (normalizeText(player.discord_username) ===
+          normalizeText(cleanCaptainDiscord) ||
+          String(player.roblox_user_id).trim() === cleanCaptainRobloxId),
     );
 
     if (playerAlreadyInAnotherTeam) {
@@ -2350,14 +2456,16 @@ export default function SAVLSitePage() {
     const captainAlreadyInAnotherTeam = teams.find(
       (item) =>
         item.id !== teamId &&
-        (
-          normalizeText(item.captain_discord) === normalizeText(cleanCaptainDiscord) ||
-          String(item.captain_roblox_id).trim() === cleanCaptainRobloxId
-        )
+        (normalizeText(item.captain_discord) ===
+          normalizeText(cleanCaptainDiscord) ||
+          String(item.captain_roblox_id).trim() === cleanCaptainRobloxId),
     );
 
     if (captainAlreadyInAnotherTeam) {
-      showNotice("This player is already registered as captain of another team.", true);
+      showNotice(
+        "This player is already registered as captain of another team.",
+        true,
+      );
       return;
     }
 
@@ -2366,10 +2474,9 @@ export default function SAVLSitePage() {
     const existingRosterPlayer = teamPlayers.find(
       (player) =>
         player.team_id === teamId &&
-        (
-          normalizeText(player.discord_username) === normalizeText(cleanCaptainDiscord) ||
-          String(player.roblox_user_id).trim() === cleanCaptainRobloxId
-        )
+        (normalizeText(player.discord_username) ===
+          normalizeText(cleanCaptainDiscord) ||
+          String(player.roblox_user_id).trim() === cleanCaptainRobloxId),
     );
 
     if (existingRosterPlayer) {
@@ -2498,7 +2605,10 @@ export default function SAVLSitePage() {
         !playoffQualifiedCountries.has(matchForm.home_country) ||
         !playoffQualifiedCountries.has(matchForm.away_country)
       ) {
-        showNotice("Only Qualifiers top 1-8 teams can play Playoffs matches.", true);
+        showNotice(
+          "Only Qualifiers top 1-8 teams can play Playoffs matches.",
+          true,
+        );
         return;
       }
     }
@@ -2580,12 +2690,28 @@ export default function SAVLSitePage() {
     const draft = matchDrafts[matchId];
     if (!current || !draft) return;
 
+    if (!statTrackLogged) {
+      showNotice("Only Stat Track can edit match stats.", true);
+      return;
+    }
+
+    if (current.stats_finalized) {
+      showNotice(
+        "Stats for this match are already finalized and cannot be edited.",
+        true,
+      );
+      return;
+    }
+
     if (normalizeText(draft.stage).startsWith("playoffs:")) {
       if (
         !playoffQualifiedCountries.has(current.home_country) ||
         !playoffQualifiedCountries.has(current.away_country)
       ) {
-        showNotice("Only Qualifiers top 1-8 teams can play Playoffs matches.", true);
+        showNotice(
+          "Only Qualifiers top 1-8 teams can play Playoffs matches.",
+          true,
+        );
         return;
       }
     }
@@ -2633,6 +2759,72 @@ export default function SAVLSitePage() {
 
     await reloadMatches();
     showNotice("Match updated.", true);
+  }
+
+  async function finishStats(matchId: number) {
+    if (!supabase) return;
+
+    if (!statTrackLogged) {
+      showNotice("Only Stat Track can finish stats.", true);
+      return;
+    }
+
+    const current = matches.find((match) => match.id === matchId);
+    const draft = matchDrafts[matchId];
+
+    if (!current || !draft) return;
+
+    if (current.stats_finalized) {
+      showNotice("Stats are already finalized.", true);
+      return;
+    }
+
+    const { homeScore, awayScore } = calculateSetWins(draft);
+
+    const winnerCountry = getWinnerCountryFromSets(
+      draft,
+      current.home_country,
+      current.away_country,
+      "Finished",
+    );
+
+    const { error } = await supabase
+      .from("matches")
+      .update({
+        status: "Finished",
+        stage: draft.stage,
+        match_date: draft.match_date,
+        match_time: draft.match_time,
+        home_score: homeScore,
+        away_score: awayScore,
+        winner_country: winnerCountry,
+        referee_id: draft.referee_id,
+        media_id: draft.media_id,
+        is_star_match: draft.is_star_match,
+
+        set1_home: draft.set1_home,
+        set1_away: draft.set1_away,
+        set2_home: draft.set2_home,
+        set2_away: draft.set2_away,
+        set3_home: draft.set3_home,
+        set3_away: draft.set3_away,
+        set4_home: draft.set4_home,
+        set4_away: draft.set4_away,
+        set5_home: draft.set5_home,
+        set5_away: draft.set5_away,
+
+        stats_finalized: true,
+      })
+      .eq("id", matchId)
+      .eq("stats_finalized", false);
+
+    if (error) {
+      showNotice(error.message, true);
+      return;
+    }
+
+    await reloadMatches();
+    showNotice("Stats finalized.", true);
   }
 
   async function handleDeleteMatch(matchId: number) {
@@ -2708,8 +2900,9 @@ export default function SAVLSitePage() {
 
     const duplicateInRoster = teamPlayers.find(
       (player) =>
-        normalizeText(player.discord_username) === normalizeText(cleanDiscord) ||
-        String(player.roblox_user_id).trim() === cleanUserId
+        normalizeText(player.discord_username) ===
+          normalizeText(cleanDiscord) ||
+        String(player.roblox_user_id).trim() === cleanUserId,
     );
 
     if (duplicateInRoster) {
@@ -2729,7 +2922,7 @@ export default function SAVLSitePage() {
     const playerIsCaptainSomewhereElse = teams.find(
       (item) =>
         normalizeText(item.captain_discord) === normalizeText(cleanDiscord) ||
-        String(item.captain_roblox_id).trim() === cleanUserId
+        String(item.captain_roblox_id).trim() === cleanUserId,
     );
 
     if (playerIsCaptainSomewhereElse) {
@@ -2866,7 +3059,10 @@ export default function SAVLSitePage() {
     );
   }
 
-  async function handleUpdateTeamBrickColor(teamId: number, brickColorName: string) {
+  async function handleUpdateTeamBrickColor(
+    teamId: number,
+    brickColorName: string,
+  ) {
     if (!supabase) return;
 
     const selectedBrickColor = getBrickColorByNumber(brickColorName);
@@ -2893,7 +3089,9 @@ export default function SAVLSitePage() {
     showNotice("Brick Color updated successfully.", true);
   }
 
-  async function handleAssignTeamGroup(event: React.FormEvent<HTMLFormElement>) {
+  async function handleAssignTeamGroup(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
     if (!supabase) return;
 
@@ -3177,7 +3375,7 @@ export default function SAVLSitePage() {
             </div>
           )}
         </section>
-        
+
         <section id="schedule" className="scroll-mt-28 bg-white/[0.03] py-16">
           <div className="mx-auto max-w-7xl px-6">
             <div className="mb-8 space-y-6">
@@ -3349,7 +3547,9 @@ export default function SAVLSitePage() {
                         ) : null}
 
                         <p className="mt-1 flex items-center gap-3 font-semibold text-white">
-                          <span className={`inline-flex items-center gap-2 ${match.status === "Finished" ? resultStyles.homeClass : "text-white"}`}>
+                          <span
+                            className={`inline-flex items-center gap-2 ${match.status === "Finished" ? resultStyles.homeClass : "text-white"}`}
+                          >
                             {homeCountry ? (
                               <img
                                 src={getFlagUrl(homeCountry.code)}
@@ -3364,7 +3564,9 @@ export default function SAVLSitePage() {
                             VS
                           </span>
 
-                          <span className={`inline-flex items-center gap-2 ${match.status === "Finished" ? resultStyles.awayClass : "text-white"}`}>
+                          <span
+                            className={`inline-flex items-center gap-2 ${match.status === "Finished" ? resultStyles.awayClass : "text-white"}`}
+                          >
                             {awayCountry ? (
                               <img
                                 src={getFlagUrl(awayCountry.code)}
@@ -3379,7 +3581,8 @@ export default function SAVLSitePage() {
                         {match.status === "Finished" ? (
                           <div className="mt-1 space-y-1 text-xs text-white/55">
                             <p>
-                              Final score: {match.home_score} - {match.away_score}
+                              Final score: {match.home_score} -{" "}
+                              {match.away_score}
                             </p>
                             {formatSetScores(match) ? (
                               <p>Set scores: {formatSetScores(match)}</p>
@@ -3396,8 +3599,11 @@ export default function SAVLSitePage() {
                                   name={referee.roblox_username}
                                 />
                                 <span>
-                                  <span className="font-semibold text-white">Referee:</span>{" "}
-                                  {referee.roblox_username} • @{referee.discord_username}
+                                  <span className="font-semibold text-white">
+                                    Referee:
+                                  </span>{" "}
+                                  {referee.roblox_username} • @
+                                  {referee.discord_username}
                                 </span>
                               </div>
                             ) : null}
@@ -3409,8 +3615,11 @@ export default function SAVLSitePage() {
                                   name={media.roblox_username}
                                 />
                                 <span>
-                                  <span className="font-semibold text-white">Media:</span>{" "}
-                                  {media.roblox_username} • @{media.discord_username}
+                                  <span className="font-semibold text-white">
+                                    Media:
+                                  </span>{" "}
+                                  {media.roblox_username} • @
+                                  {media.discord_username}
                                 </span>
                               </div>
                             ) : null}
@@ -3439,7 +3648,6 @@ export default function SAVLSitePage() {
           </div>
         </section>
 
-
         <section
           id="groups"
           className="mx-auto max-w-7xl scroll-mt-28 px-6 py-16"
@@ -3461,16 +3669,21 @@ export default function SAVLSitePage() {
                   className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6"
                 >
                   <div className="mb-5 flex items-center justify-between">
-                    <h3 className="text-xl font-black text-white">Group {group}</h3>
+                    <h3 className="text-xl font-black text-white">
+                      Group {group}
+                    </h3>
                     <span
                       className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${getGroupBadgeClass(group)}`}
                     >
-                      {teamsInGroup.length} team{teamsInGroup.length === 1 ? "" : "s"}
+                      {teamsInGroup.length} team
+                      {teamsInGroup.length === 1 ? "" : "s"}
                     </span>
                   </div>
 
                   {teamsInGroup.length === 0 ? (
-                    <p className="text-sm text-white/55">No teams assigned yet.</p>
+                    <p className="text-sm text-white/55">
+                      No teams assigned yet.
+                    </p>
                   ) : (
                     <div className="space-y-3">
                       {teamsInGroup.map((team) => (
@@ -3510,7 +3723,9 @@ export default function SAVLSitePage() {
               <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
                 League Table
               </p>
-              <h2 className="mt-2 text-3xl font-black md:text-4xl">Standings</h2>
+              <h2 className="mt-2 text-3xl font-black md:text-4xl">
+                Standings
+              </h2>
             </div>
 
             <div className="min-w-[220px]">
@@ -3519,15 +3734,15 @@ export default function SAVLSitePage() {
               </label>
               <SelectPicker
                 value={standingsView}
-                  onChange={(value) => setStandingsView(value as StandingsView)}
-                  options={[
-                    { label: "Qualifiers", value: "Qualifiers" },
-                    { label: "Playoffs", value: "Playoffs" },
-                    { label: "Group A", value: "A" },
-                    { label: "Group B", value: "B" },
-                    { label: "Group C", value: "C" },
-                    { label: "Group D", value: "D" },
-                  ]}
+                onChange={(value) => setStandingsView(value as StandingsView)}
+                options={[
+                  { label: "Qualifiers", value: "Qualifiers" },
+                  { label: "Playoffs", value: "Playoffs" },
+                  { label: "Group A", value: "A" },
+                  { label: "Group B", value: "B" },
+                  { label: "Group C", value: "C" },
+                  { label: "Group D", value: "D" },
+                ]}
                 placeholder="Select ranking"
               />
             </div>
@@ -3546,70 +3761,78 @@ export default function SAVLSitePage() {
             )}
           </div>
 
-        <div className="hidden overflow-hidden rounded-[2rem] border border-white/10 bg-[#0B1712] md:block">
-          <div className="grid grid-cols-[0.5fr_2fr_0.8fr_0.8fr_0.8fr_0.9fr_0.9fr_0.9fr_0.9fr_0.9fr] border-b border-white/10 px-6 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/50">
-            <span>#</span>
-            <span>Team</span>
-            <span>P</span>
-            <span>W</span>
-            <span>L</span>
-            <span>SW</span>
-            <span>SL</span>
-            <span>SD</span>
-            <span>PD</span>
-            <span>PTS</span>
+          <div className="hidden overflow-hidden rounded-[2rem] border border-white/10 bg-[#0B1712] md:block">
+            <div className="grid grid-cols-[0.5fr_2fr_0.8fr_0.8fr_0.8fr_0.9fr_0.9fr_0.9fr_0.9fr_0.9fr] border-b border-white/10 px-6 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/50">
+              <span>#</span>
+              <span>Team</span>
+              <span>P</span>
+              <span>W</span>
+              <span>L</span>
+              <span>SW</span>
+              <span>SL</span>
+              <span>SD</span>
+              <span>PD</span>
+              <span>PTS</span>
+            </div>
+
+            {standingsFiltered.length === 0 ? (
+              <div className="px-6 py-8 text-white/60">
+                Standings will appear after teams register and matches are
+                finished.
+              </div>
+            ) : (
+              standingsFiltered.map((team) => (
+                <div
+                  key={team.country}
+                  className="grid grid-cols-[0.5fr_2fr_0.8fr_0.8fr_0.8fr_0.9fr_0.9fr_0.9fr_0.9fr_0.9fr] items-center border-b border-white/5 px-6 py-5 text-sm last:border-none"
+                >
+                  <span className="font-semibold text-white">
+                    {team.position}
+                  </span>
+                  <span className="flex items-center gap-3 font-semibold text-white">
+                    <img
+                      src={getFlagUrl(team.code)}
+                      alt={`${team.country} flag`}
+                      className="h-5 w-7 rounded-sm object-cover"
+                    />
+                    {team.country}
+                  </span>
+                  <span className="text-white/75">{team.played}</span>
+                  <span className="text-white/75">{team.wins}</span>
+                  <span className="text-white/75">{team.losses}</span>
+                  <span className="text-white/75">{team.setsWon}</span>
+                  <span className="text-white/75">{team.setsLost}</span>
+                  <span className="text-white/75">
+                    {team.setDiff > 0 ? `+${team.setDiff}` : team.setDiff}
+                  </span>
+                  <span className="text-white/75">
+                    {team.ptsDiff > 0 ? `+${team.ptsDiff}` : team.ptsDiff}
+                  </span>
+                  <span className="font-semibold text-emerald-300">
+                    {team.points}
+                  </span>
+                </div>
+              ))
+            )}
           </div>
 
-          {standingsFiltered.length === 0 ? (
-            <div className="px-6 py-8 text-white/60">
-              Standings will appear after teams register and matches are finished.
-            </div>
-          ) : (
-            standingsFiltered.map((team) => (
-              <div
-                key={team.country}
-                className="grid grid-cols-[0.5fr_2fr_0.8fr_0.8fr_0.8fr_0.9fr_0.9fr_0.9fr_0.9fr_0.9fr] items-center border-b border-white/5 px-6 py-5 text-sm last:border-none"
-              >
-                <span className="font-semibold text-white">{team.position}</span>
-                <span className="flex items-center gap-3 font-semibold text-white">
-                  <img
-                    src={getFlagUrl(team.code)}
-                    alt={`${team.country} flag`}
-                    className="h-5 w-7 rounded-sm object-cover"
-                  />
-                  {team.country}
-                </span>
-                <span className="text-white/75">{team.played}</span>
-                <span className="text-white/75">{team.wins}</span>
-                <span className="text-white/75">{team.losses}</span>
-                <span className="text-white/75">{team.setsWon}</span>
-                <span className="text-white/75">{team.setsLost}</span>
-                <span className="text-white/75">
-                  {team.setDiff > 0 ? `+${team.setDiff}` : team.setDiff}
-                </span>
-                <span className="text-white/75">
-                  {team.ptsDiff > 0 ? `+${team.ptsDiff}` : team.ptsDiff}
-                </span>
-                <span className="font-semibold text-emerald-300">{team.points}</span>
-              </div>
-            ))
-          )}
-        </div>
-
-        <div className="mt-4 hidden rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs leading-6 text-white/60 md:block">
-          <p>
-            <strong>P</strong>: Played • <strong>W</strong>: Wins • <strong>L</strong>: Losses •{" "}
-            <strong>SW</strong>: Sets Won • <strong>SL</strong>: Sets Lost •{" "}
-            <strong>SD</strong>: Set Difference • <strong>PD</strong>: Point Difference •{" "}
-            <strong>PTS</strong>: League Points
-          </p>
-          <p className="mt-2">
-            <strong>Tiebreaker order:</strong> League Points, Wins, Set Difference, Point Difference, Sets Won.
-          </p>
-          <p className="mt-2">
-            <strong>Points system:</strong> 3 points for a 3-0 or 3-1 win, 2 points for a 3-2 win, 1 point for a 2-3 loss.
-          </p>
-        </div>
+          <div className="mt-4 hidden rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs leading-6 text-white/60 md:block">
+            <p>
+              <strong>P</strong>: Played • <strong>W</strong>: Wins •{" "}
+              <strong>L</strong>: Losses • <strong>SW</strong>: Sets Won •{" "}
+              <strong>SL</strong>: Sets Lost • <strong>SD</strong>: Set
+              Difference • <strong>PD</strong>: Point Difference •{" "}
+              <strong>PTS</strong>: League Points
+            </p>
+            <p className="mt-2">
+              <strong>Tiebreaker order:</strong> League Points, Wins, Set
+              Difference, Point Difference, Sets Won.
+            </p>
+            <p className="mt-2">
+              <strong>Points system:</strong> 3 points for a 3-0 or 3-1 win, 2
+              points for a 3-2 win, 1 point for a 2-3 loss.
+            </p>
+          </div>
         </section>
 
         <section className="mx-auto max-w-7xl px-6 py-16">
@@ -3621,7 +3844,8 @@ export default function SAVLSitePage() {
               Player & Team Statistics
             </h2>
             <p className="mt-4 max-w-2xl text-white/65">
-              View set-by-set player stats, team totals, percentages, and leaderboards.
+              View set-by-set player stats, team totals, percentages, and
+              leaderboards.
             </p>
 
             <Link
@@ -3632,6 +3856,60 @@ export default function SAVLSitePage() {
             </Link>
           </div>
         </section>
+
+        <div className="mb-6 rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
+                Stat Track Access
+              </p>
+              <p className="mt-2 text-sm text-white/60">
+                Login here to edit match stats and finish stats.
+              </p>
+            </div>
+
+            {statTrackLogged ? (
+              <button
+                type="button"
+                onClick={handleStatTrackLogout}
+                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-white/10 active:translate-y-0.5"
+              >
+                Lock Stat Track
+              </button>
+            ) : null}
+          </div>
+
+          {!statTrackLogged ? (
+            <form onSubmit={handleStatTrackLogin} className="mt-5 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+              <input
+                type="email"
+                value={statTrackEmail}
+                onChange={(e) => setStatTrackEmail(e.target.value)}
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                placeholder="stattrack@email.com"
+              />
+
+              <input
+                type="password"
+                value={statTrackPassword}
+                onChange={(e) => setStatTrackPassword(e.target.value)}
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                placeholder="Password"
+              />
+
+              <button
+                type="submit"
+                className="rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5"
+              >
+                Unlock
+              </button>
+            </form>
+          ) : (
+            <p className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-300">
+              Stat Track editing is unlocked.
+            </p>
+          )}
+        </div>
 
         <section
           id="register"
@@ -3706,7 +3984,10 @@ export default function SAVLSitePage() {
                     <SelectPicker
                       value={registerForm.brick_color_name}
                       onChange={(value) =>
-                        setRegisterForm((prev) => ({ ...prev, brick_color_name: value }))
+                        setRegisterForm((prev) => ({
+                          ...prev,
+                          brick_color_name: value,
+                        }))
                       }
                       options={registerBrickColorOptions}
                       placeholder="Select a Brick Color"
@@ -4408,7 +4689,8 @@ export default function SAVLSitePage() {
                             <span className="block font-semibold text-yellow-300">
                               Star Match
                             </span>
-                            Mark this match as a featured match on the public schedule.
+                            Mark this match as a featured match on the public
+                            schedule.
                           </span>
                         </label>
                       </div>
@@ -4420,8 +4702,13 @@ export default function SAVLSitePage() {
 
                         <div className="grid gap-3">
                           {[1, 2, 3, 4, 5].map((setNumber) => (
-                            <div key={setNumber} className="grid grid-cols-[90px_1fr_1fr] gap-3 items-end">
-                              <p className="text-sm font-semibold text-white/70">Set {setNumber}</p>
+                            <div
+                              key={setNumber}
+                              className="grid grid-cols-[90px_1fr_1fr] gap-3 items-end"
+                            >
+                              <p className="text-sm font-semibold text-white/70">
+                                Set {setNumber}
+                              </p>
 
                               <div>
                                 <label className="mb-2 block text-xs font-medium text-white/50">
@@ -4431,7 +4718,11 @@ export default function SAVLSitePage() {
                                   type="number"
                                   min="0"
                                   name={`set${setNumber}_home`}
-                                  value={matchForm[`set${setNumber}_home` as keyof typeof matchForm] as string}
+                                  value={
+                                    matchForm[
+                                      `set${setNumber}_home` as keyof typeof matchForm
+                                    ] as string
+                                  }
                                   onChange={handleMatchFormChange}
                                   className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
                                   placeholder="25"
@@ -4446,7 +4737,11 @@ export default function SAVLSitePage() {
                                   type="number"
                                   min="0"
                                   name={`set${setNumber}_away`}
-                                  value={matchForm[`set${setNumber}_away` as keyof typeof matchForm] as string}
+                                  value={
+                                    matchForm[
+                                      `set${setNumber}_away` as keyof typeof matchForm
+                                    ] as string
+                                  }
                                   onChange={handleMatchFormChange}
                                   className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
                                   placeholder="22"
@@ -4457,7 +4752,8 @@ export default function SAVLSitePage() {
                         </div>
 
                         <p className="mt-3 text-xs text-white/45">
-                          The set result in matches and standings will be calculated automatically from these values.
+                          The set result in matches and standings will be
+                          calculated automatically from these values.
                         </p>
                       </div>
 
@@ -4477,326 +4773,218 @@ export default function SAVLSitePage() {
                   <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
                     <p className="mb-4 text-xl font-bold">Team approvals</p>
 
-                      <div className="space-y-6">
-                        <div>
-                          <div className="mb-3 flex items-center justify-between">
-                            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-yellow-300">
-                              Pending Registrations
-                            </p>
-                            <span className="rounded-full border border-yellow-400/20 bg-yellow-400/10 px-3 py-1 text-xs font-semibold text-yellow-300">
-                              {pendingTeams.length}
-                            </span>
-                          </div>
-
-                          <div className="space-y-4">
-                            {pendingTeams.length === 0 ? (
-                              <p className="text-white/60">No pending teams.</p>
-                            ) : (
-                              pendingTeams.map((team) => (
-                                <div
-                                  key={team.id}
-                                  className="rounded-2xl border border-yellow-400/15 bg-yellow-400/[0.04] p-4"
-                                >
-                                  <div className="flex items-start justify-between gap-4">
-                                    <div className="min-w-0">
-                                      <div className="flex items-center gap-3">
-                                        <img
-                                          src={getFlagUrl(team.code)}
-                                          alt={`${team.country} flag`}
-                                          className="h-8 w-11 rounded-md object-cover"
-                                        />
-                                        <div>
-                                          <p className="font-semibold">{team.country}</p>
-                                          <div className="mt-1 flex items-center gap-2 text-sm text-white/70">
-                                            <Avatar
-                                              robloxUserId={team.captain_roblox_id}
-                                              name={team.captain_name}
-                                            />
-                                            <span className="truncate">
-                                              {team.captain_name} • @{team.captain_discord}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    <div className="flex flex-wrap gap-2">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleApproveTeam(team.id)}
-                                        className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] active:translate-y-0.5"
-                                      >
-                                        Approve
-                                      </button>
-
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          openConfirmDialog({
-                                            title: "Reject Registration",
-                                            message: `Are you sure you want to reject ${team.country}'s registration?`,
-                                            confirmLabel: "Reject",
-                                            onConfirm: () => handleDeleteTeam(team.id),
-                                          })
-                                        }
-                                        className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
-                                      >
-                                        Reject
-                                      </button>
-
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          openConfirmDialog({
-                                            title: "Remove Captain",
-                                            message: "Are you sure you want to remove the current captain from this team?",
-                                            confirmLabel: "Remove Captain",
-                                            onConfirm: async () => {
-                                              await handleRemoveCaptain(team.id);
-                                            },
-                                          })
-                                        }
-                                        className="rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-400/15"
-                                      >
-                                        Remove Captain
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))
-                            )}
-                          </div>
+                    <div className="space-y-6">
+                      <div>
+                        <div className="mb-3 flex items-center justify-between">
+                          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-yellow-300">
+                            Pending Registrations
+                          </p>
+                          <span className="rounded-full border border-yellow-400/20 bg-yellow-400/10 px-3 py-1 text-xs font-semibold text-yellow-300">
+                            {pendingTeams.length}
+                          </span>
                         </div>
 
-                        <div>
-                          <div className="mb-3 flex items-center justify-between">
-                            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
-                              Approved Teams
-                            </p>
-                            <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
-                              {approvedTeams.length}
-                            </span>
-                          </div>
-
-                          <div className="space-y-4">
-                            {approvedTeams.length === 0 ? (
-                              <p className="text-white/60">No approved teams yet.</p>
-                            ) : (
-                              approvedTeams.map((team) => (
-                                <div
-                                  key={team.id}
-                                  className="rounded-2xl border border-white/10 bg-white/5 p-4"
-                                >
-                                  <div className="flex items-start justify-between gap-4">
-                                    <div className="min-w-0">
-                                      <div className="flex items-center gap-3">
-                                        <img
-                                          src={getFlagUrl(team.code)}
-                                          alt={`${team.country} flag`}
-                                          className="h-8 w-11 rounded-md object-cover"
-                                        />
-                                        <div>
-                                          <p className="font-semibold">{team.country}</p>
-                                          <div className="mt-1 flex items-center gap-2 text-sm text-white/70">
-                                            <Avatar
-                                              robloxUserId={team.captain_roblox_id}
-                                              name={team.captain_name}
-                                            />
-                                            <span className="truncate">
-                                              {team.captain_name} • @{team.captain_discord}
-                                            </span>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    {team.brick_color_name && team.brick_color_hex ? (
-                                      <div className="mt-3 flex items-center gap-2 text-sm text-white/75">
-                                        <span
-                                          className="h-4 w-4 rounded-full border border-white/20"
-                                          style={{ backgroundColor: team.brick_color_hex }}
-                                        />
-                                        <span>{team.brick_color_number}</span>
-                                        {team.brick_color_number ? (
-                                          <span className="text-white/45">#{team.brick_color_number}</span>
-                                        ) : null}
-                                      </div>
-                                    ) : null}
-
-                                    <div className="mt-4">
-                                      <label className="mb-2 block text-sm font-medium text-white/70">
-                                        Brick Color
-                                      </label>
-                                      <SelectPicker
-                                        value={team.brick_color_name ?? ""}
-                                        onChange={(value) => handleUpdateTeamBrickColor(team.id, value)}
-                                        options={getAdminBrickColorOptions(team.id)}
-                                        placeholder="Select a Brick Color"
+                        <div className="space-y-4">
+                          {pendingTeams.length === 0 ? (
+                            <p className="text-white/60">No pending teams.</p>
+                          ) : (
+                            pendingTeams.map((team) => (
+                              <div
+                                key={team.id}
+                                className="rounded-2xl border border-yellow-400/15 bg-yellow-400/[0.04] p-4"
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-3">
+                                      <img
+                                        src={getFlagUrl(team.code)}
+                                        alt={`${team.country} flag`}
+                                        className="h-8 w-11 rounded-md object-cover"
                                       />
-                                    </div>
-
-                                    <div className="flex flex-wrap gap-2">
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setSelectedAdminTeamId(team.id);
-                                          setPlayerForm({
-                                            team_id: String(team.id),
-                                            roblox_username: "",
-                                            roblox_user_id: "",
-                                            discord_username: "",
-                                            role: "Player",
-                                          });
-                                          scrollToSection("admin");
-                                        }}
-                                        className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-300 transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-400/15 active:translate-y-0.5"
-                                      >
-                                        Add Player
-                                      </button>
-
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          openConfirmDialog({
-                                            title: "Remove Team",
-                                            message: `Are you sure you want to remove ${team.country}? This action cannot be undone.`,
-                                            confirmLabel: "Remove",
-                                            onConfirm: () => handleDeleteTeam(team.id),
-                                          })
-                                        }
-                                        className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
-                                      >
-                                        Remove
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="mb-3 flex items-center justify-between">
-                            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-yellow-300">
-                              Pending Referee / Media
-                            </p>
-                            <span className="rounded-full border border-yellow-400/20 bg-yellow-400/10 px-3 py-1 text-xs font-semibold text-yellow-300">
-                              {pendingStaff.length}
-                            </span>
-                          </div>
-
-                          <div className="space-y-4">
-                            {pendingStaff.length === 0 ? (
-                              <p className="text-white/60">
-                                No pending Referee / Media applications.
-                              </p>
-                            ) : (
-                              pendingStaff.map((staff) => (
-                                <div
-                                  key={staff.id}
-                                  className="rounded-2xl border border-yellow-400/15 bg-yellow-400/[0.04] p-4"
-                                >
-                                  <div className="flex items-start justify-between gap-4">
-                                    <div className="min-w-0">
-                                      <div className="flex items-center gap-3">
-                                        <Avatar
-                                          robloxUserId={staff.roblox_user_id}
-                                          name={staff.roblox_username}
-                                        />
-                                        <div>
-                                          <p className="font-semibold text-white">
-                                            {staff.roblox_username}
-                                          </p>
-                                          <p className="text-sm text-white/70">
-                                            @{staff.discord_username}
-                                          </p>
-                                          <p className="mt-1 text-xs uppercase tracking-[0.18em] text-emerald-300">
-                                            Pending {getStaffRoleLabel(staff.role)}
-                                          </p>
+                                      <div>
+                                        <p className="font-semibold">
+                                          {team.country}
+                                        </p>
+                                        <div className="mt-1 flex items-center gap-2 text-sm text-white/70">
+                                          <Avatar
+                                            robloxUserId={
+                                              team.captain_roblox_id
+                                            }
+                                            name={team.captain_name}
+                                          />
+                                          <span className="truncate">
+                                            {team.captain_name} • @
+                                            {team.captain_discord}
+                                          </span>
                                         </div>
                                       </div>
                                     </div>
-
-                                    <div className="flex flex-wrap gap-2">
-                                      <button
-                                        type="button"
-                                        onClick={() => handleApproveStaffApplication(staff.id)}
-                                        className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] active:translate-y-0.5"
-                                      >
-                                        Approve
-                                      </button>
-
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          openConfirmDialog({
-                                            title: "Reject Staff Application",
-                                            message: `Are you sure you want to reject ${staff.roblox_username}'s ${staff.role} application?`,
-                                            confirmLabel: "Reject",
-                                            onConfirm: () => handleDeleteStaffApplication(staff.id),
-                                          })
-                                        }
-                                        className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
-                                      >
-                                        Reject
-                                      </button>
-                                    </div>
                                   </div>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </div>
 
-                        <div>
-                          <div className="mb-3 flex items-center justify-between">
-                            <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
-                              Referee&apos;s and Media&apos;s
-                            </p>
-                            <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
-                              {approvedStaff.length}
-                            </span>
-                          </div>
-
-                          <div className="space-y-4">
-                            {approvedStaff.length === 0 ? (
-                              <p className="text-white/60">
-                                No approved Referee / Media yet.
-                              </p>
-                            ) : (
-                              approvedStaff.map((staff) => (
-                                <div
-                                  key={staff.id}
-                                  className="rounded-2xl border border-white/10 bg-white/5 p-4"
-                                >
-                                  <div className="flex items-start justify-between gap-4">
-                                    <div className="flex min-w-0 items-center gap-3">
-                                      <Avatar
-                                        robloxUserId={staff.roblox_user_id}
-                                        name={staff.roblox_username}
-                                      />
-                                      <div className="min-w-0">
-                                        <p className="font-semibold text-white">
-                                          {staff.roblox_username}
-                                        </p>
-                                        <p className="text-sm text-white/60">
-                                          @{staff.discord_username}
-                                        </p>
-                                        <p className="mt-1 text-xs uppercase tracking-[0.18em] text-emerald-300">
-                                          {staff.role}
-                                        </p>
-                                      </div>
-                                    </div>
+                                  <div className="flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleApproveTeam(team.id)}
+                                      className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] active:translate-y-0.5"
+                                    >
+                                      Approve
+                                    </button>
 
                                     <button
                                       type="button"
                                       onClick={() =>
                                         openConfirmDialog({
-                                          title: "Remove Staff",
-                                          message: `Are you sure you want to remove ${staff.roblox_username} from approved staff? Assigned matches will lose this reference.`,
+                                          title: "Reject Registration",
+                                          message: `Are you sure you want to reject ${team.country}'s registration?`,
+                                          confirmLabel: "Reject",
+                                          onConfirm: () =>
+                                            handleDeleteTeam(team.id),
+                                        })
+                                      }
+                                      className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
+                                    >
+                                      Reject
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openConfirmDialog({
+                                          title: "Remove Captain",
+                                          message:
+                                            "Are you sure you want to remove the current captain from this team?",
+                                          confirmLabel: "Remove Captain",
+                                          onConfirm: async () => {
+                                            await handleRemoveCaptain(team.id);
+                                          },
+                                        })
+                                      }
+                                      className="rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-400/15"
+                                    >
+                                      Remove Captain
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="mb-3 flex items-center justify-between">
+                          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
+                            Approved Teams
+                          </p>
+                          <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+                            {approvedTeams.length}
+                          </span>
+                        </div>
+
+                        <div className="space-y-4">
+                          {approvedTeams.length === 0 ? (
+                            <p className="text-white/60">
+                              No approved teams yet.
+                            </p>
+                          ) : (
+                            approvedTeams.map((team) => (
+                              <div
+                                key={team.id}
+                                className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-3">
+                                      <img
+                                        src={getFlagUrl(team.code)}
+                                        alt={`${team.country} flag`}
+                                        className="h-8 w-11 rounded-md object-cover"
+                                      />
+                                      <div>
+                                        <p className="font-semibold">
+                                          {team.country}
+                                        </p>
+                                        <div className="mt-1 flex items-center gap-2 text-sm text-white/70">
+                                          <Avatar
+                                            robloxUserId={
+                                              team.captain_roblox_id
+                                            }
+                                            name={team.captain_name}
+                                          />
+                                          <span className="truncate">
+                                            {team.captain_name} • @
+                                            {team.captain_discord}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {team.brick_color_name &&
+                                  team.brick_color_hex ? (
+                                    <div className="mt-3 flex items-center gap-2 text-sm text-white/75">
+                                      <span
+                                        className="h-4 w-4 rounded-full border border-white/20"
+                                        style={{
+                                          backgroundColor: team.brick_color_hex,
+                                        }}
+                                      />
+                                      <span>{team.brick_color_number}</span>
+                                      {team.brick_color_number ? (
+                                        <span className="text-white/45">
+                                          #{team.brick_color_number}
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  ) : null}
+
+                                  <div className="mt-4">
+                                    <label className="mb-2 block text-sm font-medium text-white/70">
+                                      Brick Color
+                                    </label>
+                                    <SelectPicker
+                                      value={team.brick_color_name ?? ""}
+                                      onChange={(value) =>
+                                        handleUpdateTeamBrickColor(
+                                          team.id,
+                                          value,
+                                        )
+                                      }
+                                      options={getAdminBrickColorOptions(
+                                        team.id,
+                                      )}
+                                      placeholder="Select a Brick Color"
+                                    />
+                                  </div>
+
+                                  <div className="flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedAdminTeamId(team.id);
+                                        setPlayerForm({
+                                          team_id: String(team.id),
+                                          roblox_username: "",
+                                          roblox_user_id: "",
+                                          discord_username: "",
+                                          role: "Player",
+                                        });
+                                        scrollToSection("admin");
+                                      }}
+                                      className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-300 transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-400/15 active:translate-y-0.5"
+                                    >
+                                      Add Player
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openConfirmDialog({
+                                          title: "Remove Team",
+                                          message: `Are you sure you want to remove ${team.country}? This action cannot be undone.`,
                                           confirmLabel: "Remove",
-                                          onConfirm: () => handleDeleteStaffApplication(staff.id),
+                                          onConfirm: () =>
+                                            handleDeleteTeam(team.id),
                                         })
                                       }
                                       className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
@@ -4805,436 +4993,630 @@ export default function SAVLSitePage() {
                                     </button>
                                   </div>
                                 </div>
-                              ))
-                            )}
-                          </div>
+                              </div>
+                            ))
+                          )}
                         </div>
+                      </div>
 
-                        <form
-                          onSubmit={handleAddPlayer}
-                          className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6"
-                        >
-                          <p className="text-xl font-bold">Add player to roster</p>
-
-                          <div className="mt-5 grid gap-4 md:grid-cols-2">
-                            <div className="md:col-span-2">
-                              <label className="mb-2 block text-sm font-medium text-white/70">
-                                Team
-                              </label>
-                              <SelectPicker
-                                value={playerForm.team_id}
-                                onChange={(value) =>
-                                  setPlayerForm((prev) => ({
-                                    ...prev,
-                                    team_id: value,
-                                  }))
-                                }
-                                options={approvedTeams.map((team) => ({
-                                  label: team.country,
-                                  value: String(team.id),
-                                  imageUrl: getFlagUrl(team.code),
-                                }))}
-                                placeholder="Select approved team"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="mb-2 block text-sm font-medium text-white/70">
-                                Roblox Username
-                              </label>
-                              <input
-                                value={playerForm.roblox_username}
-                                onChange={(e) =>
-                                  setPlayerForm((prev) => ({
-                                    ...prev,
-                                    roblox_username: e.target.value,
-                                  }))
-                                }
-                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                                placeholder="Player Roblox Username"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="mb-2 block text-sm font-medium text-white/70">
-                                Discord Username
-                              </label>
-                              <input
-                                value={playerForm.discord_username}
-                                onChange={(e) =>
-                                  setPlayerForm((prev) => ({
-                                    ...prev,
-                                    discord_username: e.target.value,
-                                  }))
-                                }
-                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                                placeholder="discorduser"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="mb-2 block text-sm font-medium text-white/70">
-                                Roblox User ID
-                              </label>
-                              <input
-                                value={playerForm.roblox_user_id}
-                                onChange={(e) =>
-                                  setPlayerForm((prev) => ({
-                                    ...prev,
-                                    roblox_user_id: e.target.value,
-                                  }))
-                                }
-                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                                placeholder="123456789"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="mb-2 block text-sm font-medium text-white/70">
-                                Role
-                              </label>
-                              <SelectPicker
-                                value={playerForm.role}
-                                onChange={(value) =>
-                                  setPlayerForm((prev) => ({
-                                    ...prev,
-                                    role: value as TeamPlayerRole,
-                                  }))
-                                }
-                                options={roleOptions}
-                                placeholder="Select role"
-                              />
-                            </div>
-
-                            <div className="md:col-span-2">
-                              <button
-                                type="submit"
-                                className="w-full rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5"
-                              >
-                                Add Player
-                              </button>
-                            </div>
-                          </div>
-                        </form>
-
-                        <div className="rounded-[1.5rem] border border-white/10 bg-[#0B1712] p-5">
-                          <h3 className="text-lg font-bold text-white">Change Team Captain</h3>
-                          <p className="mt-1 text-sm text-white/60">
-                            Replace the current captain without deleting the team.
+                      <div>
+                        <div className="mb-3 flex items-center justify-between">
+                          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-yellow-300">
+                            Pending Referee / Media
                           </p>
-
-                          <form onSubmit={handleChangeCaptain} className="mt-4 space-y-4">
-                            <div>
-                              <label className="mb-2 block text-sm font-medium text-white/80">
-                                Team
-                              </label>
-                              <SelectPicker
-                                value={captainForm.team_id}
-                                onChange={(value) =>
-                                  setCaptainForm((prev) => ({
-                                    ...prev,
-                                    team_id: value,
-                                  }))
-                                }
-                                options={teams.map((team) => ({
-                                  label: team.country,
-                                  value: String(team.id),
-                                  imageUrl: getFlagUrl(team.code),
-                                }))}
-                                placeholder="Select a team"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="mb-2 block text-sm font-medium text-white/80">
-                                New Captain Name
-                              </label>
-                              <input
-                                type="text"
-                                value={captainForm.captain_name}
-                                onChange={(event) =>
-                                  setCaptainForm((prev) => ({
-                                    ...prev,
-                                    captain_name: event.target.value,
-                                  }))
-                                }
-                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
-                                placeholder="Roblox username"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="mb-2 block text-sm font-medium text-white/80">
-                                New Captain Discord
-                              </label>
-                              <input
-                                type="text"
-                                value={captainForm.captain_discord}
-                                onChange={(event) =>
-                                  setCaptainForm((prev) => ({
-                                    ...prev,
-                                    captain_discord: event.target.value,
-                                  }))
-                                }
-                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
-                                placeholder="@discorduser"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="mb-2 block text-sm font-medium text-white/80">
-                                New Captain Roblox User ID
-                              </label>
-                              <input
-                                type="text"
-                                value={captainForm.captain_roblox_id}
-                                onChange={(event) =>
-                                  setCaptainForm((prev) => ({
-                                    ...prev,
-                                    captain_roblox_id: event.target.value,
-                                  }))
-                                }
-                                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
-                                placeholder="Numbers only"
-                              />
-                            </div>
-
-                            <div>
-                              <label className="mb-2 block text-sm font-medium text-white/80">
-                                Old Captain New Role
-                              </label>
-                              <SelectPicker
-                                value={captainForm.old_captain_new_role}
-                                onChange={(value) =>
-                                  setCaptainForm((prev) => ({
-                                    ...prev,
-                                    old_captain_new_role: value as TeamPlayerRole,
-                                  }))
-                                }
-                                options={roleOptions}
-                                placeholder="Select a role"
-                              />
-                            </div>
-
-                            <button
-                              type="submit"
-                              disabled={savingCaptainChange}
-                              className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-5 py-3 font-semibold text-emerald-300 transition hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              {savingCaptainChange ? "Saving..." : "Change Captain"}
-                            </button>
-                          </form>
+                          <span className="rounded-full border border-yellow-400/20 bg-yellow-400/10 px-3 py-1 text-xs font-semibold text-yellow-300">
+                            {pendingStaff.length}
+                          </span>
                         </div>
 
-                        <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
-                          <p className="mb-4 text-xl font-bold">Edit team rosters</p>
+                        <div className="space-y-4">
+                          {pendingStaff.length === 0 ? (
+                            <p className="text-white/60">
+                              No pending Referee / Media applications.
+                            </p>
+                          ) : (
+                            pendingStaff.map((staff) => (
+                              <div
+                                key={staff.id}
+                                className="rounded-2xl border border-yellow-400/15 bg-yellow-400/[0.04] p-4"
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-3">
+                                      <Avatar
+                                        robloxUserId={staff.roblox_user_id}
+                                        name={staff.roblox_username}
+                                      />
+                                      <div>
+                                        <p className="font-semibold text-white">
+                                          {staff.roblox_username}
+                                        </p>
+                                        <p className="text-sm text-white/70">
+                                          @{staff.discord_username}
+                                        </p>
+                                        <p className="mt-1 text-xs uppercase tracking-[0.18em] text-emerald-300">
+                                          Pending{" "}
+                                          {getStaffRoleLabel(staff.role)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
 
-                          <div className="space-y-4">
-                            {approvedTeams.length === 0 ? (
-                              <p className="text-white/60">No approved teams yet.</p>
-                            ) : (
-                              approvedTeams.map((team) => {
-                                const players = getPlayersByTeam(team.id);
-                                const isOpen = selectedAdminTeamId === team.id;
-
-                                return (
-                                  <div
-                                    key={team.id}
-                                    className="rounded-2xl border border-white/10 bg-white/5 p-4"
-                                  >
+                                  <div className="flex flex-wrap gap-2">
                                     <button
                                       type="button"
                                       onClick={() =>
-                                        setSelectedAdminTeamId((prev) =>
-                                          prev === team.id ? null : team.id,
-                                        )
+                                        handleApproveStaffApplication(staff.id)
                                       }
-                                      className="flex w-full items-center justify-between gap-4 rounded-[1rem] text-left focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
-                                      aria-expanded={isOpen}
-                                      aria-label={
-                                        isOpen
-                                          ? `Hide roster for ${team.country}`
-                                          : `Edit roster for ${team.country}`
-                                      }
+                                      className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] active:translate-y-0.5"
                                     >
-                                      <div className="flex items-center gap-3">
-                                        <img
-                                          src={getFlagUrl(team.code)}
-                                          alt={`${team.country} flag`}
-                                          className="h-8 w-11 rounded-md object-cover"
-                                        />
-                                        <div>
-                                          <p className="font-semibold text-white">{team.country}</p>
-                                          <p className="text-sm text-white/55">
-                                            {players.length + (
-                                              team.captain_name?.trim() &&
-                                              team.captain_discord?.trim() &&
-                                              String(team.captain_roblox_id || "").trim()
-                                                ? 1
-                                                : 0
-                                            )} roster members
-                                          </p>
-                                        </div>
-                                      </div>
-
-                                      <span className="text-sm text-emerald-300">
-                                        {isOpen ? "Hide roster" : "Edit roster"}
-                                      </span>
+                                      Approve
                                     </button>
 
-                                    {isOpen ? (
-                                      <div className="mt-4 space-y-3">
-                                        <div className="rounded-2xl border border-white/10 bg-[#081712] p-3">
-                                          <div className="flex items-center gap-3">
-                                            <Avatar
-                                              robloxUserId={team.captain_roblox_id}
-                                              name={team.captain_name}
-                                            />
-                                            <div>
-                                              <p className="font-semibold text-white">
-                                                {team.captain_name}
-                                              </p>
-                                              <p className="text-sm text-white/60">
-                                                @{team.captain_discord}
-                                              </p>
-                                            </div>
-                                            <span className="ml-auto rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
-                                              Captain
-                                            </span>
-                                          </div>
-                                        </div>
-
-                                        {players.length === 0 ? (
-                                          <p className="text-sm text-white/60">
-                                            No extra players added yet.
-                                          </p>
-                                        ) : (
-                                          players.map((player) => (
-                                            <div
-                                              key={player.id}
-                                              className="rounded-2xl border border-white/10 bg-[#081712] p-4"
-                                            >
-                                              <div className="grid gap-3 md:grid-cols-2">
-                                                <input
-                                                  defaultValue={player.roblox_username}
-                                                  onBlur={(e) =>
-                                                    handleUpdatePlayer(player.id, {
-                                                      roblox_username: e.target.value.trim(),
-                                                    })
-                                                  }
-                                                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none"
-                                                  placeholder="Roblox Username"
-                                                />
-
-                                                <input
-                                                  defaultValue={player.discord_username}
-                                                  onBlur={(e) =>
-                                                    handleUpdatePlayer(player.id, {
-                                                      discord_username: e.target.value
-                                                        .trim()
-                                                        .replace(/^@/, ""),
-                                                    })
-                                                  }
-                                                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none"
-                                                  placeholder="Discord Username"
-                                                />
-
-                                                <input
-                                                  defaultValue={player.roblox_user_id}
-                                                  onBlur={(e) =>
-                                                    handleUpdatePlayer(player.id, {
-                                                      roblox_user_id: e.target.value.trim(),
-                                                    })
-                                                  }
-                                                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none"
-                                                  placeholder="Roblox User ID"
-                                                />
-
-                                                <select
-                                                  defaultValue={player.role}
-                                                  onChange={(e) =>
-                                                    handleUpdatePlayer(player.id, {
-                                                      role: e.target.value as TeamPlayerRole,
-                                                    })
-                                                  }
-                                                  className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none"
-                                                >
-                                                  <option value="Vice Captain">Vice Captain</option>
-                                                  <option value="Player">Player</option>
-                                                </select>
-                                              </div>
-
-                                              <div className="mt-3 flex justify-end">
-                                                <button
-                                                  type="button"
-                                                  onClick={() =>
-                                                    openConfirmDialog({
-                                                      title: "Remove Player",
-                                                      message: `Are you sure you want to remove ${player.roblox_username} from the roster?`,
-                                                      confirmLabel: "Remove",
-                                                      onConfirm: () => handleDeletePlayer(player.id),
-                                                    })
-                                                  }
-                                                  className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:bg-red-400/15"
-                                                >
-                                                  Remove Player
-                                                </button>
-                                              </div>
-                                            </div>
-                                          ))
-                                        )}
-                                      </div>
-                                    ) : null}
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openConfirmDialog({
+                                          title: "Reject Staff Application",
+                                          message: `Are you sure you want to reject ${staff.roblox_username}'s ${staff.role} application?`,
+                                          confirmLabel: "Reject",
+                                          onConfirm: () =>
+                                            handleDeleteStaffApplication(
+                                              staff.id,
+                                            ),
+                                        })
+                                      }
+                                      className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
+                                    >
+                                      Reject
+                                    </button>
                                   </div>
-                                );
-                              })
-                            )}
-                        </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
                         </div>
                       </div>
+
+                      <div>
+                        <div className="mb-3 flex items-center justify-between">
+                          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
+                            Referee&apos;s and Media&apos;s
+                          </p>
+                          <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+                            {approvedStaff.length}
+                          </span>
+                        </div>
+
+                        <div className="space-y-4">
+                          {approvedStaff.length === 0 ? (
+                            <p className="text-white/60">
+                              No approved Referee / Media yet.
+                            </p>
+                          ) : (
+                            approvedStaff.map((staff) => (
+                              <div
+                                key={staff.id}
+                                className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="flex min-w-0 items-center gap-3">
+                                    <Avatar
+                                      robloxUserId={staff.roblox_user_id}
+                                      name={staff.roblox_username}
+                                    />
+                                    <div className="min-w-0">
+                                      <p className="font-semibold text-white">
+                                        {staff.roblox_username}
+                                      </p>
+                                      <p className="text-sm text-white/60">
+                                        @{staff.discord_username}
+                                      </p>
+                                      <p className="mt-1 text-xs uppercase tracking-[0.18em] text-emerald-300">
+                                        {staff.role}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      openConfirmDialog({
+                                        title: "Remove Staff",
+                                        message: `Are you sure you want to remove ${staff.roblox_username} from approved staff? Assigned matches will lose this reference.`,
+                                        confirmLabel: "Remove",
+                                        onConfirm: () =>
+                                          handleDeleteStaffApplication(
+                                            staff.id,
+                                          ),
+                                      })
+                                    }
+                                    className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      <form
+                        onSubmit={handleAddPlayer}
+                        className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6"
+                      >
+                        <p className="text-xl font-bold">
+                          Add player to roster
+                        </p>
+
+                        <div className="mt-5 grid gap-4 md:grid-cols-2">
+                          <div className="md:col-span-2">
+                            <label className="mb-2 block text-sm font-medium text-white/70">
+                              Team
+                            </label>
+                            <SelectPicker
+                              value={playerForm.team_id}
+                              onChange={(value) =>
+                                setPlayerForm((prev) => ({
+                                  ...prev,
+                                  team_id: value,
+                                }))
+                              }
+                              options={approvedTeams.map((team) => ({
+                                label: team.country,
+                                value: String(team.id),
+                                imageUrl: getFlagUrl(team.code),
+                              }))}
+                              placeholder="Select approved team"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/70">
+                              Roblox Username
+                            </label>
+                            <input
+                              value={playerForm.roblox_username}
+                              onChange={(e) =>
+                                setPlayerForm((prev) => ({
+                                  ...prev,
+                                  roblox_username: e.target.value,
+                                }))
+                              }
+                              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                              placeholder="Player Roblox Username"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/70">
+                              Discord Username
+                            </label>
+                            <input
+                              value={playerForm.discord_username}
+                              onChange={(e) =>
+                                setPlayerForm((prev) => ({
+                                  ...prev,
+                                  discord_username: e.target.value,
+                                }))
+                              }
+                              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                              placeholder="discorduser"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/70">
+                              Roblox User ID
+                            </label>
+                            <input
+                              value={playerForm.roblox_user_id}
+                              onChange={(e) =>
+                                setPlayerForm((prev) => ({
+                                  ...prev,
+                                  roblox_user_id: e.target.value,
+                                }))
+                              }
+                              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                              placeholder="123456789"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/70">
+                              Role
+                            </label>
+                            <SelectPicker
+                              value={playerForm.role}
+                              onChange={(value) =>
+                                setPlayerForm((prev) => ({
+                                  ...prev,
+                                  role: value as TeamPlayerRole,
+                                }))
+                              }
+                              options={roleOptions}
+                              placeholder="Select role"
+                            />
+                          </div>
+
+                          <div className="md:col-span-2">
+                            <button
+                              type="submit"
+                              className="w-full rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5"
+                            >
+                              Add Player
+                            </button>
+                          </div>
+                        </div>
+                      </form>
+
+                      <div className="rounded-[1.5rem] border border-white/10 bg-[#0B1712] p-5">
+                        <h3 className="text-lg font-bold text-white">
+                          Change Team Captain
+                        </h3>
+                        <p className="mt-1 text-sm text-white/60">
+                          Replace the current captain without deleting the team.
+                        </p>
+
+                        <form
+                          onSubmit={handleChangeCaptain}
+                          className="mt-4 space-y-4"
+                        >
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/80">
+                              Team
+                            </label>
+                            <SelectPicker
+                              value={captainForm.team_id}
+                              onChange={(value) =>
+                                setCaptainForm((prev) => ({
+                                  ...prev,
+                                  team_id: value,
+                                }))
+                              }
+                              options={teams.map((team) => ({
+                                label: team.country,
+                                value: String(team.id),
+                                imageUrl: getFlagUrl(team.code),
+                              }))}
+                              placeholder="Select a team"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/80">
+                              New Captain Name
+                            </label>
+                            <input
+                              type="text"
+                              value={captainForm.captain_name}
+                              onChange={(event) =>
+                                setCaptainForm((prev) => ({
+                                  ...prev,
+                                  captain_name: event.target.value,
+                                }))
+                              }
+                              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
+                              placeholder="Roblox username"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/80">
+                              New Captain Discord
+                            </label>
+                            <input
+                              type="text"
+                              value={captainForm.captain_discord}
+                              onChange={(event) =>
+                                setCaptainForm((prev) => ({
+                                  ...prev,
+                                  captain_discord: event.target.value,
+                                }))
+                              }
+                              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
+                              placeholder="@discorduser"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/80">
+                              New Captain Roblox User ID
+                            </label>
+                            <input
+                              type="text"
+                              value={captainForm.captain_roblox_id}
+                              onChange={(event) =>
+                                setCaptainForm((prev) => ({
+                                  ...prev,
+                                  captain_roblox_id: event.target.value,
+                                }))
+                              }
+                              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
+                              placeholder="Numbers only"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/80">
+                              Old Captain New Role
+                            </label>
+                            <SelectPicker
+                              value={captainForm.old_captain_new_role}
+                              onChange={(value) =>
+                                setCaptainForm((prev) => ({
+                                  ...prev,
+                                  old_captain_new_role: value as TeamPlayerRole,
+                                }))
+                              }
+                              options={roleOptions}
+                              placeholder="Select a role"
+                            />
+                          </div>
+
+                          <button
+                            type="submit"
+                            disabled={savingCaptainChange}
+                            className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-5 py-3 font-semibold text-emerald-300 transition hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {savingCaptainChange
+                              ? "Saving..."
+                              : "Change Captain"}
+                          </button>
+                        </form>
+                      </div>
+
+                      <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
+                        <p className="mb-4 text-xl font-bold">
+                          Edit team rosters
+                        </p>
+
+                        <div className="space-y-4">
+                          {approvedTeams.length === 0 ? (
+                            <p className="text-white/60">
+                              No approved teams yet.
+                            </p>
+                          ) : (
+                            approvedTeams.map((team) => {
+                              const players = getPlayersByTeam(team.id);
+                              const isOpen = selectedAdminTeamId === team.id;
+
+                              return (
+                                <div
+                                  key={team.id}
+                                  className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setSelectedAdminTeamId((prev) =>
+                                        prev === team.id ? null : team.id,
+                                      )
+                                    }
+                                    className="flex w-full items-center justify-between gap-4 rounded-[1rem] text-left focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+                                    aria-expanded={isOpen}
+                                    aria-label={
+                                      isOpen
+                                        ? `Hide roster for ${team.country}`
+                                        : `Edit roster for ${team.country}`
+                                    }
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <img
+                                        src={getFlagUrl(team.code)}
+                                        alt={`${team.country} flag`}
+                                        className="h-8 w-11 rounded-md object-cover"
+                                      />
+                                      <div>
+                                        <p className="font-semibold text-white">
+                                          {team.country}
+                                        </p>
+                                        <p className="text-sm text-white/55">
+                                          {players.length +
+                                            (team.captain_name?.trim() &&
+                                            team.captain_discord?.trim() &&
+                                            String(
+                                              team.captain_roblox_id || "",
+                                            ).trim()
+                                              ? 1
+                                              : 0)}{" "}
+                                          roster members
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    <span className="text-sm text-emerald-300">
+                                      {isOpen ? "Hide roster" : "Edit roster"}
+                                    </span>
+                                  </button>
+
+                                  {isOpen ? (
+                                    <div className="mt-4 space-y-3">
+                                      <div className="rounded-2xl border border-white/10 bg-[#081712] p-3">
+                                        <div className="flex items-center gap-3">
+                                          <Avatar
+                                            robloxUserId={
+                                              team.captain_roblox_id
+                                            }
+                                            name={team.captain_name}
+                                          />
+                                          <div>
+                                            <p className="font-semibold text-white">
+                                              {team.captain_name}
+                                            </p>
+                                            <p className="text-sm text-white/60">
+                                              @{team.captain_discord}
+                                            </p>
+                                          </div>
+                                          <span className="ml-auto rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+                                            Captain
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {players.length === 0 ? (
+                                        <p className="text-sm text-white/60">
+                                          No extra players added yet.
+                                        </p>
+                                      ) : (
+                                        players.map((player) => (
+                                          <div
+                                            key={player.id}
+                                            className="rounded-2xl border border-white/10 bg-[#081712] p-4"
+                                          >
+                                            <div className="grid gap-3 md:grid-cols-2">
+                                              <input
+                                                defaultValue={
+                                                  player.roblox_username
+                                                }
+                                                onBlur={(e) =>
+                                                  handleUpdatePlayer(
+                                                    player.id,
+                                                    {
+                                                      roblox_username:
+                                                        e.target.value.trim(),
+                                                    },
+                                                  )
+                                                }
+                                                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none"
+                                                placeholder="Roblox Username"
+                                              />
+
+                                              <input
+                                                defaultValue={
+                                                  player.discord_username
+                                                }
+                                                onBlur={(e) =>
+                                                  handleUpdatePlayer(
+                                                    player.id,
+                                                    {
+                                                      discord_username:
+                                                        e.target.value
+                                                          .trim()
+                                                          .replace(/^@/, ""),
+                                                    },
+                                                  )
+                                                }
+                                                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none"
+                                                placeholder="Discord Username"
+                                              />
+
+                                              <input
+                                                defaultValue={
+                                                  player.roblox_user_id
+                                                }
+                                                onBlur={(e) =>
+                                                  handleUpdatePlayer(
+                                                    player.id,
+                                                    {
+                                                      roblox_user_id:
+                                                        e.target.value.trim(),
+                                                    },
+                                                  )
+                                                }
+                                                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none"
+                                                placeholder="Roblox User ID"
+                                              />
+
+                                              <select
+                                                defaultValue={player.role}
+                                                onChange={(e) =>
+                                                  handleUpdatePlayer(
+                                                    player.id,
+                                                    {
+                                                      role: e.target
+                                                        .value as TeamPlayerRole,
+                                                    },
+                                                  )
+                                                }
+                                                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none"
+                                              >
+                                                <option value="Vice Captain">
+                                                  Vice Captain
+                                                </option>
+                                                <option value="Player">
+                                                  Player
+                                                </option>
+                                              </select>
+                                            </div>
+
+                                            <div className="mt-3 flex justify-end">
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  openConfirmDialog({
+                                                    title: "Remove Player",
+                                                    message: `Are you sure you want to remove ${player.roblox_username} from the roster?`,
+                                                    confirmLabel: "Remove",
+                                                    onConfirm: () =>
+                                                      handleDeletePlayer(
+                                                        player.id,
+                                                      ),
+                                                  })
+                                                }
+                                                className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:bg-red-400/15"
+                                              >
+                                                Remove Player
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ))
+                                      )}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
                     <p className="mb-4 text-xl font-bold">Manage matches</p>
                     <div className="space-y-4">
-                        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-                          <div className="flex flex-col gap-4 md:flex-row md:items-end">
-                            <div className="min-w-[220px]">
-                              <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                                Filter by status
-                                </label>
-                                <SelectPicker
-                                  value={adminFilterStatus}
-                                  onChange={(value) =>
-                                    setAdminFilterStatus(value as "All" | MatchStatus)
-                                  }
-                                  options={[
-                                    { label: "All statuses", value: "All" },
-                                    ...statusOptions,
-                                  ]}
-                                  placeholder="Select status"
-                                />
-                              </div>
+                      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                        <div className="flex flex-col gap-4 md:flex-row md:items-end">
+                          <div className="min-w-[220px]">
+                            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                              Filter by status
+                            </label>
+                            <SelectPicker
+                              value={adminFilterStatus}
+                              onChange={(value) =>
+                                setAdminFilterStatus(
+                                  value as "All" | MatchStatus,
+                                )
+                              }
+                              options={[
+                                { label: "All statuses", value: "All" },
+                                ...statusOptions,
+                              ]}
+                              placeholder="Select status"
+                            />
+                          </div>
 
-                              <div className="min-w-[240px]">
-                              <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                                  Filter by stage
-                                </label>
-                                <SelectPicker
-                                  value={adminFilterStage}
-                                  onChange={setAdminFilterStage}
-                                  options={[
-                                    { label: "All stages", value: "All" },
-                                    ...availableStages.map((stage) => ({
-                                      label: stage,
-                                      value: stage,
-                                    })),
-                                  ]}
-                                  placeholder="Select stage"
-                                />
-                              </div>
-                            </div>
-                          </div>    
+                          <div className="min-w-[240px]">
+                            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                              Filter by stage
+                            </label>
+                            <SelectPicker
+                              value={adminFilterStage}
+                              onChange={setAdminFilterStage}
+                              options={[
+                                { label: "All stages", value: "All" },
+                                ...availableStages.map((stage) => ({
+                                  label: stage,
+                                  value: stage,
+                                })),
+                              ]}
+                              placeholder="Select stage"
+                            />
+                          </div>
+                        </div>
+                      </div>
                       {adminFilteredMatches.length === 0 ? (
                         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/60">
                           No matches found with the selected filters.
@@ -5246,8 +5628,12 @@ export default function SAVLSitePage() {
                           return (
                             <div
                               key={match.id}
-                              className="rounded-2xl border border-white/10 bg-white/5 p-4"
-                            >       
+                              className={`rounded-2xl border p-4 ${
+                                match.stats_finalized
+                                  ? "border-emerald-400/30 bg-emerald-400/10"
+                                  : "border-red-400/30 bg-red-400/10"
+                              }`}
+                            >
                               <div className="grid gap-4">
                                 <div className="flex flex-wrap items-center gap-3">
                                   {draft?.stage || match.stage ? (
@@ -5264,7 +5650,12 @@ export default function SAVLSitePage() {
                                   >
                                     {draft?.status ?? match.status}
                                   </span>
-                                </div>                          
+                                  <span
+                                    className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${getStatusBadgeClass(draft?.status ?? match.status)}`}
+                                  >
+                                    {draft?.status ?? match.status}
+                                  </span>
+                                </div>
 
                                 <div>
                                   <label className="mb-2 block text-sm text-white/70">
@@ -5374,57 +5765,77 @@ export default function SAVLSitePage() {
                                       />
                                     </div>
                                   </div>
-                                <div>
-                                  <label className="mb-2 block text-sm text-white/70">
-                                    Referee
-                                  </label>
-                                  <SelectPicker
-                                    value={draft?.referee_id ? String(draft.referee_id) : ""}
-                                    onChange={(value) =>
-                                      updateMatchDraft(match.id, {
-                                        referee_id: value ? Number(value) : null,
-                                      })
-                                    }
-                                    options={refereeOptions}
-                                    placeholder="Select referee"
-                                  />
-                                </div>
+                                  <div>
+                                    <label className="mb-2 block text-sm text-white/70">
+                                      Referee
+                                    </label>
+                                    <SelectPicker
+                                      value={
+                                        draft?.referee_id
+                                          ? String(draft.referee_id)
+                                          : ""
+                                      }
+                                      onChange={(value) =>
+                                        updateMatchDraft(match.id, {
+                                          referee_id: value
+                                            ? Number(value)
+                                            : null,
+                                        })
+                                      }
+                                      options={refereeOptions}
+                                      placeholder="Select referee"
+                                    />
+                                  </div>
 
-                                <div>
-                                  <label className="mb-2 block text-sm text-white/70">
-                                    Media
-                                  </label>
-                                  <SelectPicker
-                                    value={draft?.media_id ? String(draft.media_id) : ""}
-                                    onChange={(value) =>
-                                      updateMatchDraft(match.id, {
-                                        media_id: value ? Number(value) : null,
-                                      })
-                                    }
-                                    options={mediaOptions}
-                                    placeholder="Select media"
-                                  />
+                                  <div>
+                                    <label className="mb-2 block text-sm text-white/70">
+                                      Media
+                                    </label>
+                                    <SelectPicker
+                                      value={
+                                        draft?.media_id
+                                          ? String(draft.media_id)
+                                          : ""
+                                      }
+                                      onChange={(value) =>
+                                        updateMatchDraft(match.id, {
+                                          media_id: value
+                                            ? Number(value)
+                                            : null,
+                                        })
+                                      }
+                                      options={mediaOptions}
+                                      placeholder="Select media"
+                                    />
+                                  </div>
                                 </div>
-                                </div>
-                                {(getStaffById(draft?.referee_id ?? match.referee_id) ||
-                                  getStaffById(draft?.media_id ?? match.media_id)) ? (
+                                {getStaffById(
+                                  draft?.referee_id ?? match.referee_id,
+                                ) ||
+                                getStaffById(
+                                  draft?.media_id ?? match.media_id,
+                                ) ? (
                                   <div className="rounded-2xl border border-white/10 bg-[#081712] p-4">
                                     <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">
                                       Assigned Match Staff
                                     </p>
 
                                     <div className="space-y-3">
-                                      {getStaffById(draft?.referee_id ?? match.referee_id) ? (
+                                      {getStaffById(
+                                        draft?.referee_id ?? match.referee_id,
+                                      ) ? (
                                         <div className="flex items-center gap-3">
                                           <Avatar
                                             robloxUserId={
                                               getStaffById(
-                                                draft?.referee_id ?? match.referee_id,
+                                                draft?.referee_id ??
+                                                  match.referee_id,
                                               )!.roblox_user_id
                                             }
                                             name={
                                               getStaffById(
-                                                draft?.referee_id ?? match.referee_id,
+                                                draft?.referee_id ??
+                                                  match.referee_id,
                                               )!.roblox_username
                                             }
                                           />
@@ -5433,7 +5844,8 @@ export default function SAVLSitePage() {
                                               Referee:{" "}
                                               {
                                                 getStaffById(
-                                                  draft?.referee_id ?? match.referee_id,
+                                                  draft?.referee_id ??
+                                                    match.referee_id,
                                                 )!.roblox_username
                                               }
                                             </p>
@@ -5441,7 +5853,8 @@ export default function SAVLSitePage() {
                                               @
                                               {
                                                 getStaffById(
-                                                  draft?.referee_id ?? match.referee_id,
+                                                  draft?.referee_id ??
+                                                    match.referee_id,
                                                 )!.discord_username
                                               }
                                             </p>
@@ -5449,17 +5862,21 @@ export default function SAVLSitePage() {
                                         </div>
                                       ) : null}
 
-                                      {getStaffById(draft?.media_id ?? match.media_id) ? (
+                                      {getStaffById(
+                                        draft?.media_id ?? match.media_id,
+                                      ) ? (
                                         <div className="flex items-center gap-3">
                                           <Avatar
                                             robloxUserId={
                                               getStaffById(
-                                                draft?.media_id ?? match.media_id,
+                                                draft?.media_id ??
+                                                  match.media_id,
                                               )!.roblox_user_id
                                             }
                                             name={
                                               getStaffById(
-                                                draft?.media_id ?? match.media_id,
+                                                draft?.media_id ??
+                                                  match.media_id,
                                               )!.roblox_username
                                             }
                                           />
@@ -5468,7 +5885,8 @@ export default function SAVLSitePage() {
                                               Media:{" "}
                                               {
                                                 getStaffById(
-                                                  draft?.media_id ?? match.media_id,
+                                                  draft?.media_id ??
+                                                    match.media_id,
                                                 )!.roblox_username
                                               }
                                             </p>
@@ -5476,7 +5894,8 @@ export default function SAVLSitePage() {
                                               @
                                               {
                                                 getStaffById(
-                                                  draft?.media_id ?? match.media_id,
+                                                  draft?.media_id ??
+                                                    match.media_id,
                                                 )!.discord_username
                                               }
                                             </p>
@@ -5490,7 +5909,9 @@ export default function SAVLSitePage() {
                                 <label className="flex items-start gap-3 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4 text-sm text-yellow-100">
                                   <input
                                     type="checkbox"
-                                    checked={Boolean(matchDrafts[match.id]?.is_star_match)}
+                                    checked={Boolean(
+                                      matchDrafts[match.id]?.is_star_match,
+                                    )}
                                     onChange={(event) =>
                                       updateMatchDraft(match.id, {
                                         is_star_match: event.target.checked,
@@ -5512,35 +5933,81 @@ export default function SAVLSitePage() {
                                     Set Results
                                   </p>
                                   <p className="mt-3 text-xs text-white/55">
-                                    Set scores preview: {formatSetScores({
-                                      set1_home: matchDrafts[match.id]?.set1_home ?? null,
-                                      set1_away: matchDrafts[match.id]?.set1_away ?? null,
-                                      set2_home: matchDrafts[match.id]?.set2_home ?? null,
-                                      set2_away: matchDrafts[match.id]?.set2_away ?? null,
-                                      set3_home: matchDrafts[match.id]?.set3_home ?? null,
-                                      set3_away: matchDrafts[match.id]?.set3_away ?? null,
-                                      set4_home: matchDrafts[match.id]?.set4_home ?? null,
-                                      set4_away: matchDrafts[match.id]?.set4_away ?? null,
-                                      set5_home: matchDrafts[match.id]?.set5_home ?? null,
-                                      set5_away: matchDrafts[match.id]?.set5_away ?? null,
+                                    Set scores preview:{" "}
+                                    {formatSetScores({
+                                      set1_home:
+                                        matchDrafts[match.id]?.set1_home ??
+                                        null,
+                                      set1_away:
+                                        matchDrafts[match.id]?.set1_away ??
+                                        null,
+                                      set2_home:
+                                        matchDrafts[match.id]?.set2_home ??
+                                        null,
+                                      set2_away:
+                                        matchDrafts[match.id]?.set2_away ??
+                                        null,
+                                      set3_home:
+                                        matchDrafts[match.id]?.set3_home ??
+                                        null,
+                                      set3_away:
+                                        matchDrafts[match.id]?.set3_away ??
+                                        null,
+                                      set4_home:
+                                        matchDrafts[match.id]?.set4_home ??
+                                        null,
+                                      set4_away:
+                                        matchDrafts[match.id]?.set4_away ??
+                                        null,
+                                      set5_home:
+                                        matchDrafts[match.id]?.set5_home ??
+                                        null,
+                                      set5_away:
+                                        matchDrafts[match.id]?.set5_away ??
+                                        null,
                                     }) || "-"}
                                   </p>
 
-                                  <button
-                                    type="button"
-                                    onClick={() => saveMatchDraft(match.id)}
-                                  >
-                                    Save Match
-                                  </button>
+                                  {statTrackLogged && !match.stats_finalized ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => saveMatchDraft(match.id)}
+                                      className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] active:translate-y-0.5"
+                                    >
+                                      Save Match
+                                    </button>
+                                  ) : null}
 
                                   <div className="grid gap-4 md:grid-cols-5">
-                                    {([
-                                      { label: "Set 1", homeField: "set1_home", awayField: "set1_away" },
-                                      { label: "Set 2", homeField: "set2_home", awayField: "set2_away" },
-                                      { label: "Set 3", homeField: "set3_home", awayField: "set3_away" },
-                                      { label: "Set 4", homeField: "set4_home", awayField: "set4_away" },
-                                      { label: "Set 5", homeField: "set5_home", awayField: "set5_away" },
-                                    ] as const).map((setItem) => (
+                                    {(
+                                      [
+                                        {
+                                          label: "Set 1",
+                                          homeField: "set1_home",
+                                          awayField: "set1_away",
+                                        },
+                                        {
+                                          label: "Set 2",
+                                          homeField: "set2_home",
+                                          awayField: "set2_away",
+                                        },
+                                        {
+                                          label: "Set 3",
+                                          homeField: "set3_home",
+                                          awayField: "set3_away",
+                                        },
+                                        {
+                                          label: "Set 4",
+                                          homeField: "set4_home",
+                                          awayField: "set4_away",
+                                        },
+                                        {
+                                          label: "Set 5",
+                                          homeField: "set5_home",
+                                          awayField: "set5_away",
+                                        },
+                                      ] as const
+                                    ).map((setItem) => (
                                       <div
                                         key={setItem.label}
                                         className="rounded-2xl border border-white/10 bg-[#081712] p-3"
@@ -5554,7 +6021,12 @@ export default function SAVLSitePage() {
                                             type="number"
                                             min="0"
                                             placeholder="Home"
-                                            value={matchDrafts[match.id]?.[setItem.homeField] ?? ""}
+                                            disabled={!statTrackLogged || match.stats_finalized}
+                                            value={
+                                              matchDrafts[match.id]?.[
+                                                setItem.homeField
+                                              ] ?? ""
+                                            }
                                             onChange={(e) =>
                                               updateMatchDraftNumber(
                                                 match.id,
@@ -5562,14 +6034,18 @@ export default function SAVLSitePage() {
                                                 e.target.value,
                                               )
                                             }
-                                            className="h-14 w-full rounded-2xl border border-white/10 bg-white/5 px-3 text-center text-white placeholder:text-white/25 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                                            className="h-14 w-full rounded-2xl border border-white/10 bg-white/5 px-3 text-center text-white placeholder:text-white/25 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40 disabled:cursor-not-allowed disabled:opacity-50"
                                           />
 
                                           <input
                                             type="number"
                                             min="0"
                                             placeholder="Away"
-                                            value={matchDrafts[match.id]?.[setItem.awayField] ?? ""}
+                                            value={
+                                              matchDrafts[match.id]?.[
+                                                setItem.awayField
+                                              ] ?? ""
+                                            }
                                             onChange={(e) =>
                                               updateMatchDraftNumber(
                                                 match.id,
@@ -5586,13 +6062,33 @@ export default function SAVLSitePage() {
                                 </div>
 
                                 <div className="flex flex-wrap gap-3">
-                                  <button
-                                    type="button"
-                                    onClick={() => saveMatchDraft(match.id)}
-                                    className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] active:translate-y-0.5"
-                                  >
-                                    Save Changes
-                                  </button>
+                                  {statTrackLogged && !match.stats_finalized ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => saveMatchDraft(match.id)}
+                                        className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] active:translate-y-0.5"
+                                      >
+                                        Save Changes
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          openConfirmDialog({
+                                            title: "Finish Stats",
+                                            message: `Are you sure you want to finish stats for ${match.home_country} vs ${match.away_country}? After this, the stats cannot be edited.`,
+                                            confirmLabel: "Finish Stats",
+                                            onConfirm: () =>
+                                              finishStats(match.id),
+                                          })
+                                        }
+                                        className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-300 transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-400/15 active:translate-y-0.5"
+                                      >
+                                        Finish Stats
+                                      </button>
+                                    </>
+                                  ) : null}
                                   <button
                                     type="button"
                                     onClick={() =>
@@ -5600,7 +6096,8 @@ export default function SAVLSitePage() {
                                         title: "Delete Match",
                                         message: `Are you sure you want to delete ${match.home_country} vs ${match.away_country}?`,
                                         confirmLabel: "Delete",
-                                        onConfirm: () => handleDeleteMatch(match.id),
+                                        onConfirm: () =>
+                                          handleDeleteMatch(match.id),
                                       })
                                     }
                                     className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
@@ -5685,7 +6182,9 @@ export default function SAVLSitePage() {
       {confirmDialog.open ? (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-[2rem] border border-red-400/20 bg-[#071A13] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
-            <h3 className="text-xl font-black text-white">{confirmDialog.title}</h3>
+            <h3 className="text-xl font-black text-white">
+              {confirmDialog.title}
+            </h3>
             <p className="mt-3 text-sm leading-6 text-white/75">
               {confirmDialog.message}
             </p>
