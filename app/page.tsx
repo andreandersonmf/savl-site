@@ -574,11 +574,13 @@ function SelectPicker({
   onChange,
   options,
   placeholder,
+  disabled = false,
 }: {
   value: string;
   onChange: (value: string) => void;
   options: SelectOption[];
   placeholder: string;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -610,8 +612,12 @@ function SelectPicker({
     <div ref={wrapperRef} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((prev) => !prev)}
-        className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-white transition duration-200 hover:-translate-y-0.5 hover:border-emerald-400/30 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+        disabled={disabled}
+        onClick={() => {
+          if (disabled) return;
+          setOpen((prev) => !prev);
+        }}
+        className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-left text-white transition duration-200 hover:-translate-y-0.5 hover:border-emerald-400/30 hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-emerald-400/40 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:border-white/10 disabled:hover:bg-white/5"
       >
         <span className="flex min-w-0 items-center gap-3">
           {selected?.imageUrl ? (
@@ -642,7 +648,7 @@ function SelectPicker({
         />
       </button>
 
-      {open ? (
+      {open && !disabled ? (
         <div className="absolute z-40 mt-2 max-h-72 w-full overflow-y-auto rounded-2xl border border-white/10 bg-[#081712] p-2 shadow-2xl shadow-black/40">
           {options.length === 0 ? (
             <div className="px-3 py-3 text-sm text-white/50">
@@ -1391,8 +1397,6 @@ export default function SAVLSitePage() {
   const [filterTeam, setFilterTeam] = useState("All");
   const [filterGroup, setFilterGroup] = useState("All");
   const [statTrackerLogged, setStatTrackerLogged] = useState(false);
-  const [currentStatTracker, setCurrentStatTracker] =
-    useState<StaffApplication | null>(null);
   const [statTrackerEmail, setStatTrackerEmail] = useState("");
   const [statTrackerPassword, setStatTrackerPassword] = useState("");
 
@@ -1532,6 +1536,14 @@ export default function SAVLSitePage() {
     return data?.role ?? null;
   }
 
+  function isStatTrackerRole(role: string | null) {
+    if (!role) return false;
+
+    return ["stat_tracker", "stat tracker", "stattracker"].includes(
+      normalizeText(role),
+    );
+  }
+
   async function reloadTeams() {
     if (!supabase) {
       console.error("Supabase client is null");
@@ -1588,7 +1600,6 @@ export default function SAVLSitePage() {
 
     setAdminLogged(true);
     setStatTrackerLogged(false);
-    setCurrentStatTracker(null);
     setAdminEmail("");
     setAdminPassword("");
 
@@ -1681,17 +1692,17 @@ export default function SAVLSitePage() {
         if (role === "admin") {
           setAdminLogged(true);
           setStatTrackerLogged(false);
-          setCurrentStatTracker(null);
+        } else if (isStatTrackerRole(role)) {
+          setAdminLogged(false);
+          setStatTrackerLogged(true);
         } else {
           setAdminLogged(false);
           setStatTrackerLogged(false);
-          setCurrentStatTracker(null);
           await supabase.auth.signOut();
         }
       } else {
         setAdminLogged(false);
         setStatTrackerLogged(false);
-        setCurrentStatTracker(null);
       }
 
       await Promise.all([
@@ -2040,20 +2051,17 @@ export default function SAVLSitePage() {
 
   function canCurrentStatTrackerEditMatch(match: MatchRow) {
     if (match.stats_finalized) return false;
-    if (!statTrackerLogged || !currentStatTracker) return false;
+    if (!statTrackerLogged) return false;
 
-    return match.stat_tracker_id === currentStatTracker.id;
+    return match.stat_tracker_id !== null;
   }
 
   const statTrackMatches = useMemo(() => {
     return matches
       .filter((match) => {
         if (!adminLogged) {
-          if (statTrackerLogged && currentStatTracker) {
-            if (match.stat_tracker_id !== currentStatTracker.id) return false;
-          } else {
-            return false;
-          }
+          if (!statTrackerLogged) return false;
+          if (match.stat_tracker_id === null) return false;
         }
 
         const statusOk =
@@ -2070,6 +2078,10 @@ export default function SAVLSitePage() {
           return a.stats_finalized ? -1 : 1;
         }
 
+        if (a.stats_submitted_for_review !== b.stats_submitted_for_review) {
+          return a.stats_submitted_for_review ? -1 : 1;
+        }
+
         const dateA = `${a.match_date} ${a.match_time}`;
         const dateB = `${b.match_date} ${b.match_time}`;
 
@@ -2079,7 +2091,6 @@ export default function SAVLSitePage() {
     matches,
     adminLogged,
     statTrackerLogged,
-    currentStatTracker,
     adminFilterStatus,
     adminFilterStage,
   ]);
@@ -2272,7 +2283,7 @@ export default function SAVLSitePage() {
       !cleanDiscord ||
       !cleanRobloxUserId
     ) {
-      showNotice("Fill in all Referee / Media fields before submitting.");
+      showNotice("Fill in all staff application fields before submitting.");
       return;
     }
 
@@ -2972,33 +2983,33 @@ export default function SAVLSitePage() {
 
     const email = statTrackerEmail.trim().toLowerCase();
 
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password: statTrackerPassword,
     });
 
-    if (error || !data.user) {
+    if (error) {
       showNotice("Invalid Stat Tracker login.", true);
       return;
     }
 
-    const tracker = staffApplications.find(
-      (staff) =>
-        staff.approved &&
-        staff.role === "Stat Tracker" &&
-        staff.user_id === data.user.id,
-    );
+    const role = await getCurrentUserRole();
 
-    if (!tracker) {
+    if (!isStatTrackerRole(role)) {
       await supabase.auth.signOut();
       setStatTrackerLogged(false);
-      setCurrentStatTracker(null);
       showNotice("This login does not have Stat Tracker permission.", true);
       return;
     }
 
+    setAdminLogged(false);
     setStatTrackerLogged(true);
-    setCurrentStatTracker(tracker);
+    setStatTrackerEmail("");
+    setStatTrackerPassword("");
+
+    await reloadMatches();
+    await reloadStaffApplications();
+
     showNotice("Stat Tracker unlocked.", true);
   }
 
@@ -3008,7 +3019,6 @@ export default function SAVLSitePage() {
     }
 
     setStatTrackerLogged(false);
-    setCurrentStatTracker(null);
     setStatTrackerEmail("");
     setStatTrackerPassword("");
   }
@@ -4063,10 +4073,11 @@ export default function SAVLSitePage() {
             </p>
           ) : null}
 
-          {statTrackerLogged && currentStatTracker ? (
+          {statTrackerLogged ? (
             <p className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-300">
-              Logged as Stat Tracker: {currentStatTracker.roblox_username}. You
-              can edit only matches assigned to you.
+              Stat Tracker access enabled. This shared login can edit matches
+              that have a Stat Tracker assigned, but cannot finish or unlock
+              finalized stats.
             </p>
           ) : null}
         </div>
@@ -4283,12 +4294,12 @@ export default function SAVLSitePage() {
                 Staff Applications
               </p>
               <h2 className="mt-2 text-3xl font-black md:text-4xl">
-                Referee / Media Registration
+                Referee / Media / Stat Tracker Registration
               </h2>
               <p className="mt-4 max-w-lg text-white/70">
-                Apply to join SAVL staff as a Referee or Media member. Approved
-                applications will appear in the admin panel and can be assigned
-                to upcoming matches.
+                Apply to join SAVL staff as a Referee, Media member, or Stat
+                Tracker. Approved applications will appear in the admin panel
+                and can be assigned to upcoming matches.
               </p>
 
               <div className="mt-8 rounded-[2rem] border border-white/10 bg-white/5 p-6">
@@ -4310,6 +4321,14 @@ export default function SAVLSitePage() {
                     <p className="mt-1 text-sm text-white/65">
                       Responsible for streaming or recording matches with clear
                       quality and reliable performance.
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-[#0B1712] p-4">
+                    <p className="font-semibold text-white">Stat Tracker</p>
+                    <p className="mt-1 text-sm text-white/65">
+                      Responsible for entering match set scores and submitting
+                      stats for admin review.
                     </p>
                   </div>
                 </div>
@@ -4335,7 +4354,7 @@ export default function SAVLSitePage() {
                         }))
                       }
                       options={staffRoleOptions}
-                      placeholder="Select Referee or Media"
+                      placeholder="Select staff role"
                     />
                   </div>
 
@@ -4412,7 +4431,9 @@ export default function SAVLSitePage() {
                       <span>
                         {staffRegisterForm.role === "Media"
                           ? "I confirm that I have a computer and setup capable of recording or streaming SAVL matches with good visual quality, stability, and responsibility."
-                          : "I confirm that I understand the responsibility of being a Referee and will officiate matches fairly, impartially, and according to league standards without favoring either side."}
+                          : staffRegisterForm.role === "Stat Tracker"
+                            ? "I confirm that I understand the responsibility of being a Stat Tracker and will enter match stats carefully, accurately, and only for assigned matches."
+                            : "I confirm that I understand the responsibility of being a Referee and will officiate matches fairly, impartially, and according to league standards without favoring either side."}
                       </span>
                     </label>
 
@@ -5819,6 +5840,13 @@ export default function SAVLSitePage() {
                                   >
                                     {match.stats_finalized ? "Stats finalized" : "Stats not finalized"}
                                   </span>
+
+                                  {match.stats_submitted_for_review &&
+                                  !match.stats_finalized ? (
+                                    <span className="rounded-full border border-yellow-400/30 bg-yellow-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-yellow-300">
+                                      Waiting admin review
+                                    </span>
+                                  ) : null}
                                 </div>
 
                                 <div>
@@ -5853,6 +5881,7 @@ export default function SAVLSitePage() {
                                       }
                                       options={statusOptions}
                                       placeholder="Select status"
+                                      disabled={!adminLogged || match.stats_finalized}
                                     />
                                   </div>
 
@@ -5902,6 +5931,13 @@ export default function SAVLSitePage() {
                                       <input
                                         type="number"
                                         min="0"
+                                        disabled={
+                                          match.stats_finalized ||
+                                          (!adminLogged &&
+                                            !canCurrentStatTrackerEditMatch(
+                                              match,
+                                            ))
+                                        }
                                         value={
                                           draft?.home_score ?? match.home_score
                                         }
@@ -5920,6 +5956,13 @@ export default function SAVLSitePage() {
                                       <input
                                         type="number"
                                         min="0"
+                                        disabled={
+                                          match.stats_finalized ||
+                                          (!adminLogged &&
+                                            !canCurrentStatTrackerEditMatch(
+                                              match,
+                                            ))
+                                        }
                                         value={
                                           draft?.away_score ?? match.away_score
                                         }
@@ -5951,6 +5994,7 @@ export default function SAVLSitePage() {
                                       }
                                       options={refereeOptions}
                                       placeholder="Select referee"
+                                      disabled={!adminLogged || match.stats_finalized}
                                     />
                                   </div>
 
@@ -5973,6 +6017,7 @@ export default function SAVLSitePage() {
                                       }
                                       options={mediaOptions}
                                       placeholder="Select media"
+                                      disabled={!adminLogged || match.stats_finalized}
                                     />
                                   </div>
 
@@ -6002,6 +6047,7 @@ export default function SAVLSitePage() {
                                         ...statTrackerOptions,
                                       ]}
                                       placeholder="Select Stat Tracker"
+                                      disabled={!adminLogged || match.stats_finalized}
                                     />
                                   </div>
                                 </div>
