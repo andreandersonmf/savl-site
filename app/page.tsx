@@ -44,8 +44,10 @@ type MatchRow = {
   winner_country: string | null;
   referee_id: number | null;
   media_id: number | null;
+  stat_tracker_id: number | null;
   is_star_match: boolean;
   stats_finalized: boolean;
+  stats_submitted_for_review: boolean;
   created_at: string;
 
   set1_home: number | null;
@@ -92,6 +94,7 @@ type MatchDraft = {
   away_score: number;
   referee_id: number | null;
   media_id: number | null;
+  stat_tracker_id: number | null;
   is_star_match: boolean;
 
   set1_home: number | null;
@@ -118,11 +121,13 @@ type TeamPlayer = {
   created_at: string;
 };
 
-type StaffRole = "Referee" | "Media";
+type StaffRole = "Referee" | "Media" | "Stat Tracker";
 
 type StaffApplication = {
   id: number;
   role: StaffRole;
+  email: string | null;
+  user_id: string | null;
   roblox_username: string;
   discord_username: string;
   roblox_user_id: string;
@@ -1115,7 +1120,7 @@ function StandingsCard({ team }: { team: StandingRow }) {
 }
 
 function getStaffRoleLabel(role: StaffRole) {
-  return role === "Referee" ? "Referee" : "Media";
+  return role;
 }
 
 function cleanDiscordUsername(value: string) {
@@ -1372,9 +1377,6 @@ export default function SAVLSitePage() {
   const [adminLogged, setAdminLogged] = useState(false);
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
-  const [statTrackLogged, setStatTrackLogged] = useState(false);
-  const [statTrackEmail, setStatTrackEmail] = useState("");
-  const [statTrackPassword, setStatTrackPassword] = useState("");
   const [matchDrafts, setMatchDrafts] = useState<Record<number, MatchDraft>>(
     {},
   );
@@ -1388,6 +1390,11 @@ export default function SAVLSitePage() {
   const [togglingRegistrations, setTogglingRegistrations] = useState(false);
   const [filterTeam, setFilterTeam] = useState("All");
   const [filterGroup, setFilterGroup] = useState("All");
+  const [statTrackerLogged, setStatTrackerLogged] = useState(false);
+  const [currentStatTracker, setCurrentStatTracker] =
+    useState<StaffApplication | null>(null);
+  const [statTrackerEmail, setStatTrackerEmail] = useState("");
+  const [statTrackerPassword, setStatTrackerPassword] = useState("");
 
   type StandingsView = "Qualifiers" | "Playoffs" | GroupLetter;
 
@@ -1442,6 +1449,7 @@ export default function SAVLSitePage() {
     match_time: "",
     status: "Scheduled" as MatchStatus,
     is_star_match: false,
+    stat_tracker_id: "",
 
     set1_home: "",
     set1_away: "",
@@ -1579,7 +1587,7 @@ export default function SAVLSitePage() {
     }
 
     setAdminLogged(true);
-    setStatTrackLogged(false);
+    setStatTrackerLogged(true);
     setAdminEmail("");
     setAdminPassword("");
 
@@ -1598,7 +1606,7 @@ export default function SAVLSitePage() {
     await supabase.auth.signOut();
 
     setAdminLogged(false);
-    setStatTrackLogged(false);
+    setStatTrackerLogged(false);
 
     await reloadTeams();
     await reloadMatches();
@@ -1634,6 +1642,7 @@ export default function SAVLSitePage() {
               away_score: match.away_score,
               referee_id: match.referee_id ?? null,
               media_id: match.media_id ?? null,
+              stat_tracker_id: match.stat_tracker_id,
               is_star_match: Boolean(match.is_star_match),
 
               set1_home: match.set1_home ?? null,
@@ -1651,50 +1660,6 @@ export default function SAVLSitePage() {
         ),
       );
     }
-  }
-
-  async function handleStatTrackLogin(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (!supabase) return;
-
-    const { error } = await supabase.auth.signInWithPassword({
-      email: statTrackEmail.trim(),
-      password: statTrackPassword,
-    });
-
-    if (error) {
-      showNotice(error.message, true);
-      return;
-    }
-
-    const role = await getCurrentUserRole();
-
-    if (role !== "stat_track") {
-      await supabase.auth.signOut();
-      showNotice("This login does not have Stat Track permission.", true);
-      return;
-    }
-
-    setStatTrackLogged(true);
-    setAdminLogged(false);
-    setStatTrackEmail("");
-    setStatTrackPassword("");
-
-    await reloadMatches();
-
-    showNotice("Stat Track unlocked.", true);
-  }
-
-  async function handleStatTrackLogout() {
-    if (!supabase) return;
-
-    await supabase.auth.signOut();
-
-    setStatTrackLogged(false);
-    await reloadMatches();
-
-    showNotice("Stat Track locked.", true);
   }
 
   useEffect(() => {
@@ -1847,10 +1812,6 @@ export default function SAVLSitePage() {
         return statusOk && stageOk;
       })
       .sort((a, b) => {
-        if (a.stats_finalized !== b.stats_finalized) {
-          return a.stats_finalized ? -1 : 1;
-        }
-
         const dateA = `${a.match_date} ${a.match_time}`;
         const dateB = `${b.match_date} ${b.match_time}`;
 
@@ -1925,9 +1886,21 @@ export default function SAVLSitePage() {
     return approvedStaff.filter((staff) => staff.role === "Media");
   }, [approvedStaff]);
 
+  const approvedStatTrackers = useMemo(() => {
+    return approvedStaff.filter((staff) => staff.role === "Stat Tracker");
+  }, [approvedStaff]);
+
+  const statTrackerOptions = useMemo<SelectOption[]>(() => {
+    return approvedStatTrackers.map((staff) => ({
+      label: `${staff.roblox_username} (@${staff.discord_username})`,
+      value: String(staff.id),
+    }));
+  }, [approvedStatTrackers]);
+
   const staffRoleOptions: SelectOption[] = [
     { label: "Referee", value: "Referee" },
     { label: "Media", value: "Media" },
+    { label: "Stat Tracker", value: "Stat Tracker" },
   ];
 
   const refereeOptions = useMemo<SelectOption[]>(() => {
@@ -2046,6 +2019,36 @@ export default function SAVLSitePage() {
       onConfirm,
     });
   }
+
+  function canCurrentStatTrackerEditMatch(match: MatchRow) {
+    if (match.stats_finalized) return false;
+    if (!statTrackerLogged || !currentStatTracker) return false;
+
+    return match.stat_tracker_id === currentStatTracker.id;
+  }
+
+  const statTrackMatches = useMemo(() => {
+    return matches
+      .filter((match) => {
+        if (adminLogged) return true;
+
+        if (statTrackerLogged && currentStatTracker) {
+          return match.stat_tracker_id === currentStatTracker.id;
+        }
+
+        return false;
+      })
+      .sort((a, b) => {
+        if (a.stats_finalized !== b.stats_finalized) {
+          return a.stats_finalized ? -1 : 1;
+        }
+
+        const dateA = `${a.match_date} ${a.match_time}`;
+        const dateB = `${b.match_date} ${b.match_time}`;
+
+        return dateA.localeCompare(dateB);
+      });
+  }, [matches, adminLogged, statTrackerLogged, currentStatTracker]);
 
   const roleOptions: SelectOption[] = [
     { label: "Vice Captain", value: "Vice Captain" },
@@ -2647,7 +2650,12 @@ export default function SAVLSitePage() {
       winner_country: winnerCountry,
       referee_id: null,
       media_id: null,
+      stat_tracker_id: matchForm.stat_tracker_id
+        ? Number(matchForm.stat_tracker_id)
+        : null,
       is_star_match: matchForm.is_star_match,
+      stats_finalized: false,
+      stats_submitted_for_review: false,
 
       ...setsPayload,
     });
@@ -2667,6 +2675,7 @@ export default function SAVLSitePage() {
       match_time: "",
       status: "Scheduled",
       is_star_match: false,
+      stat_tracker_id: "",
 
       set1_home: "",
       set1_away: "",
@@ -2690,8 +2699,11 @@ export default function SAVLSitePage() {
     const draft = matchDrafts[matchId];
     if (!current || !draft) return;
 
-    if (!statTrackLogged) {
-      showNotice("Only Stat Track can edit match stats.", true);
+    const canEditAsAdmin = adminLogged;
+    const canEditAsTracker = canCurrentStatTrackerEditMatch(current);
+
+    if (!canEditAsAdmin && !canEditAsTracker) {
+      showNotice("You can only edit matches assigned to you.", true);
       return;
     }
 
@@ -2725,32 +2737,47 @@ export default function SAVLSitePage() {
       draft.status,
     );
 
+    const commonStatsPayload = {
+      home_score: homeScore,
+      away_score: awayScore,
+      winner_country: winnerCountry,
+
+      set1_home: draft.set1_home,
+      set1_away: draft.set1_away,
+      set2_home: draft.set2_home,
+      set2_away: draft.set2_away,
+      set3_home: draft.set3_home,
+      set3_away: draft.set3_away,
+      set4_home: draft.set4_home,
+      set4_away: draft.set4_away,
+      set5_home: draft.set5_home,
+      set5_away: draft.set5_away,
+
+      stats_submitted_for_review: false,
+    };
+
+    const adminPayload = {
+      status: draft.status,
+      stage: draft.stage,
+      match_date: draft.match_date,
+      match_time: draft.match_time,
+      referee_id: draft.referee_id,
+      media_id: draft.media_id,
+      stat_tracker_id: draft.stat_tracker_id,
+      is_star_match: draft.is_star_match,
+      ...commonStatsPayload,
+    };
+
+    const trackerPayload = {
+      status: draft.status === "Finished" ? "Live" : draft.status,
+      ...commonStatsPayload,
+    };
+
     const { error } = await supabase
       .from("matches")
-      .update({
-        status: draft.status,
-        stage: draft.stage,
-        match_date: draft.match_date,
-        match_time: draft.match_time,
-        home_score: homeScore,
-        away_score: awayScore,
-        winner_country: winnerCountry,
-        referee_id: draft.referee_id,
-        media_id: draft.media_id,
-        is_star_match: draft.is_star_match,
-
-        set1_home: draft.set1_home,
-        set1_away: draft.set1_away,
-        set2_home: draft.set2_home,
-        set2_away: draft.set2_away,
-        set3_home: draft.set3_home,
-        set3_away: draft.set3_away,
-        set4_home: draft.set4_home,
-        set4_away: draft.set4_away,
-        set5_home: draft.set5_home,
-        set5_away: draft.set5_away,
-      })
-      .eq("id", matchId);
+      .update(canEditAsAdmin ? adminPayload : trackerPayload)
+      .eq("id", matchId)
+      .eq("stats_finalized", false);
 
     if (error) {
       showNotice(error.message, true);
@@ -2761,11 +2788,45 @@ export default function SAVLSitePage() {
     showNotice("Match updated.", true);
   }
 
+  async function submitStatsForReview(matchId: number) {
+    if (!supabase) return;
+
+    const current = matches.find((match) => match.id === matchId);
+
+    if (!current) return;
+
+    if (!canCurrentStatTrackerEditMatch(current)) {
+      showNotice("You can only submit matches assigned to you.", true);
+      return;
+    }
+
+    if (current.stats_finalized) {
+      showNotice("Stats are already finalized.", true);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("matches")
+      .update({
+        stats_submitted_for_review: true,
+      })
+      .eq("id", matchId)
+      .eq("stats_finalized", false);
+
+    if (error) {
+      showNotice(error.message, true);
+      return;
+    }
+
+    await reloadMatches();
+    showNotice("Stats sent to Admin review.", true);
+  }
+
   async function finishStats(matchId: number) {
     if (!supabase) return;
 
-    if (!statTrackLogged) {
-      showNotice("Only Stat Track can finish stats.", true);
+    if (!adminLogged) {
+      showNotice("Only Admin can finish stats.", true);
       return;
     }
 
@@ -2800,6 +2861,7 @@ export default function SAVLSitePage() {
         winner_country: winnerCountry,
         referee_id: draft.referee_id,
         media_id: draft.media_id,
+        stat_tracker_id: draft.stat_tracker_id,
         is_star_match: draft.is_star_match,
 
         set1_home: draft.set1_home,
@@ -2814,6 +2876,7 @@ export default function SAVLSitePage() {
         set5_away: draft.set5_away,
 
         stats_finalized: true,
+        stats_submitted_for_review: false,
       })
       .eq("id", matchId)
       .eq("stats_finalized", false);
@@ -2864,6 +2927,56 @@ export default function SAVLSitePage() {
     if (!result.error && result.data) {
       setStaffApplications(result.data as StaffApplication[]);
     }
+  }
+
+  async function handleStatTrackerLogin(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+
+    if (!supabase) return;
+
+    const email = statTrackerEmail.trim().toLowerCase();
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password: statTrackerPassword,
+    });
+
+    if (error || !data.user) {
+      showNotice("Invalid Stat Tracker login.", true);
+      return;
+    }
+
+    const tracker = staffApplications.find(
+      (staff) =>
+        staff.approved &&
+        staff.role === "Stat Tracker" &&
+        staff.user_id === data.user.id,
+    );
+
+    if (!tracker) {
+      await supabase.auth.signOut();
+      setStatTrackerLogged(false);
+      setCurrentStatTracker(null);
+      showNotice("This login does not have Stat Tracker permission.", true);
+      return;
+    }
+
+    setStatTrackerLogged(true);
+    setCurrentStatTracker(tracker);
+    showNotice("Stat Tracker unlocked.", true);
+  }
+
+  async function handleStatTrackerLogout() {
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+
+    setStatTrackerLogged(false);
+    setCurrentStatTracker(null);
+    setStatTrackerEmail("");
+    setStatTrackerPassword("");
   }
 
   async function handleAddPlayer(event: React.FormEvent<HTMLFormElement>) {
@@ -3864,35 +3977,39 @@ export default function SAVLSitePage() {
                 Stat Track Access
               </p>
               <p className="mt-2 text-sm text-white/60">
-                Login here to edit match stats and finish stats.
+                Stat Trackers can edit only matches assigned to them. Admins can
+                review and finish stats.
               </p>
             </div>
 
-            {statTrackLogged ? (
+            {statTrackerLogged ? (
               <button
                 type="button"
-                onClick={handleStatTrackLogout}
+                onClick={handleStatTrackerLogout}
                 className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-white/10 active:translate-y-0.5"
               >
-                Lock Stat Track
+                Lock Stat Tracker
               </button>
             ) : null}
           </div>
 
-          {!statTrackLogged ? (
-            <form onSubmit={handleStatTrackLogin} className="mt-5 grid gap-3 md:grid-cols-[1fr_1fr_auto]">
+          {!adminLogged && !statTrackerLogged ? (
+            <form
+              onSubmit={handleStatTrackerLogin}
+              className="mt-5 grid gap-3 md:grid-cols-[1fr_1fr_auto]"
+            >
               <input
                 type="email"
-                value={statTrackEmail}
-                onChange={(e) => setStatTrackEmail(e.target.value)}
+                value={statTrackerEmail}
+                onChange={(e) => setStatTrackerEmail(e.target.value)}
                 className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                placeholder="stattrack@email.com"
+                placeholder="stattracker@email.com"
               />
 
               <input
                 type="password"
-                value={statTrackPassword}
-                onChange={(e) => setStatTrackPassword(e.target.value)}
+                value={statTrackerPassword}
+                onChange={(e) => setStatTrackerPassword(e.target.value)}
                 className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
                 placeholder="Password"
               />
@@ -3904,11 +4021,20 @@ export default function SAVLSitePage() {
                 Unlock
               </button>
             </form>
-          ) : (
+          ) : null}
+
+          {adminLogged ? (
             <p className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-300">
-              Stat Track editing is unlocked.
+              Admin access enabled. You can review and finish stats.
             </p>
-          )}
+          ) : null}
+
+          {statTrackerLogged && currentStatTracker ? (
+            <p className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-300">
+              Logged as Stat Tracker: {currentStatTracker.roblox_username}. You
+              can edit only matches assigned to you.
+            </p>
+          ) : null}
         </div>
 
         <section
@@ -5002,7 +5128,7 @@ export default function SAVLSitePage() {
                       <div>
                         <div className="mb-3 flex items-center justify-between">
                           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-yellow-300">
-                            Pending Referee / Media
+                            Pending Staff
                           </p>
                           <span className="rounded-full border border-yellow-400/20 bg-yellow-400/10 px-3 py-1 text-xs font-semibold text-yellow-300">
                             {pendingStaff.length}
@@ -5012,7 +5138,7 @@ export default function SAVLSitePage() {
                         <div className="space-y-4">
                           {pendingStaff.length === 0 ? (
                             <p className="text-white/60">
-                              No pending Referee / Media applications.
+                              No pending Staff applications.
                             </p>
                           ) : (
                             pendingStaff.map((staff) => (
@@ -5081,7 +5207,7 @@ export default function SAVLSitePage() {
                       <div>
                         <div className="mb-3 flex items-center justify-between">
                           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
-                            Referee&apos;s and Media&apos;s
+                            Approved Staff
                           </p>
                           <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
                             {approvedStaff.length}
@@ -5091,7 +5217,7 @@ export default function SAVLSitePage() {
                         <div className="space-y-4">
                           {approvedStaff.length === 0 ? (
                             <p className="text-white/60">
-                              No approved Referee / Media yet.
+                              No approved Staff yet.
                             </p>
                           ) : (
                             approvedStaff.map((staff) => (
@@ -5617,22 +5743,18 @@ export default function SAVLSitePage() {
                           </div>
                         </div>
                       </div>
-                      {adminFilteredMatches.length === 0 ? (
+                      {statTrackMatches.length === 0 ? (
                         <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/60">
                           No matches found with the selected filters.
                         </div>
                       ) : (
-                        adminFilteredMatches.map((match) => {
+                        statTrackMatches.map((match) => {
                           const draft = matchDrafts[match.id];
 
                           return (
                             <div
                               key={match.id}
-                              className={`rounded-2xl border p-4 ${
-                                match.stats_finalized
-                                  ? "border-emerald-400/30 bg-emerald-400/10"
-                                  : "border-red-400/30 bg-red-400/10"
-                              }`}
+                              className="rounded-2xl border border-white/10 bg-white/5 p-4"
                             >
                               <div className="grid gap-4">
                                 <div className="flex flex-wrap items-center gap-3">
@@ -5808,13 +5930,39 @@ export default function SAVLSitePage() {
                                       placeholder="Select media"
                                     />
                                   </div>
+
+                                  <div>
+                                    <label className="mb-2 block text-sm font-semibold text-white/70">
+                                      Stat Tracker
+                                    </label>
+
+                                    <SelectPicker
+                                      value={
+                                        matchDrafts[match.id]?.stat_tracker_id
+                                          ? String(
+                                              matchDrafts[match.id]
+                                                .stat_tracker_id,
+                                            )
+                                          : ""
+                                      }
+                                      onChange={(value) =>
+                                        updateMatchDraft(match.id, {
+                                          stat_tracker_id: value
+                                            ? Number(value)
+                                            : null,
+                                        })
+                                      }
+                                      options={[
+                                        { label: "No Stat Tracker", value: "" },
+                                        ...statTrackerOptions,
+                                      ]}
+                                      placeholder="Select Stat Tracker"
+                                    />
+                                  </div>
                                 </div>
-                                {getStaffById(
-                                  draft?.referee_id ?? match.referee_id,
-                                ) ||
-                                getStaffById(
-                                  draft?.media_id ?? match.media_id,
-                                ) ? (
+                                {getStaffById(draft?.referee_id ?? match.referee_id) ||
+                                getStaffById(draft?.media_id ?? match.media_id) ||
+                                getStaffById(draft?.stat_tracker_id ?? match.stat_tracker_id) ? (
                                   <div className="rounded-2xl border border-white/10 bg-[#081712] p-4">
                                     <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">
                                       Assigned Match Staff
@@ -5902,6 +6050,48 @@ export default function SAVLSitePage() {
                                           </div>
                                         </div>
                                       ) : null}
+                                      {getStaffById(
+                                        draft?.stat_tracker_id ??
+                                          match.stat_tracker_id,
+                                      ) ? (
+                                        <div className="flex items-center gap-3">
+                                          <Avatar
+                                            robloxUserId={
+                                              getStaffById(
+                                                draft?.stat_tracker_id ??
+                                                  match.stat_tracker_id,
+                                              )!.roblox_user_id
+                                            }
+                                            name={
+                                              getStaffById(
+                                                draft?.stat_tracker_id ??
+                                                  match.stat_tracker_id,
+                                              )!.roblox_username
+                                            }
+                                          />
+
+                                          <div>
+                                            <p className="font-semibold text-white">
+                                              Stat Tracker:{" "}
+                                              {
+                                                getStaffById(
+                                                  draft?.stat_tracker_id ??
+                                                    match.stat_tracker_id,
+                                                )!.roblox_username
+                                              }
+                                            </p>
+                                            <p className="text-sm text-white/60">
+                                              @
+                                              {
+                                                getStaffById(
+                                                  draft?.stat_tracker_id ??
+                                                    match.stat_tracker_id,
+                                                )!.discord_username
+                                              }
+                                            </p>
+                                          </div>
+                                        </div>
+                                      ) : null}
                                     </div>
                                   </div>
                                 ) : null}
@@ -5968,15 +6158,18 @@ export default function SAVLSitePage() {
                                     }) || "-"}
                                   </p>
 
-                                  {statTrackLogged && !match.stats_finalized ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => saveMatchDraft(match.id)}
-                                      className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] active:translate-y-0.5"
-                                    >
-                                      Save Match
-                                    </button>
-                                  ) : null}
+                                  <button
+                                    type="button"
+                                    onClick={() => saveMatchDraft(match.id)}
+                                    disabled={
+                                      match.stats_finalized ||
+                                      (!adminLogged &&
+                                        !canCurrentStatTrackerEditMatch(match))
+                                    }
+                                    className="rounded-2xl bg-emerald-500 px-5 py-3 font-semibold text-black transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40 active:translate-y-0.5"
+                                  >
+                                    Save Stats
+                                  </button>
 
                                   <div className="grid gap-4 md:grid-cols-5">
                                     {(
@@ -6021,7 +6214,13 @@ export default function SAVLSitePage() {
                                             type="number"
                                             min="0"
                                             placeholder="Home"
-                                            disabled={!statTrackLogged || match.stats_finalized}
+                                            disabled={
+                                              match.stats_finalized ||
+                                              (!adminLogged &&
+                                                !canCurrentStatTrackerEditMatch(
+                                                  match,
+                                                ))
+                                            }
                                             value={
                                               matchDrafts[match.id]?.[
                                                 setItem.homeField
@@ -6062,48 +6261,72 @@ export default function SAVLSitePage() {
                                 </div>
 
                                 <div className="flex flex-wrap gap-3">
-                                  {statTrackLogged && !match.stats_finalized ? (
-                                    <>
-                                      <button
-                                        type="button"
-                                        onClick={() => saveMatchDraft(match.id)}
-                                        className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] active:translate-y-0.5"
-                                      >
-                                        Save Changes
-                                      </button>
-
-                                      <button
-                                        type="button"
-                                        onClick={() =>
-                                          openConfirmDialog({
-                                            title: "Finish Stats",
-                                            message: `Are you sure you want to finish stats for ${match.home_country} vs ${match.away_country}? After this, the stats cannot be edited.`,
-                                            confirmLabel: "Finish Stats",
-                                            onConfirm: () =>
-                                              finishStats(match.id),
-                                          })
-                                        }
-                                        className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-300 transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-400/15 active:translate-y-0.5"
-                                      >
-                                        Finish Stats
-                                      </button>
-                                    </>
+                                  {(adminLogged ||
+                                    canCurrentStatTrackerEditMatch(match)) &&
+                                  !match.stats_finalized ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => saveMatchDraft(match.id)}
+                                      className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] active:translate-y-0.5"
+                                    >
+                                      Save Changes
+                                    </button>
                                   ) : null}
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      openConfirmDialog({
-                                        title: "Delete Match",
-                                        message: `Are you sure you want to delete ${match.home_country} vs ${match.away_country}?`,
-                                        confirmLabel: "Delete",
-                                        onConfirm: () =>
-                                          handleDeleteMatch(match.id),
-                                      })
-                                    }
-                                    className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
-                                  >
-                                    Delete Match
-                                  </button>
+
+                                  {canCurrentStatTrackerEditMatch(match) &&
+                                  !match.stats_finalized ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openConfirmDialog({
+                                          title: "Submit Stats",
+                                          message: `Send stats for ${match.home_country} vs ${match.away_country} to Admin review?`,
+                                          confirmLabel: "Submit Stats",
+                                          onConfirm: () =>
+                                            submitStatsForReview(match.id),
+                                        })
+                                      }
+                                      className="rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-4 py-2 text-sm font-semibold text-yellow-300 transition duration-200 hover:-translate-y-0.5 hover:bg-yellow-400/15 active:translate-y-0.5"
+                                    >
+                                      Submit Stats
+                                    </button>
+                                  ) : null}
+
+                                  {adminLogged && !match.stats_finalized ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openConfirmDialog({
+                                          title: "Finish Stats",
+                                          message: `Are you sure you want to finish stats for ${match.home_country} vs ${match.away_country}? After this, the stats cannot be edited.`,
+                                          confirmLabel: "Finish Stats",
+                                          onConfirm: () =>
+                                            finishStats(match.id),
+                                        })
+                                      }
+                                      className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-300 transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-400/15 active:translate-y-0.5"
+                                    >
+                                      Finish Stats
+                                    </button>
+                                  ) : null}
+
+                                  {adminLogged ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openConfirmDialog({
+                                          title: "Delete Match",
+                                          message: `Are you sure you want to delete ${match.home_country} vs ${match.away_country}?`,
+                                          confirmLabel: "Delete",
+                                          onConfirm: () =>
+                                            handleDeleteMatch(match.id),
+                                        })
+                                      }
+                                      className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
+                                    >
+                                      Delete Match
+                                    </button>
+                                  ) : null}
                                 </div>
                               </div>
                             </div>
