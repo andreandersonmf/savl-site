@@ -1399,6 +1399,7 @@ export default function SAVLSitePage() {
   const [statTrackerLogged, setStatTrackerLogged] = useState(false);
   const [statTrackerEmail, setStatTrackerEmail] = useState("");
   const [statTrackerPassword, setStatTrackerPassword] = useState("");
+  const [showStatTrackAccess, setShowStatTrackAccess] = useState(false);
 
   type StandingsView = "Qualifiers" | "Playoffs" | GroupLetter;
 
@@ -1539,7 +1540,7 @@ export default function SAVLSitePage() {
   function isStatTrackerRole(role: string | null) {
     if (!role) return false;
 
-    return ["stat_tracker", "stat tracker", "stattracker"].includes(
+    return ["stat_track", "stat tracker", "stat_tracker", "stattracker"].includes(
       normalizeText(role),
     );
   }
@@ -3003,6 +3004,7 @@ export default function SAVLSitePage() {
     }
 
     setAdminLogged(false);
+    setShowStatTrackAccess(true);
     setStatTrackerLogged(true);
     setStatTrackerEmail("");
     setStatTrackerPassword("");
@@ -3010,6 +3012,7 @@ export default function SAVLSitePage() {
     await reloadMatches();
     await reloadStaffApplications();
 
+    setTimeout(() => scrollToSection("admin"), 100);
     showNotice("Stat Tracker unlocked.", true);
   }
 
@@ -4005,82 +4008,97 @@ export default function SAVLSitePage() {
               leaderboards.
             </p>
 
-            <Link
-              href="/stats"
-              className="mt-6 inline-flex rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.02] active:translate-y-0.5"
-            >
-              Open Stat Track
-            </Link>
-          </div>
-        </section>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link
+                href="/stats"
+                className="inline-flex rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.02] active:translate-y-0.5"
+              >
+                Open Stat Track
+              </Link>
 
-        <div className="mb-6 rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
-                Stat Track Access
-              </p>
-              <p className="mt-2 text-sm text-white/60">
-                Stat Trackers can edit only matches assigned to them. Admins can
-                review and finish stats.
-              </p>
-            </div>
-
-            {statTrackerLogged ? (
               <button
                 type="button"
-                onClick={handleStatTrackerLogout}
-                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-white/10 active:translate-y-0.5"
+                onClick={() => {
+                  setShowStatTrackAccess(true);
+                  setTimeout(() => scrollToSection("stat-track-access"), 50);
+                }}
+                className="inline-flex rounded-2xl border border-white/10 bg-white/5 px-6 py-3 font-semibold text-white transition duration-200 hover:-translate-y-1 hover:bg-white/10 active:translate-y-0.5"
               >
-                Lock Stat Tracker
+                Stat Track Access
               </button>
+            </div>
+
+            {showStatTrackAccess || adminLogged || statTrackerLogged ? (
+              <div
+                id="stat-track-access"
+                className="mt-8 rounded-[2rem] border border-white/10 bg-[#0B1712] p-6"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
+                      Stat Track Access
+                    </p>
+                    <p className="mt-2 text-sm text-white/60">
+                      Stat Trackers can edit matches that have a Stat Tracker assigned. Admins can review and finish stats.
+                    </p>
+                  </div>
+
+                  {statTrackerLogged ? (
+                    <button
+                      type="button"
+                      onClick={handleStatTrackerLogout}
+                      className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-white/10 active:translate-y-0.5"
+                    >
+                      Lock Stat Tracker
+                    </button>
+                  ) : null}
+                </div>
+
+                {!adminLogged && !statTrackerLogged ? (
+                  <form
+                    onSubmit={handleStatTrackerLogin}
+                    className="mt-5 grid gap-3 md:grid-cols-[1fr_1fr_auto]"
+                  >
+                    <input
+                      type="email"
+                      value={statTrackerEmail}
+                      onChange={(e) => setStatTrackerEmail(e.target.value)}
+                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                      placeholder="stattracker@email.com"
+                    />
+
+                    <input
+                      type="password"
+                      value={statTrackerPassword}
+                      onChange={(e) => setStatTrackerPassword(e.target.value)}
+                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                      placeholder="Password"
+                    />
+
+                    <button
+                      type="submit"
+                      className="rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5"
+                    >
+                      Unlock
+                    </button>
+                  </form>
+                ) : null}
+
+                {adminLogged ? (
+                  <p className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-300">
+                    Admin access enabled. You can review and finish stats.
+                  </p>
+                ) : null}
+
+                {statTrackerLogged ? (
+                  <p className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-300">
+                    Stat Tracker access enabled. This shared login can edit matches that have a Stat Tracker assigned, but cannot finish or unlock finalized stats.
+                  </p>
+                ) : null}
+              </div>
             ) : null}
           </div>
-
-          {!adminLogged && !statTrackerLogged ? (
-            <form
-              onSubmit={handleStatTrackerLogin}
-              className="mt-5 grid gap-3 md:grid-cols-[1fr_1fr_auto]"
-            >
-              <input
-                type="email"
-                value={statTrackerEmail}
-                onChange={(e) => setStatTrackerEmail(e.target.value)}
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                placeholder="stattracker@email.com"
-              />
-
-              <input
-                type="password"
-                value={statTrackerPassword}
-                onChange={(e) => setStatTrackerPassword(e.target.value)}
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                placeholder="Password"
-              />
-
-              <button
-                type="submit"
-                className="rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5"
-              >
-                Unlock
-              </button>
-            </form>
-          ) : null}
-
-          {adminLogged ? (
-            <p className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-300">
-              Admin access enabled. You can review and finish stats.
-            </p>
-          ) : null}
-
-          {statTrackerLogged ? (
-            <p className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-300">
-              Stat Tracker access enabled. This shared login can edit matches
-              that have a Stat Tracker assigned, but cannot finish or unlock
-              finalized stats.
-            </p>
-          ) : null}
-        </div>
+        </section>
 
         <section
           id="register"
@@ -4510,7 +4528,7 @@ export default function SAVLSitePage() {
               ) : null}
             </div>
 
-            {!adminLogged ? (
+            {!adminLogged && !statTrackerLogged ? (
               <form
                 onSubmit={handleAdminLogin}
                 className="max-w-xl rounded-[2rem] border border-white/10 bg-[#0B1712] p-6"
@@ -4551,7 +4569,8 @@ export default function SAVLSitePage() {
               </form>
             ) : (
               <div className="space-y-8">
-                <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
+                <div className={adminLogged ? "space-y-8" : "hidden"}>
+                  <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     <div>
                       <p className="text-xl font-bold text-white">
@@ -5755,8 +5774,10 @@ export default function SAVLSitePage() {
                     </div>
                   </div>
 
-                  <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
-                    <p className="mb-4 text-xl font-bold">Manage matches</p>
+                </div>
+
+                <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
+                  <p className="mb-4 text-xl font-bold">Manage matches</p>
                     <div className="space-y-4">
                       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                         <div className="flex flex-col gap-4 md:flex-row md:items-end">
