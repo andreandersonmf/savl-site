@@ -392,6 +392,10 @@ const BRICK_COLORS: BrickColor[] = [
   { name: "Hot pink", number: 1032, hex: "#FF00BF" },
 ];
 
+
+const STAT_TRACK_ACCESS_EMAIL = "savlstatsteam@gmail.com";
+const STAT_TRACK_ACCESS_PASSWORD = "fgAHJ3KJHtgjmFAl3!@";
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
@@ -2980,26 +2984,29 @@ export default function SAVLSitePage() {
   ) {
     event.preventDefault();
 
-    if (!supabase) return;
+    if (!supabase) {
+      showNotice("Supabase is not configured.", true);
+      return;
+    }
 
     const email = statTrackerEmail.trim().toLowerCase();
+    const password = statTrackerPassword.trim();
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: statTrackerPassword,
-    });
-
-    if (error) {
+    if (
+      email !== STAT_TRACK_ACCESS_EMAIL ||
+      password !== STAT_TRACK_ACCESS_PASSWORD
+    ) {
       showNotice("Invalid Stat Tracker login.", true);
       return;
     }
 
-    const role = await getCurrentUserRole();
+    const { error } = await supabase.auth.signInWithPassword({
+      email: STAT_TRACK_ACCESS_EMAIL,
+      password: STAT_TRACK_ACCESS_PASSWORD,
+    });
 
-    if (!isStatTrackerRole(role)) {
-      await supabase.auth.signOut();
-      setStatTrackerLogged(false);
-      showNotice("This login does not have Stat Tracker permission.", true);
+    if (error) {
+      showNotice(`Stat Tracker login error: ${error.message}`, true);
       return;
     }
 
@@ -4064,7 +4071,7 @@ export default function SAVLSitePage() {
                       value={statTrackerEmail}
                       onChange={(e) => setStatTrackerEmail(e.target.value)}
                       className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                      placeholder="stattracker@email.com"
+                      placeholder="savlstatsteam@gmail.com"
                     />
 
                     <input
