@@ -1587,7 +1587,8 @@ export default function SAVLSitePage() {
     }
 
     setAdminLogged(true);
-    setStatTrackerLogged(true);
+    setStatTrackerLogged(false);
+    setCurrentStatTracker(null);
     setAdminEmail("");
     setAdminPassword("");
 
@@ -1674,7 +1675,24 @@ export default function SAVLSitePage() {
         data: { session },
       } = await supabase.auth.getSession();
 
-      setAdminLogged(!!session);
+      if (session) {
+        const role = await getCurrentUserRole();
+
+        if (role === "admin") {
+          setAdminLogged(true);
+          setStatTrackerLogged(false);
+          setCurrentStatTracker(null);
+        } else {
+          setAdminLogged(false);
+          setStatTrackerLogged(false);
+          setCurrentStatTracker(null);
+          await supabase.auth.signOut();
+        }
+      } else {
+        setAdminLogged(false);
+        setStatTrackerLogged(false);
+        setCurrentStatTracker(null);
+      }
 
       await Promise.all([
         reloadTeams(),
@@ -2030,13 +2048,22 @@ export default function SAVLSitePage() {
   const statTrackMatches = useMemo(() => {
     return matches
       .filter((match) => {
-        if (adminLogged) return true;
-
-        if (statTrackerLogged && currentStatTracker) {
-          return match.stat_tracker_id === currentStatTracker.id;
+        if (!adminLogged) {
+          if (statTrackerLogged && currentStatTracker) {
+            if (match.stat_tracker_id !== currentStatTracker.id) return false;
+          } else {
+            return false;
+          }
         }
 
-        return false;
+        const statusOk =
+          adminFilterStatus === "All" || match.status === adminFilterStatus;
+
+        const stageOk =
+          adminFilterStage === "All" ||
+          (match.stage?.trim() ?? "") === adminFilterStage;
+
+        return statusOk && stageOk;
       })
       .sort((a, b) => {
         if (a.stats_finalized !== b.stats_finalized) {
@@ -2048,7 +2075,14 @@ export default function SAVLSitePage() {
 
         return dateA.localeCompare(dateB);
       });
-  }, [matches, adminLogged, statTrackerLogged, currentStatTracker]);
+  }, [
+    matches,
+    adminLogged,
+    statTrackerLogged,
+    currentStatTracker,
+    adminFilterStatus,
+    adminFilterStage,
+  ]);
 
   const roleOptions: SelectOption[] = [
     { label: "Vice Captain", value: "Vice Captain" },
@@ -5754,7 +5788,11 @@ export default function SAVLSitePage() {
                           return (
                             <div
                               key={match.id}
-                              className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                              className={`rounded-2xl border p-4 ${
+                                match.stats_finalized
+                                  ? "border-emerald-400/30 bg-emerald-400/10"
+                                  : "border-red-400/30 bg-red-400/10"
+                              }`}
                             >
                               <div className="grid gap-4">
                                 <div className="flex flex-wrap items-center gap-3">
@@ -5773,9 +5811,13 @@ export default function SAVLSitePage() {
                                     {draft?.status ?? match.status}
                                   </span>
                                   <span
-                                    className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${getStatusBadgeClass(draft?.status ?? match.status)}`}
+                                    className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${
+                                      match.stats_finalized
+                                        ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
+                                        : "border-red-400/30 bg-red-400/10 text-red-300"
+                                    }`}
                                   >
-                                    {draft?.status ?? match.status}
+                                    {match.stats_finalized ? "Stats finalized" : "Stats not finalized"}
                                   </span>
                                 </div>
 
@@ -5785,6 +5827,7 @@ export default function SAVLSitePage() {
                                   </label>
                                   <input
                                     type="text"
+                                    disabled={!adminLogged || match.stats_finalized}
                                     value={draft?.stage ?? match.stage ?? ""}
                                     onChange={(e) =>
                                       updateMatchDraft(match.id, {
@@ -5819,6 +5862,7 @@ export default function SAVLSitePage() {
                                     </label>
                                     <input
                                       type="date"
+                                      disabled={!adminLogged || match.stats_finalized}
                                       value={
                                         draft?.match_date ?? match.match_date
                                       }
@@ -5837,6 +5881,7 @@ export default function SAVLSitePage() {
                                     </label>
                                     <input
                                       type="time"
+                                      disabled={!adminLogged || match.stats_finalized}
                                       value={
                                         draft?.match_time ?? match.match_time
                                       }
@@ -6096,9 +6141,11 @@ export default function SAVLSitePage() {
                                   </div>
                                 ) : null}
 
-                                <label className="flex items-start gap-3 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4 text-sm text-yellow-100">
+                                {adminLogged ? (
+                                  <label className="flex items-start gap-3 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4 text-sm text-yellow-100">
                                   <input
                                     type="checkbox"
+                                    disabled={match.stats_finalized}
                                     checked={Boolean(
                                       matchDrafts[match.id]?.is_star_match,
                                     )}
@@ -6117,6 +6164,7 @@ export default function SAVLSitePage() {
                                     Highlight this match in the public schedule.
                                   </span>
                                 </label>
+                               ) : null}
 
                                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                                   <p className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">
@@ -6157,19 +6205,6 @@ export default function SAVLSitePage() {
                                         null,
                                     }) || "-"}
                                   </p>
-
-                                  <button
-                                    type="button"
-                                    onClick={() => saveMatchDraft(match.id)}
-                                    disabled={
-                                      match.stats_finalized ||
-                                      (!adminLogged &&
-                                        !canCurrentStatTrackerEditMatch(match))
-                                    }
-                                    className="rounded-2xl bg-emerald-500 px-5 py-3 font-semibold text-black transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40 active:translate-y-0.5"
-                                  >
-                                    Save Stats
-                                  </button>
 
                                   <div className="grid gap-4 md:grid-cols-5">
                                     {(
@@ -6240,6 +6275,10 @@ export default function SAVLSitePage() {
                                             type="number"
                                             min="0"
                                             placeholder="Away"
+                                            disabled={
+                                              match.stats_finalized ||
+                                              (!adminLogged && !canCurrentStatTrackerEditMatch(match))
+                                            }
                                             value={
                                               matchDrafts[match.id]?.[
                                                 setItem.awayField
@@ -6252,7 +6291,7 @@ export default function SAVLSitePage() {
                                                 e.target.value,
                                               )
                                             }
-                                            className="h-14 w-full rounded-2xl border border-white/10 bg-white/5 px-3 text-center text-white placeholder:text-white/25 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                                            className="h-14 w-full rounded-2xl border border-white/10 bg-white/5 px-3 text-center text-white placeholder:text-white/25 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40 disabled:cursor-not-allowed disabled:opacity-50"
                                           />
                                         </div>
                                       </div>
