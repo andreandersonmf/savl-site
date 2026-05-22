@@ -1261,6 +1261,19 @@ function getWinnerCountryFromSets(
   return null;
 }
 
+function getWinnerCountryFromScore(
+  homeScore: number,
+  awayScore: number,
+  homeCountry: string,
+  awayCountry: string,
+  status: MatchStatus,
+) {
+  if (status !== "Finished") return null;
+  if (homeScore > awayScore) return homeCountry;
+  if (awayScore > homeScore) return awayCountry;
+  return null;
+}
+
 function formatSetScores(source: {
   set1_home?: number | null;
   set1_away?: number | null;
@@ -2757,7 +2770,7 @@ export default function SAVLSitePage() {
       return;
     }
 
-    if (current.stats_finalized) {
+    if (current.stats_finalized && !canEditAsAdmin) {
       showNotice(
         "Stats for this match are already finalized and cannot be edited.",
         true,
@@ -2776,6 +2789,47 @@ export default function SAVLSitePage() {
         );
         return;
       }
+    }
+
+    const baseAdminPayload = {
+      status: draft.status,
+      stage: draft.stage,
+      match_date: draft.match_date,
+      match_time: draft.match_time,
+      referee_id: draft.referee_id,
+      media_id: draft.media_id,
+      stat_tracker_id: draft.stat_tracker_id,
+      is_star_match: draft.is_star_match,
+    };
+
+    if (current.stats_finalized && canEditAsAdmin) {
+      const homeScore = Number.isFinite(draft.home_score) ? draft.home_score : 0;
+      const awayScore = Number.isFinite(draft.away_score) ? draft.away_score : 0;
+
+      const { error } = await supabase
+        .from("matches")
+        .update({
+          ...baseAdminPayload,
+          home_score: homeScore,
+          away_score: awayScore,
+          winner_country: getWinnerCountryFromScore(
+            homeScore,
+            awayScore,
+            current.home_country,
+            current.away_country,
+            draft.status,
+          ),
+        })
+        .eq("id", matchId);
+
+      if (error) {
+        showNotice(error.message, true);
+        return;
+      }
+
+      await reloadMatches();
+      showNotice("Match updated. Finalized stats were kept locked.", true);
+      return;
     }
 
     const { homeScore, awayScore } = calculateSetWins(draft);
@@ -2807,14 +2861,7 @@ export default function SAVLSitePage() {
     };
 
     const adminPayload = {
-      status: draft.status,
-      stage: draft.stage,
-      match_date: draft.match_date,
-      match_time: draft.match_time,
-      referee_id: draft.referee_id,
-      media_id: draft.media_id,
-      stat_tracker_id: draft.stat_tracker_id,
-      is_star_match: draft.is_star_match,
+      ...baseAdminPayload,
       ...commonStatsPayload,
     };
 
@@ -5883,7 +5930,7 @@ export default function SAVLSitePage() {
                                   </label>
                                   <input
                                     type="text"
-                                    disabled={!adminLogged || match.stats_finalized}
+                                    disabled={!adminLogged}
                                     value={draft?.stage ?? match.stage ?? ""}
                                     onChange={(e) =>
                                       updateMatchDraft(match.id, {
@@ -5909,7 +5956,7 @@ export default function SAVLSitePage() {
                                       }
                                       options={statusOptions}
                                       placeholder="Select status"
-                                      disabled={!adminLogged || match.stats_finalized}
+                                      disabled={!adminLogged}
                                     />
                                   </div>
 
@@ -5919,7 +5966,7 @@ export default function SAVLSitePage() {
                                     </label>
                                     <input
                                       type="date"
-                                      disabled={!adminLogged || match.stats_finalized}
+                                      disabled={!adminLogged}
                                       value={
                                         draft?.match_date ?? match.match_date
                                       }
@@ -5938,7 +5985,7 @@ export default function SAVLSitePage() {
                                     </label>
                                     <input
                                       type="time"
-                                      disabled={!adminLogged || match.stats_finalized}
+                                      disabled={!adminLogged}
                                       value={
                                         draft?.match_time ?? match.match_time
                                       }
@@ -5960,11 +6007,10 @@ export default function SAVLSitePage() {
                                         type="number"
                                         min="0"
                                         disabled={
-                                          match.stats_finalized ||
-                                          (!adminLogged &&
-                                            !canCurrentStatTrackerEditMatch(
-                                              match,
-                                            ))
+                                          !adminLogged &&
+                                          !canCurrentStatTrackerEditMatch(
+                                            match,
+                                          )
                                         }
                                         value={
                                           draft?.home_score ?? match.home_score
@@ -5985,11 +6031,10 @@ export default function SAVLSitePage() {
                                         type="number"
                                         min="0"
                                         disabled={
-                                          match.stats_finalized ||
-                                          (!adminLogged &&
-                                            !canCurrentStatTrackerEditMatch(
-                                              match,
-                                            ))
+                                          !adminLogged &&
+                                          !canCurrentStatTrackerEditMatch(
+                                            match,
+                                          )
                                         }
                                         value={
                                           draft?.away_score ?? match.away_score
@@ -6022,7 +6067,7 @@ export default function SAVLSitePage() {
                                       }
                                       options={refereeOptions}
                                       placeholder="Select referee"
-                                      disabled={!adminLogged || match.stats_finalized}
+                                      disabled={!adminLogged}
                                     />
                                   </div>
 
@@ -6045,7 +6090,7 @@ export default function SAVLSitePage() {
                                       }
                                       options={mediaOptions}
                                       placeholder="Select media"
-                                      disabled={!adminLogged || match.stats_finalized}
+                                      disabled={!adminLogged}
                                     />
                                   </div>
 
@@ -6075,7 +6120,7 @@ export default function SAVLSitePage() {
                                         ...statTrackerOptions,
                                       ]}
                                       placeholder="Select Stat Tracker"
-                                      disabled={!adminLogged || match.stats_finalized}
+                                      disabled={!adminLogged}
                                     />
                                   </div>
                                 </div>
@@ -6219,7 +6264,7 @@ export default function SAVLSitePage() {
                                   <label className="flex items-start gap-3 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4 text-sm text-yellow-100">
                                   <input
                                     type="checkbox"
-                                    disabled={match.stats_finalized}
+                                    disabled={false}
                                     checked={Boolean(
                                       matchDrafts[match.id]?.is_star_match,
                                     )}
@@ -6374,9 +6419,8 @@ export default function SAVLSitePage() {
                                 </div>
 
                                 <div className="flex flex-wrap gap-3">
-                                  {(adminLogged ||
-                                    canCurrentStatTrackerEditMatch(match)) &&
-                                  !match.stats_finalized ? (
+                                  {adminLogged ||
+                                  canCurrentStatTrackerEditMatch(match) ? (
                                     <button
                                       type="button"
                                       onClick={() => saveMatchDraft(match.id)}
