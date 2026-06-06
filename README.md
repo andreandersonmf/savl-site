@@ -1,36 +1,100 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SAVL - South America Volleyball League
 
-## Getting Started
+Uma plataforma moderna de gerenciamento de ligas esportivas desenvolvida com 
+tecnologias web contemporâneas. O SAVL é um sistema completo para organizar 
+competições de volleyball com autenticação, fixtures, rankings e painel administrativo.
 
-First, run the development server:
+🌐 **[Acesse a plataforma aqui](https://savl-site.vercel.app/)**
+
+---
+
+## ✨ Destaques
+
+- ⚡ **Gerenciamento Completo de Ligas** - Crie times, organize fixtures e acompanhe rankings
+- 🎮 **Integração com Roblox** - Sincronização de dados via API
+- 📊 **Dashboard em Tempo Real** - Estatísticas e classificações atualizadas
+- 👥 **Sistema de Papéis** - Admin, Árbitro, Mídia e Stat Tracker
+- 📱 **Responsivo** - Funciona perfeitamente em desktop, tablet e mobile
+- 🔐 **Autenticação Segura** - Sistema de login robusto
+- 🎨 **Design Moderno** - Interface dark premium com Tailwind CSS
+
+---
+
+## 🚀 Tech Stack
+
+### Frontend
+- **[React.js](https://react.dev/)** - Biblioteca JavaScript para UI
+- **[TypeScript](https://www.typescriptlang.org/)** - Type safety
+- **[Tailwind CSS](https://tailwindcss.com/)** - Estilização utility-first
+- **[Next.js](https://nextjs.org/)** - Framework React com SSR/SSG
+
+### Backend & Deployment
+- **[Next.js API Routes](https://nextjs.org/docs/api-routes/introduction)** - Backend serverless
+- **[Vercel](https://vercel.com/)** - Hosting e deployment
+- **[API REST](https://developer.roblox.com/)** - Integração Roblox
+
+---
+
+## 📋 Funcionalidades Principais
+
+### 🏠 Home
+- Landing page com informações da liga
+- Quick stats (formato, timezone, times registrados)
+- Call-to-action para registro e visualização de partidas
+
+### 👥 Teams
+- Diretório completo de times registrados
+- Visualização de capitães e rosters
+- Filtro por país
+- Acesso aos dados de cada equipe
+
+### 📅 Fixtures
+- Calendário de partidas com filtros avançados
+- Filtro por estágio (Grupos, Playoffs)
+- Informações de árbitros e mídia
+- Status das partidas (Scheduled, Completed, etc)
+
+### 📊 Standings
+- Tabela de classificação detalhada
+- Estatísticas: Pontos, Vitórias, Derrotas, Sets
+- Visualização por grupos (A, B, C, D)
+- Diferença de pontos e sets
+
+### ⚙️ Admin Panel
+- Gerenciamento de times
+- Criação e edição de fixtures
+- Definição de resultados finais
+- Aprovação de staff (árbitros, mídia)
+
+### 📝 Registro
+- Inscrição de times com validação
+- Seleção de país disponível
+- Customização de cor de brick
+- Confirmação de requisitos
+
+### 👔 Staff Applications
+- Inscrição como árbitro ou mídia
+- Sistema de aprovação
+- Atribuição a partidas
+
+---
+
+## 🛠️ Começando Localmente
+
+### Pré-requisitos
+- Node.js 16+ 
+- npm, yarn ou pnpm
+
+### Instalação
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+# Clone o repositório
+git clone https://github.com/seu-usuario/SAVL.git
+cd SAVL
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+# Instale as dependências
+npm install
+# ou
+yarn install
+# ou
+pnpm install
