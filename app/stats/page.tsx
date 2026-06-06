@@ -336,9 +336,15 @@ export default function StatsPage() {
   }, [selectedMatch, selectedSet, playerOptions, stats]);
 
   const leaderboard = useMemo(() => {
+    if (!selectedMatch) return [];
+
     return playerOptions
       .map((player) => {
-        const rows = stats.filter((row) => row.player_key === player.key);
+        const rows = stats.filter(
+          (row) =>
+            row.player_key === player.key &&
+            row.match_id === selectedMatch.id,
+        );
         return sumRows(rows);
       })
       .filter((row): row is StatRow => Boolean(row))
@@ -356,7 +362,7 @@ export default function StatsPage() {
         return a.player_name.localeCompare(b.player_name);
       })
       .slice(0, 10);
-  }, [playerOptions, stats]);
+  }, [playerOptions, stats, selectedMatch]);
 
   async function loadData() {
     if (!supabase) {
