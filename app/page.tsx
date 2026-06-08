@@ -145,17 +145,27 @@ type BrickColor = {
 };
 
 type PlayerStat = {
-  id: number;
+  id?: number;
   match_id: number;
-  player_username: string;
-  player_roblox_id?: string | null;
-  team: string;
-  kills: number;
-  receives: number;
-  assists: number;
+  team_country: string;
+  player_key: string;
+  player_name: string;
+  set_number: number;
+  spiking_errors: number;
   ape_kills: number;
+  ape_attempts: number;
+  kills: number;
+  attempts: number;
+  one_touches: number;
+  kill_blocks: number;
+  assists: number;
+  spike_receives?: number | null;
+  serve_bfs: number;
+  receives: number;
+  dives: number;
   aces: number;
-  created_at: string;
+  misc_errors: number;
+  created_at?: string | null;
 };
 
 const COUNTRIES: Country[] = [
@@ -1422,6 +1432,8 @@ type LeaderboardPlayer = {
   assists: number;
   ape_kills: number;
   aces: number;
+  attempts: number;
+  ape_attempts: number;
   matches_played: number;
 };
 
@@ -1430,6 +1442,19 @@ type LeaderboardStatKey = "kills" | "receives" | "assists" | "ape_kills" | "aces
 function statAverage(player: LeaderboardPlayer, key: LeaderboardStatKey) {
   if (!player.matches_played) return 0;
   return player[key] / player.matches_played;
+}
+
+function percentValue(value: number, total: number) {
+  if (!total) return "0.00%";
+  return `${((value / total) * 100).toFixed(2)}%`;
+}
+
+function playerTotalAttempts(player: LeaderboardPlayer) {
+  return player.attempts + player.ape_attempts;
+}
+
+function playerTotalKillPercentage(player: LeaderboardPlayer) {
+  return percentValue(player.kills, playerTotalAttempts(player));
 }
 
 function sortByAverage(key: LeaderboardStatKey) {
@@ -1618,7 +1643,9 @@ function AwardsPodium({
                   <p className="text-xs uppercase tracking-wide text-white/45">
                     Avg. {mainStatLabel}
                   </p>
-                  <p className="mt-1 font-black text-white">{avg.toFixed(1)}</p>
+                  <p className="mt-1 font-black text-white">
+                    {mainStat === "kills" ? playerTotalKillPercentage(player) : avg.toFixed(1)}
+                  </p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
                   <p className="text-xs uppercase tracking-wide text-white/45">
@@ -1762,7 +1789,7 @@ function TeamOfSeason({
                   Starter #{index + 1}
                 </span>
                 <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white/35">
-                  Season XI
+                  Season I
                 </span>
               </div>
               <div className="flex items-center gap-3">
@@ -1846,7 +1873,6 @@ export default function SAVLSitePage() {
     | "best_setter"
     | "best_aper"
     | "season_mvp"
-    | "finals_mvp"
     | "most_improved"
     | "team_of_season"
   >("best_spiker");
@@ -2352,13 +2378,125 @@ export default function SAVLSitePage() {
     playoffStandings,
   ]);
 
+  const playerMetaByKey = useMemo(() => {
+    const map = new Map<string, { username: string; robloxId: string | null; team: string }>();
+
+    for (const team of approvedTeams) {
+      if (team.captain_name?.trim()) {
+        map.set(`captain-${team.id}`, {
+          username: team.captain_name,
+          robloxId: team.captain_roblox_id ?? null,
+          team: team.country,
+        });
+      }
+    }
+
+    for (const player of teamPlayers) {
+      const team = approvedTeams.find((item) => item.id === player.team_id);
+      if (!team) continue;
+      map.set(`player-${player.id}`, {
+        username: player.roblox_username,
+        robloxId: player.roblox_user_id ?? null,
+        team: team.country,
+      });
+    }
+
+    return map;
+  }, [approvedTeams, teamPlayers]);
+
+  const findPlayerMeta = (
+    username: string,
+    playerKey?: string | null,
+    teamCountry?: string | null,
+  ) => {
+    if (playerKey) {
+      const byKey = playerMetaByKey.get(playerKey);
+      if (byKey) return byKey;
+    }
+
+    const normalizedUsername = normalizeText(username);
+
+    for (const team of approvedTeams) {
+      if (normalizeText(team.captain_name ?? "") === normalizedUsername) {
+        return {
+          username: team.captain_name,
+          robloxId: team.captain_roblox_id ?? null,
+          team: team.country,
+        };
+      }
+    }
+
+    const rosterPlayer = teamPlayers.find(
+      (player) => normalizeText(player.roblox_username) === normalizedUsername,
+    );
+    if (rosterPlayer) {
+      const rosterTeam = approvedTeams.find(
+        (team) => team.id === rosterPlayer.team_id,
+      );
+      return {
+        username: rosterPlayer.roblox_username,
+        robloxId: rosterPlayer.roblox_user_id ?? null,
+        team: rosterTeam?.country ?? teamCountry ?? "Selected",
+      };
+    }
+
+    return {
+      username,
+      robloxId: null,
+      team: teamCountry ?? "Selected",
+    };
+  };
+
+  const aggregatePlayerStats = (rows: PlayerStat[]) => {
+    const map = new Map<
+      string,
+      LeaderboardPlayer & { matchIds: Set<number> }
+    >();
+
+    for (const s of rows) {
+      const meta = findPlayerMeta(s.player_name, s.player_key, s.team_country);
+      const key = s.player_key || normalizeText(meta.username || s.player_name);
+      const totalKills = (s.kills ?? 0) + (s.ape_kills ?? 0);
+      const existing = map.get(key);
+
+      if (existing) {
+        existing.kills += totalKills;
+        existing.receives += s.receives ?? 0;
+        existing.assists += s.assists ?? 0;
+        existing.ape_kills += s.ape_kills ?? 0;
+        existing.aces += s.aces ?? 0;
+        existing.attempts += s.attempts ?? 0;
+        existing.ape_attempts += s.ape_attempts ?? 0;
+        existing.matchIds.add(s.match_id);
+        existing.matches_played = existing.matchIds.size;
+      } else {
+        map.set(key, {
+          player_username: meta.username || s.player_name,
+          player_roblox_id: meta.robloxId,
+          team: meta.team || s.team_country,
+          kills: totalKills,
+          receives: s.receives ?? 0,
+          assists: s.assists ?? 0,
+          ape_kills: s.ape_kills ?? 0,
+          aces: s.aces ?? 0,
+          attempts: s.attempts ?? 0,
+          ape_attempts: s.ape_attempts ?? 0,
+          matches_played: 1,
+          matchIds: new Set([s.match_id]),
+        });
+      }
+    }
+
+    return Array.from(map.values()).map(({ matchIds, ...player }) => player);
+  };
+
   // Leaderboard filtered player stats
   const leaderboardStats = useMemo(() => {
     let filtered = playerStats;
 
     if (leaderboardFilterTeam !== "All") {
       filtered = filtered.filter(
-        (s) => normalizeText(s.team) === normalizeText(leaderboardFilterTeam),
+        (s) => normalizeText(s.team_country) === normalizeText(leaderboardFilterTeam),
       );
     }
 
@@ -2371,84 +2509,12 @@ export default function SAVLSitePage() {
       filtered = filtered.filter((s) => matchIds.has(s.match_id));
     }
 
-    // Aggregate by player
-    const map = new Map<
-      string,
-      {
-        player_username: string;
-        player_roblox_id: string | null;
-        team: string;
-        kills: number;
-        receives: number;
-        assists: number;
-        ape_kills: number;
-        aces: number;
-        matches_played: number;
-      }
-    >();
-
-    for (const s of filtered) {
-      const key = normalizeText(s.player_username);
-      const existing = map.get(key);
-      if (existing) {
-        existing.kills += s.kills;
-        existing.receives += s.receives;
-        existing.assists += s.assists;
-        existing.ape_kills += s.ape_kills;
-        existing.aces += s.aces ?? 0;
-        existing.matches_played += 1;
-      } else {
-        map.set(key, {
-          player_username: s.player_username,
-          player_roblox_id: s.player_roblox_id ?? null,
-          team: s.team,
-          kills: s.kills,
-          receives: s.receives,
-          assists: s.assists,
-          ape_kills: s.ape_kills,
-          aces: s.aces ?? 0,
-          matches_played: 1,
-        });
-      }
-    }
-
-    return Array.from(map.values());
-  }, [playerStats, leaderboardFilterTeam, leaderboardFilterStage, matches]);
+    return aggregatePlayerStats(filtered);
+  }, [playerStats, leaderboardFilterTeam, leaderboardFilterStage, matches, playerMetaByKey, approvedTeams, teamPlayers]);
 
   // Awards computed data
   const awardsData = useMemo(() => {
-    const aggregateStats = (rows: PlayerStat[]) => {
-      const map = new Map<string, LeaderboardPlayer>();
-
-      for (const s of rows) {
-        const key = normalizeText(s.player_username);
-        const existing = map.get(key);
-        if (existing) {
-          existing.kills += s.kills;
-          existing.receives += s.receives;
-          existing.assists += s.assists;
-          existing.ape_kills += s.ape_kills;
-          existing.aces += s.aces ?? 0;
-          existing.matches_played += 1;
-        } else {
-          map.set(key, {
-            player_username: s.player_username,
-            player_roblox_id: s.player_roblox_id ?? null,
-            team: s.team,
-            kills: s.kills,
-            receives: s.receives,
-            assists: s.assists,
-            ape_kills: s.ape_kills,
-            aces: s.aces ?? 0,
-            matches_played: 1,
-          });
-        }
-      }
-
-      return Array.from(map.values());
-    };
-
-    const all = aggregateStats(playerStats);
+    const all = aggregatePlayerStats(playerStats);
 
     const buildSelectedPlayer = (username: string): LeaderboardPlayer => {
       const statsPlayer = all.find(
@@ -2456,43 +2522,22 @@ export default function SAVLSitePage() {
       );
       if (statsPlayer) return statsPlayer;
 
-      const rosterPlayer = teamPlayers.find(
-        (player) => normalizeText(player.roblox_username) === normalizeText(username),
-      );
-      const rosterTeam = rosterPlayer
-        ? approvedTeams.find((team) => team.id === rosterPlayer.team_id)
-        : null;
+      const meta = findPlayerMeta(username);
 
       return {
-        player_username: username,
-        player_roblox_id: rosterPlayer?.roblox_user_id ?? null,
-        team: rosterTeam?.country ?? "Selected",
+        player_username: meta.username || username,
+        player_roblox_id: meta.robloxId,
+        team: meta.team,
         kills: 0,
         receives: 0,
         assists: 0,
         ape_kills: 0,
         aces: 0,
+        attempts: 0,
+        ape_attempts: 0,
         matches_played: 0,
       };
     };
-
-    const finalsMatchIds = new Set(
-      matches
-        .filter((m) => {
-          const stage = normalizeText(m.stage ?? "");
-          return (
-            stage.includes("finals") ||
-            stage.includes("grand final") ||
-            stage.includes("semifinal") ||
-            stage.includes("semi-final")
-          );
-        })
-        .map((m) => m.id),
-    );
-
-    const finalsAll = aggregateStats(
-      playerStats.filter((stat) => finalsMatchIds.has(stat.match_id)),
-    );
 
     const bestSpiker = [...all].sort(sortByAverage("kills")).slice(0, 3);
 
@@ -2517,29 +2562,7 @@ export default function SAVLSitePage() {
 
     const bestAper = [...all].sort(sortByAverage("ape_kills")).slice(0, 3);
 
-    const seasonMvp = [...all]
-      .sort((a, b) => {
-        const aAvg =
-          a.matches_played > 0
-            ? (a.kills + a.receives + a.assists + a.ape_kills + a.aces) /
-              a.matches_played
-            : 0;
-        const bAvg =
-          b.matches_played > 0
-            ? (b.kills + b.receives + b.assists + b.ape_kills + b.aces) /
-              b.matches_played
-            : 0;
-        return bAvg - aAvg;
-      })
-      .slice(0, 1);
-
-    const finalsMvp = [...finalsAll]
-      .sort((a, b) => {
-        const aScore = a.kills + a.receives + a.assists + a.ape_kills * 1.5 + a.aces;
-        const bScore = b.kills + b.receives + b.assists + b.ape_kills * 1.5 + b.aces;
-        return bScore - aScore;
-      })
-      .slice(0, 1);
+    const seasonMvp = [buildSelectedPlayer("Fake_MattX")];
 
     const mostImproved = ["CLypX_9", "ykGznn", "SOBRINHODOSILVA"].map(
       buildSelectedPlayer,
@@ -2561,11 +2584,10 @@ export default function SAVLSitePage() {
       bestSetter,
       bestAper,
       seasonMvp,
-      finalsMvp,
       mostImproved,
       teamOfSeason,
     };
-  }, [playerStats, matches, teamPlayers, approvedTeams]);
+  }, [playerStats, playerMetaByKey, approvedTeams, teamPlayers]);
 
   const approvedStaff = useMemo(() => {
     return staffApplications.filter((staff) => staff.approved);
@@ -3897,9 +3919,12 @@ export default function SAVLSitePage() {
     if (!supabase) return;
     setPlayerStatsLoading(true);
     const result = await supabase
-      .from("player_stats")
+      .from("match_player_stats")
       .select("*")
-      .order("created_at", { ascending: true });
+      .order("match_id", { ascending: true })
+      .order("set_number", { ascending: true })
+      .order("team_country", { ascending: true })
+      .order("player_name", { ascending: true });
     setPlayerStatsLoading(false);
     if (!result.error && result.data) {
       setPlayerStats(result.data as PlayerStat[]);
@@ -5009,7 +5034,6 @@ export default function SAVLSitePage() {
                       { key: "best_setter", label: "Best Setter" },
                       { key: "best_aper", label: "Best Aper" },
                       { key: "season_mvp", label: "Season MVP" },
-                      { key: "finals_mvp", label: "Finals MVP" },
                       { key: "most_improved", label: "Most Improved Player" },
                       { key: "team_of_season", label: "Team of the Season" },
                     ] as const
@@ -5090,14 +5114,6 @@ export default function SAVLSitePage() {
                         title="Season MVP"
                         subtitle="The player with the highest average full impact per match"
                         player={awardsData.seasonMvp[0] ?? null}
-                        teams={approvedTeams}
-                      />
-                    ) : null}
-                    {awardsTab === "finals_mvp" ? (
-                      <AwardsMVP
-                        title="Finals MVP"
-                        subtitle="The player who stood out the most during the Finals & Grand Finals"
-                        player={awardsData.finalsMvp[0] ?? null}
                         teams={approvedTeams}
                       />
                     ) : null}
