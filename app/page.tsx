@@ -154,6 +154,7 @@ type PlayerStat = {
   receives: number;
   assists: number;
   ape_kills: number;
+  aces: number;
   created_at: string;
 };
 
@@ -1420,8 +1421,37 @@ type LeaderboardPlayer = {
   receives: number;
   assists: number;
   ape_kills: number;
+  aces: number;
   matches_played: number;
 };
+
+type LeaderboardStatKey = "kills" | "receives" | "assists" | "ape_kills" | "aces";
+
+function statAverage(player: LeaderboardPlayer, key: LeaderboardStatKey) {
+  if (!player.matches_played) return 0;
+  return player[key] / player.matches_played;
+}
+
+function sortByAverage(key: LeaderboardStatKey) {
+  return (a: LeaderboardPlayer, b: LeaderboardPlayer) => {
+    const avgDiff = statAverage(b, key) - statAverage(a, key);
+    if (avgDiff !== 0) return avgDiff;
+    if (b[key] !== a[key]) return b[key] - a[key];
+    return a.player_username.localeCompare(b.player_username);
+  };
+}
+
+function PlayerAvatar({ player }: { player: Pick<LeaderboardPlayer, "player_username" | "player_roblox_id"> }) {
+  if (player.player_roblox_id) {
+    return <Avatar robloxUserId={player.player_roblox_id} name={player.player_username} />;
+  }
+
+  return (
+    <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-bold text-white/70">
+      {player.player_username.slice(0, 2).toUpperCase()}
+    </div>
+  );
+}
 
 function LeaderboardTable({
   title,
@@ -1436,59 +1466,70 @@ function LeaderboardTable({
   accentClass: string;
   borderClass: string;
   players: LeaderboardPlayer[];
-  statKey: "kills" | "receives" | "assists" | "ape_kills";
+  statKey: LeaderboardStatKey;
   statLabel: string;
   teams: Team[];
 }) {
   if (players.length === 0) return null;
 
   return (
-    <div className={`rounded-2xl border ${borderClass} bg-white/[0.03] overflow-hidden`}>
-      <div className={`px-5 py-3 border-b ${borderClass} bg-white/[0.03]`}>
+    <div className={`rounded-2xl border ${borderClass} bg-white/[0.03] overflow-hidden shadow-[0_18px_60px_rgba(0,0,0,0.18)]`}>
+      <div className={`px-5 py-4 border-b ${borderClass} bg-white/[0.04]`}>
         <p className={`text-sm font-bold uppercase tracking-[0.2em] ${accentClass}`}>
           {title}
         </p>
+        <p className="mt-1 text-xs text-white/45">Ranked by average per match</p>
       </div>
       <div className="divide-y divide-white/5">
         {players.map((player, index) => {
           const team = teams.find(
             (t) => normalizeText(t.country) === normalizeText(player.team),
           );
+          const avg = statAverage(player, statKey);
           return (
             <div
               key={player.player_username}
-              className="flex items-center gap-4 px-5 py-3"
+              className="grid grid-cols-[32px_44px_1fr_auto] items-center gap-3 px-5 py-3 transition hover:bg-white/[0.03]"
             >
               <span
-                className={`w-6 text-center text-sm font-black ${
+                className={`flex h-8 w-8 items-center justify-center rounded-full border text-sm font-black ${
                   index === 0
-                    ? "text-yellow-300"
+                    ? "border-yellow-300/30 bg-yellow-300/10 text-yellow-300"
                     : index === 1
-                      ? "text-white/60"
+                      ? "border-white/20 bg-white/10 text-white/70"
                       : index === 2
-                        ? "text-amber-600"
-                        : "text-white/40"
+                        ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                        : "border-white/10 bg-white/5 text-white/40"
                 }`}
               >
                 {index + 1}
               </span>
-              {team ? (
-                <img
-                  src={getFlagUrl(team.code)}
-                  alt={team.country}
-                  className="h-4 w-6 rounded-sm object-cover"
-                />
-              ) : null}
-              <span className="flex-1 truncate text-sm font-semibold text-white">
-                {player.player_username}
-              </span>
-              <span className="text-xs text-white/50">{player.team}</span>
-              <span className={`min-w-[52px] text-right text-sm font-bold ${accentClass}`}>
-                {player[statKey]}
-              </span>
-              <span className="w-16 text-right text-xs text-white/40">
-                {player.matches_played}g
-              </span>
+              <PlayerAvatar player={player} />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  {team ? (
+                    <img
+                      src={getFlagUrl(team.code)}
+                      alt={team.country}
+                      className="h-4 w-6 rounded-sm object-cover"
+                    />
+                  ) : null}
+                  <span className="truncate text-sm font-bold text-white">
+                    {player.player_username}
+                  </span>
+                </div>
+                <p className="mt-0.5 truncate text-xs text-white/45">
+                  {player.team} • {player.matches_played} match{player.matches_played !== 1 ? "es" : ""}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className={`text-lg font-black ${accentClass}`}>
+                  {avg.toFixed(1)}
+                </p>
+                <p className="text-xs text-white/45">
+                  {player[statKey]} total {statLabel}
+                </p>
+              </div>
             </div>
           );
         })}
@@ -1500,7 +1541,6 @@ function LeaderboardTable({
 function AwardsPodium({
   title,
   subtitle,
-  icon,
   players,
   mainStat,
   mainStatLabel,
@@ -1508,14 +1548,11 @@ function AwardsPodium({
 }: {
   title: string;
   subtitle: string;
-  icon: string;
   players: LeaderboardPlayer[];
-  mainStat: "kills" | "receives" | "assists" | "ape_kills";
+  mainStat: LeaderboardStatKey;
   mainStatLabel: string;
   teams: Team[];
 }) {
-  const medals = ["🥇", "🥈", "🥉"];
-
   if (players.length === 0) {
     return (
       <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-white/50">
@@ -1526,10 +1563,8 @@ function AwardsPodium({
 
   return (
     <div>
-      <div className="mb-4">
-        <p className="text-xl font-black text-white">
-          {icon} {title}
-        </p>
+      <div className="mb-5">
+        <p className="text-xl font-black text-white">{title}</p>
         <p className="mt-1 text-sm text-white/60">{subtitle}</p>
       </div>
       <div className="grid gap-4 md:grid-cols-3">
@@ -1537,10 +1572,11 @@ function AwardsPodium({
           const team = teams.find(
             (t) => normalizeText(t.country) === normalizeText(player.team),
           );
+          const avg = statAverage(player, mainStat);
           return (
             <div
               key={player.player_username}
-              className={`rounded-[1.5rem] border p-5 ${
+              className={`rounded-[1.5rem] border p-5 shadow-[0_18px_70px_rgba(0,0,0,0.22)] ${
                 index === 0
                   ? "border-yellow-400/30 bg-yellow-400/[0.08]"
                   : index === 1
@@ -1548,8 +1584,18 @@ function AwardsPodium({
                     : "border-amber-700/30 bg-amber-900/10"
               }`}
             >
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-2xl">{medals[index]}</span>
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <span
+                  className={`flex h-10 w-10 items-center justify-center rounded-full border text-sm font-black ${
+                    index === 0
+                      ? "border-yellow-300/30 bg-yellow-300/10 text-yellow-300"
+                      : index === 1
+                        ? "border-white/20 bg-white/10 text-white/75"
+                        : "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                  }`}
+                >
+                  #{index + 1}
+                </span>
                 {team ? (
                   <img
                     src={getFlagUrl(team.code)}
@@ -1558,39 +1604,40 @@ function AwardsPodium({
                   />
                 ) : null}
               </div>
-              <p className="text-lg font-black text-white">
-                {player.player_username}
-              </p>
-              <p className="text-sm text-white/60">{player.team}</p>
+              <div className="flex items-center gap-3">
+                <PlayerAvatar player={player} />
+                <div className="min-w-0">
+                  <p className="truncate text-lg font-black text-white">
+                    {player.player_username}
+                  </p>
+                  <p className="truncate text-sm text-white/60">{player.team}</p>
+                </div>
+              </div>
               <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
                 <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
                   <p className="text-xs uppercase tracking-wide text-white/45">
-                    {mainStatLabel}
+                    Avg. {mainStatLabel}
                   </p>
-                  <p className="mt-1 font-black text-white">
-                    {player[mainStat]}
-                  </p>
+                  <p className="mt-1 font-black text-white">{avg.toFixed(1)}</p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
                   <p className="text-xs uppercase tracking-wide text-white/45">
-                    Matches
+                    Total {mainStatLabel}
                   </p>
-                  <p className="mt-1 font-black text-white">
-                    {player.matches_played}
-                  </p>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
-                  <p className="text-xs uppercase tracking-wide text-white/45">
-                    Kills
-                  </p>
-                  <p className="mt-1 font-bold text-white">{player.kills}</p>
+                  <p className="mt-1 font-black text-white">{player[mainStat]}</p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
                   <p className="text-xs uppercase tracking-wide text-white/45">
                     Receives
                   </p>
+                  <p className="mt-1 font-bold text-white">{player.receives}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
+                  <p className="text-xs uppercase tracking-wide text-white/45">
+                    Matches
+                  </p>
                   <p className="mt-1 font-bold text-white">
-                    {player.receives}
+                    {player.matches_played}
                   </p>
                 </div>
               </div>
@@ -1605,13 +1652,11 @@ function AwardsPodium({
 function AwardsMVP({
   title,
   subtitle,
-  icon,
   player,
   teams,
 }: {
   title: string;
   subtitle: string;
-  icon: string;
   player: LeaderboardPlayer | null;
   teams: Team[];
 }) {
@@ -1629,19 +1674,20 @@ function AwardsMVP({
 
   const avg =
     player.matches_played > 0
-      ? ((player.kills + player.receives) / player.matches_played).toFixed(1)
+      ? ((player.kills + player.receives + player.assists + player.ape_kills + player.aces) /
+          player.matches_played).toFixed(1)
       : "0.0";
 
   return (
     <div>
       <div className="mb-5">
-        <p className="text-xl font-black text-white">
-          {icon} {title}
-        </p>
+        <p className="text-xl font-black text-white">{title}</p>
         <p className="mt-1 text-sm text-white/60">{subtitle}</p>
       </div>
-      <div className="mx-auto max-w-sm rounded-[2rem] border border-yellow-400/30 bg-gradient-to-b from-yellow-400/10 to-yellow-400/[0.03] p-8 text-center">
-        <div className="mb-4 text-5xl">{icon}</div>
+      <div className="mx-auto max-w-sm rounded-[2rem] border border-yellow-400/30 bg-gradient-to-b from-yellow-400/10 to-yellow-400/[0.03] p-8 text-center shadow-[0_24px_90px_rgba(0,0,0,0.35)]">
+        <div className="mx-auto mb-4 flex justify-center">
+          <PlayerAvatar player={player} />
+        </div>
         {team ? (
           <img
             src={getFlagUrl(team.code)}
@@ -1654,40 +1700,26 @@ function AwardsMVP({
 
         <div className="mt-6 grid grid-cols-2 gap-3 text-sm">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
-            <p className="text-xs uppercase tracking-wide text-white/45">
-              Kills
-            </p>
+            <p className="text-xs uppercase tracking-wide text-white/45">Kills</p>
             <p className="mt-1 text-xl font-black text-white">{player.kills}</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
-            <p className="text-xs uppercase tracking-wide text-white/45">
-              Receives
-            </p>
-            <p className="mt-1 text-xl font-black text-white">
-              {player.receives}
-            </p>
+            <p className="text-xs uppercase tracking-wide text-white/45">Receives</p>
+            <p className="mt-1 text-xl font-black text-white">{player.receives}</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
-            <p className="text-xs uppercase tracking-wide text-white/45">
-              Assists
-            </p>
-            <p className="mt-1 text-xl font-black text-white">
-              {player.assists}
-            </p>
+            <p className="text-xs uppercase tracking-wide text-white/45">Assists</p>
+            <p className="mt-1 text-xl font-black text-white">{player.assists}</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-3 text-center">
-            <p className="text-xs uppercase tracking-wide text-white/45">
-              Ape Kills
-            </p>
-            <p className="mt-1 text-xl font-black text-white">
-              {player.ape_kills}
-            </p>
+            <p className="text-xs uppercase tracking-wide text-white/45">Aces</p>
+            <p className="mt-1 text-xl font-black text-white">{player.aces}</p>
           </div>
         </div>
 
         <div className="mt-4 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-3">
           <p className="text-xs uppercase tracking-wide text-yellow-300/70">
-            Avg. Kills + Receives / match
+            Avg. full impact / match
           </p>
           <p className="mt-1 text-2xl font-black text-yellow-300">{avg}</p>
         </div>
@@ -1703,85 +1735,65 @@ function AwardsMVP({
 function TeamOfSeason({
   players,
 }: {
-  players: {
-    player_username: string;
-    player_roblox_id?: string | null;
-    kills: number;
-    receives: number;
-    assists: number;
-    ape_kills: number;
-    matches_played: number;
-  }[];
+  players: LeaderboardPlayer[];
 }) {
-  const switzerlandCountry = COUNTRIES.find(
-    (c) => normalizeText(c.name) === "switzerland",
-  );
-
   return (
     <div>
       <div className="mb-5">
-        <p className="text-xl font-black text-white">🥇 Team of the Season</p>
+        <p className="text-xl font-black text-white">Team of the Season</p>
         <p className="mt-1 text-sm text-white/60">
-          Switzerland — Season Champions
-        </p>
-      </div>
-
-      {/* Championship Banner */}
-      <div className="mb-6 flex flex-col items-center rounded-[2rem] border border-yellow-400/25 bg-gradient-to-b from-yellow-400/10 to-transparent p-8 text-center">
-        {switzerlandCountry ? (
-          <img
-            src={getFlagUrl(switzerlandCountry.code)}
-            alt="Switzerland flag"
-            className="mb-4 h-16 w-24 rounded-xl object-cover shadow-lg"
-          />
-        ) : null}
-        <p className="text-3xl font-black text-white">🇨🇭 Switzerland</p>
-        <p className="mt-2 text-yellow-300 font-semibold uppercase tracking-[0.2em] text-sm">
-          Season Champions
+          The six selected best players of the season.
         </p>
       </div>
 
       {players.length === 0 ? (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-white/50">
-          No player stats recorded for Switzerland yet.
+          No selected players found yet.
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-yellow-400/15">
-          <div className="grid grid-cols-[1fr_80px_80px_80px_80px_60px] border-b border-yellow-400/15 bg-yellow-400/[0.05] px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/50">
-            <span>Player</span>
-            <span className="text-right">Kills</span>
-            <span className="text-right">Receives</span>
-            <span className="text-right">Assists</span>
-            <span className="text-right">Ape Kills</span>
-            <span className="text-right">Games</span>
-          </div>
-          <div className="divide-y divide-white/5">
-            {players.map((player) => (
-              <div
-                key={player.player_username}
-                className="grid grid-cols-[1fr_80px_80px_80px_80px_60px] items-center px-5 py-3 text-sm"
-              >
-                <span className="font-semibold text-white">
-                  {player.player_username}
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {players.map((player, index) => (
+            <div
+              key={player.player_username}
+              className="rounded-[1.5rem] border border-yellow-400/15 bg-gradient-to-br from-yellow-400/[0.08] to-white/[0.03] p-5 shadow-[0_18px_70px_rgba(0,0,0,0.22)]"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <span className="rounded-full border border-yellow-400/25 bg-yellow-400/10 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-yellow-300">
+                  Starter #{index + 1}
                 </span>
-                <span className="text-right font-bold text-red-300">
-                  {player.kills}
-                </span>
-                <span className="text-right font-bold text-blue-300">
-                  {player.receives}
-                </span>
-                <span className="text-right font-bold text-emerald-300">
-                  {player.assists}
-                </span>
-                <span className="text-right font-bold text-amber-300">
-                  {player.ape_kills}
-                </span>
-                <span className="text-right text-white/50">
-                  {player.matches_played}
+                <span className="text-xs font-semibold uppercase tracking-[0.18em] text-white/35">
+                  Season XI
                 </span>
               </div>
-            ))}
-          </div>
+              <div className="flex items-center gap-3">
+                <PlayerAvatar player={player} />
+                <div className="min-w-0">
+                  <p className="truncate text-lg font-black text-white">
+                    {player.player_username}
+                  </p>
+                  <p className="truncate text-sm text-white/55">{player.team}</p>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
+                  <p className="text-xs uppercase tracking-wide text-white/45">Kills</p>
+                  <p className="mt-1 font-black text-red-300">{player.kills}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
+                  <p className="text-xs uppercase tracking-wide text-white/45">Receives</p>
+                  <p className="mt-1 font-black text-blue-300">{player.receives}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
+                  <p className="text-xs uppercase tracking-wide text-white/45">Assists</p>
+                  <p className="mt-1 font-black text-emerald-300">{player.assists}</p>
+                </div>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
+                  <p className="text-xs uppercase tracking-wide text-white/45">Aces</p>
+                  <p className="mt-1 font-black text-purple-300">{player.aces}</p>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -1830,10 +1842,12 @@ export default function SAVLSitePage() {
   const [awardsTab, setAwardsTab] = useState<
     | "best_spiker"
     | "best_receiver"
+    | "best_server"
     | "best_setter"
     | "best_aper"
     | "season_mvp"
     | "finals_mvp"
+    | "most_improved"
     | "team_of_season"
   >("best_spiker");
   const [awardsPublicLoading, setAwardsPublicLoading] = useState(false);
@@ -2368,6 +2382,7 @@ export default function SAVLSitePage() {
         receives: number;
         assists: number;
         ape_kills: number;
+        aces: number;
         matches_played: number;
       }
     >();
@@ -2380,6 +2395,7 @@ export default function SAVLSitePage() {
         existing.receives += s.receives;
         existing.assists += s.assists;
         existing.ape_kills += s.ape_kills;
+        existing.aces += s.aces ?? 0;
         existing.matches_played += 1;
       } else {
         map.set(key, {
@@ -2390,6 +2406,7 @@ export default function SAVLSitePage() {
           receives: s.receives,
           assists: s.assists,
           ape_kills: s.ape_kills,
+          aces: s.aces ?? 0,
           matches_played: 1,
         });
       }
@@ -2400,49 +2417,65 @@ export default function SAVLSitePage() {
 
   // Awards computed data
   const awardsData = useMemo(() => {
-    const allStats = playerStats;
+    const aggregateStats = (rows: PlayerStat[]) => {
+      const map = new Map<string, LeaderboardPlayer>();
 
-    // Aggregate by player (all-time)
-    const map = new Map<
-      string,
-      {
-        player_username: string;
-        player_roblox_id: string | null;
-        team: string;
-        kills: number;
-        receives: number;
-        assists: number;
-        ape_kills: number;
-        matches_played: number;
+      for (const s of rows) {
+        const key = normalizeText(s.player_username);
+        const existing = map.get(key);
+        if (existing) {
+          existing.kills += s.kills;
+          existing.receives += s.receives;
+          existing.assists += s.assists;
+          existing.ape_kills += s.ape_kills;
+          existing.aces += s.aces ?? 0;
+          existing.matches_played += 1;
+        } else {
+          map.set(key, {
+            player_username: s.player_username,
+            player_roblox_id: s.player_roblox_id ?? null,
+            team: s.team,
+            kills: s.kills,
+            receives: s.receives,
+            assists: s.assists,
+            ape_kills: s.ape_kills,
+            aces: s.aces ?? 0,
+            matches_played: 1,
+          });
+        }
       }
-    >();
 
-    for (const s of allStats) {
-      const key = normalizeText(s.player_username);
-      const existing = map.get(key);
-      if (existing) {
-        existing.kills += s.kills;
-        existing.receives += s.receives;
-        existing.assists += s.assists;
-        existing.ape_kills += s.ape_kills;
-        existing.matches_played += 1;
-      } else {
-        map.set(key, {
-          player_username: s.player_username,
-          player_roblox_id: s.player_roblox_id ?? null,
-          team: s.team,
-          kills: s.kills,
-          receives: s.receives,
-          assists: s.assists,
-          ape_kills: s.ape_kills,
-          matches_played: 1,
-        });
-      }
-    }
+      return Array.from(map.values());
+    };
 
-    const all = Array.from(map.values());
+    const all = aggregateStats(playerStats);
 
-    // Finals/Grand Finals matches
+    const buildSelectedPlayer = (username: string): LeaderboardPlayer => {
+      const statsPlayer = all.find(
+        (player) => normalizeText(player.player_username) === normalizeText(username),
+      );
+      if (statsPlayer) return statsPlayer;
+
+      const rosterPlayer = teamPlayers.find(
+        (player) => normalizeText(player.roblox_username) === normalizeText(username),
+      );
+      const rosterTeam = rosterPlayer
+        ? approvedTeams.find((team) => team.id === rosterPlayer.team_id)
+        : null;
+
+      return {
+        player_username: username,
+        player_roblox_id: rosterPlayer?.roblox_user_id ?? null,
+        team: rosterTeam?.country ?? "Selected",
+        kills: 0,
+        receives: 0,
+        assists: 0,
+        ape_kills: 0,
+        aces: 0,
+        matches_played: 0,
+      };
+    };
+
     const finalsMatchIds = new Set(
       matches
         .filter((m) => {
@@ -2457,70 +2490,44 @@ export default function SAVLSitePage() {
         .map((m) => m.id),
     );
 
-    const finalsStatsMap = new Map<
-      string,
-      {
-        player_username: string;
-        player_roblox_id: string | null;
-        team: string;
-        kills: number;
-        receives: number;
-        assists: number;
-        ape_kills: number;
-        matches_played: number;
-      }
-    >();
+    const finalsAll = aggregateStats(
+      playerStats.filter((stat) => finalsMatchIds.has(stat.match_id)),
+    );
 
-    for (const s of allStats.filter((s) => finalsMatchIds.has(s.match_id))) {
-      const key = normalizeText(s.player_username);
-      const existing = finalsStatsMap.get(key);
-      if (existing) {
-        existing.kills += s.kills;
-        existing.receives += s.receives;
-        existing.assists += s.assists;
-        existing.ape_kills += s.ape_kills;
-        existing.matches_played += 1;
-      } else {
-        finalsStatsMap.set(key, {
-          player_username: s.player_username,
-          player_roblox_id: s.player_roblox_id ?? null,
-          team: s.team,
-          kills: s.kills,
-          receives: s.receives,
-          assists: s.assists,
-          ape_kills: s.ape_kills,
-          matches_played: 1,
-        });
-      }
-    }
+    const bestSpiker = [...all].sort(sortByAverage("kills")).slice(0, 3);
 
-    const finalsAll = Array.from(finalsStatsMap.values());
+    const bestReceiver = [...all].sort(sortByAverage("receives")).slice(0, 3);
 
-    const bestSpiker = [...all]
-      .sort((a, b) => b.kills - a.kills)
-      .slice(0, 3);
-
-    const bestReceiver = [...all]
-      .sort((a, b) => b.receives - a.receives)
-      .slice(0, 3);
+    const bestServer = [...all].sort(sortByAverage("aces")).slice(0, 3);
 
     const bestSetter = [...all]
-      .sort((a, b) => b.assists + b.ape_kills - (a.assists + a.ape_kills))
+      .sort((a, b) => {
+        const apeDiff = statAverage(b, "ape_kills") - statAverage(a, "ape_kills");
+        if (apeDiff !== 0) return apeDiff;
+
+        const receiveDiff = statAverage(b, "receives") - statAverage(a, "receives");
+        if (receiveDiff !== 0) return receiveDiff;
+
+        const assistDiff = statAverage(b, "assists") - statAverage(a, "assists");
+        if (assistDiff !== 0) return assistDiff;
+
+        return a.player_username.localeCompare(b.player_username);
+      })
       .slice(0, 3);
 
-    const bestAper = [...all]
-      .sort((a, b) => b.ape_kills - a.ape_kills)
-      .slice(0, 3);
+    const bestAper = [...all].sort(sortByAverage("ape_kills")).slice(0, 3);
 
     const seasonMvp = [...all]
       .sort((a, b) => {
         const aAvg =
           a.matches_played > 0
-            ? (a.kills + a.receives) / a.matches_played
+            ? (a.kills + a.receives + a.assists + a.ape_kills + a.aces) /
+              a.matches_played
             : 0;
         const bAvg =
           b.matches_played > 0
-            ? (b.kills + b.receives) / b.matches_played
+            ? (b.kills + b.receives + b.assists + b.ape_kills + b.aces) /
+              b.matches_played
             : 0;
         return bAvg - aAvg;
       })
@@ -2528,65 +2535,37 @@ export default function SAVLSitePage() {
 
     const finalsMvp = [...finalsAll]
       .sort((a, b) => {
-        const aScore = a.kills + a.receives + a.ape_kills * 1.5;
-        const bScore = b.kills + b.receives + b.ape_kills * 1.5;
+        const aScore = a.kills + a.receives + a.assists + a.ape_kills * 1.5 + a.aces;
+        const bScore = b.kills + b.receives + b.assists + b.ape_kills * 1.5 + b.aces;
         return bScore - aScore;
       })
       .slice(0, 1);
 
-    // Switzerland team stats aggregated
-    const switzerlandTeamStats = (() => {
-      const swissStats = allStats.filter(
-        (s) => normalizeText(s.team) === "switzerland",
-      );
-      const swissMap = new Map<
-        string,
-        {
-          player_username: string;
-          player_roblox_id: string | null;
-          kills: number;
-          receives: number;
-          assists: number;
-          ape_kills: number;
-          matches_played: number;
-        }
-      >();
-      for (const s of swissStats) {
-        const key = normalizeText(s.player_username);
-        const existing = swissMap.get(key);
-        if (existing) {
-          existing.kills += s.kills;
-          existing.receives += s.receives;
-          existing.assists += s.assists;
-          existing.ape_kills += s.ape_kills;
-          existing.matches_played += 1;
-        } else {
-          swissMap.set(key, {
-            player_username: s.player_username,
-            player_roblox_id: s.player_roblox_id ?? null,
-            kills: s.kills,
-            receives: s.receives,
-            assists: s.assists,
-            ape_kills: s.ape_kills,
-            matches_played: 1,
-          });
-        }
-      }
-      return Array.from(swissMap.values()).sort(
-        (a, b) => b.kills + b.receives - (a.kills + a.receives),
-      );
-    })();
+    const mostImproved = ["CLypX_9", "ykGznn", "SOBRINHODOSILVA"].map(
+      buildSelectedPlayer,
+    );
+
+    const teamOfSeason = [
+      "Fake_MattX",
+      "ykGznn",
+      "CLypX_9",
+      "Vitin_xd11",
+      "yoylenguren",
+      "calgues2018",
+    ].map(buildSelectedPlayer);
 
     return {
       bestSpiker,
       bestReceiver,
+      bestServer,
       bestSetter,
       bestAper,
       seasonMvp,
       finalsMvp,
-      switzerlandTeamStats,
+      mostImproved,
+      teamOfSeason,
     };
-  }, [playerStats, matches]);
+  }, [playerStats, matches, teamPlayers, approvedTeams]);
 
   const approvedStaff = useMemo(() => {
     return staffApplications.filter((staff) => staff.approved);
@@ -4072,12 +4051,7 @@ export default function SAVLSitePage() {
             <AnimatedNavButton label="Groups" targetId="groups" />
             <AnimatedNavButton label="Standings" targetId="standings" />
 
-            <Link
-              href="/stats"
-              className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
-            >
-              Stat Track
-            </Link>
+            <AnimatedNavButton label="Stat Track" targetId="stat-track" />
 
             <AnimatedNavButton label="Register" targetId="register" />
             <AnimatedNavButton label="Admin" targetId="admin" />
@@ -4764,7 +4738,7 @@ export default function SAVLSitePage() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-6 py-16">
+        <section id="stat-track" className="mx-auto max-w-7xl px-6 py-16">
           <div className="rounded-[2rem] border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-8">
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
               Stat Track
@@ -4775,7 +4749,7 @@ export default function SAVLSitePage() {
             <p className="mt-4 max-w-2xl text-white/65">
               View set-by-set player stats, team totals, percentages, and
               leaderboards. Use the Leaderboard for season-wide stats and
-              filters, or click "View Match Stats" on any finished match for
+              filters, or click &quot;View Match Stats&quot; on any finished match for
               match-specific Top Players.
             </p>
 
@@ -4922,7 +4896,7 @@ export default function SAVLSitePage() {
                       accentClass="text-red-300"
                       borderClass="border-red-400/20"
                       players={[...leaderboardStats]
-                        .sort((a, b) => b.kills - a.kills)
+                        .sort(sortByAverage("kills"))
                         .slice(0, 10)}
                       statKey="kills"
                       statLabel="Kills"
@@ -4934,10 +4908,22 @@ export default function SAVLSitePage() {
                       accentClass="text-blue-300"
                       borderClass="border-blue-400/20"
                       players={[...leaderboardStats]
-                        .sort((a, b) => b.receives - a.receives)
+                        .sort(sortByAverage("receives"))
                         .slice(0, 10)}
                       statKey="receives"
                       statLabel="Receives"
+                      teams={approvedTeams}
+                    />
+                    {/* Aces Leaderboard */}
+                    <LeaderboardTable
+                      title="Top Servers (Aces)"
+                      accentClass="text-purple-300"
+                      borderClass="border-purple-400/20"
+                      players={[...leaderboardStats]
+                        .sort(sortByAverage("aces"))
+                        .slice(0, 10)}
+                      statKey="aces"
+                      statLabel="Aces"
                       teams={approvedTeams}
                     />
                     {/* Assists Leaderboard */}
@@ -4946,7 +4932,7 @@ export default function SAVLSitePage() {
                       accentClass="text-emerald-300"
                       borderClass="border-emerald-400/20"
                       players={[...leaderboardStats]
-                        .sort((a, b) => b.assists - a.assists)
+                        .sort(sortByAverage("assists"))
                         .slice(0, 10)}
                       statKey="assists"
                       statLabel="Assists"
@@ -4958,7 +4944,7 @@ export default function SAVLSitePage() {
                       accentClass="text-amber-300"
                       borderClass="border-amber-400/20"
                       players={[...leaderboardStats]
-                        .sort((a, b) => b.ape_kills - a.ape_kills)
+                        .sort(sortByAverage("ape_kills"))
                         .slice(0, 10)}
                       statKey="ape_kills"
                       statLabel="Ape Kills"
@@ -5017,13 +5003,15 @@ export default function SAVLSitePage() {
                 <div className="mb-6 flex flex-wrap gap-2">
                   {(
                     [
-                      { key: "best_spiker", label: "🏐 Best Spiker" },
-                      { key: "best_receiver", label: "🛡️ Best Receiver" },
-                      { key: "best_setter", label: "🎯 Best Setter" },
-                      { key: "best_aper", label: "⚡ Best Aper" },
-                      { key: "season_mvp", label: "🌟 Season MVP" },
-                      { key: "finals_mvp", label: "🏆 Finals MVP" },
-                      { key: "team_of_season", label: "🥇 Team of the Season" },
+                      { key: "best_spiker", label: "Best Spiker" },
+                      { key: "best_receiver", label: "Best Receiver" },
+                      { key: "best_server", label: "Best Server" },
+                      { key: "best_setter", label: "Best Setter" },
+                      { key: "best_aper", label: "Best Aper" },
+                      { key: "season_mvp", label: "Season MVP" },
+                      { key: "finals_mvp", label: "Finals MVP" },
+                      { key: "most_improved", label: "Most Improved Player" },
+                      { key: "team_of_season", label: "Team of the Season" },
                     ] as const
                   ).map(({ key, label }) => (
                     <button
@@ -5050,8 +5038,7 @@ export default function SAVLSitePage() {
                     {awardsTab === "best_spiker" ? (
                       <AwardsPodium
                         title="Best Spiker"
-                        subtitle="Top 3 players with the most kills this season"
-                        icon="🏐"
+                        subtitle="Top 3 players by average total kills per match"
                         players={awardsData.bestSpiker}
                         mainStat="kills"
                         mainStatLabel="Kills"
@@ -5061,30 +5048,37 @@ export default function SAVLSitePage() {
                     {awardsTab === "best_receiver" ? (
                       <AwardsPodium
                         title="Best Receiver"
-                        subtitle="Top 3 players with the most receives this season"
-                        icon="🛡️"
+                        subtitle="Top 3 players by average receives per match"
                         players={awardsData.bestReceiver}
                         mainStat="receives"
                         mainStatLabel="Receives"
                         teams={approvedTeams}
                       />
                     ) : null}
+                    {awardsTab === "best_server" ? (
+                      <AwardsPodium
+                        title="Best Server"
+                        subtitle="Top 3 players by average aces per match"
+                        players={awardsData.bestServer}
+                        mainStat="aces"
+                        mainStatLabel="Aces"
+                        teams={approvedTeams}
+                      />
+                    ) : null}
                     {awardsTab === "best_setter" ? (
                       <AwardsPodium
                         title="Best Setter"
-                        subtitle="Top 3 players with the most assists + ape kills this season"
-                        icon="🎯"
+                        subtitle="Top 3 players by average ape kills, then receives, then assists"
                         players={awardsData.bestSetter}
-                        mainStat="assists"
-                        mainStatLabel="Assists"
+                        mainStat="ape_kills"
+                        mainStatLabel="Ape Kills"
                         teams={approvedTeams}
                       />
                     ) : null}
                     {awardsTab === "best_aper" ? (
                       <AwardsPodium
                         title="Best Aper"
-                        subtitle="Top 3 players with the most ape kills this season"
-                        icon="⚡"
+                        subtitle="Top 3 players by average ape kills per match"
                         players={awardsData.bestAper}
                         mainStat="ape_kills"
                         mainStatLabel="Ape Kills"
@@ -5094,8 +5088,7 @@ export default function SAVLSitePage() {
                     {awardsTab === "season_mvp" ? (
                       <AwardsMVP
                         title="Season MVP"
-                        subtitle="The player with the highest average kills + receives per match"
-                        icon="🌟"
+                        subtitle="The player with the highest average full impact per match"
                         player={awardsData.seasonMvp[0] ?? null}
                         teams={approvedTeams}
                       />
@@ -5104,15 +5097,22 @@ export default function SAVLSitePage() {
                       <AwardsMVP
                         title="Finals MVP"
                         subtitle="The player who stood out the most during the Finals & Grand Finals"
-                        icon="🏆"
                         player={awardsData.finalsMvp[0] ?? null}
                         teams={approvedTeams}
                       />
                     ) : null}
-                    {awardsTab === "team_of_season" ? (
-                      <TeamOfSeason
-                        players={awardsData.switzerlandTeamStats}
+                    {awardsTab === "most_improved" ? (
+                      <AwardsPodium
+                        title="Most Improved Player"
+                        subtitle="Chosen top 3: CLypX_9, ykGznn, SOBRINHODOSILVA"
+                        players={awardsData.mostImproved}
+                        mainStat="kills"
+                        mainStatLabel="Kills"
+                        teams={approvedTeams}
                       />
+                    ) : null}
+                    {awardsTab === "team_of_season" ? (
+                      <TeamOfSeason players={awardsData.teamOfSeason} />
                     ) : null}
                   </div>
                 )}
