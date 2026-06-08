@@ -1857,9 +1857,11 @@ export default function SAVLSitePage() {
   const [showStatTrackAccess, setShowStatTrackAccess] = useState(false);
 
   // Leaderboard
+  const [leaderboardPublic, setLeaderboardPublic] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [playerStats, setPlayerStats] = useState<PlayerStat[]>([]);
   const [playerStatsLoading, setPlayerStatsLoading] = useState(false);
+  const [leaderboardPublicLoading, setLeaderboardPublicLoading] = useState(false);
   const [leaderboardFilterTeam, setLeaderboardFilterTeam] = useState("All");
   const [leaderboardFilterStage, setLeaderboardFilterStage] = useState("All");
 
@@ -2461,7 +2463,7 @@ export default function SAVLSitePage() {
 
       if (existing) {
         existing.kills += totalKills;
-        existing.receives += s.receives ?? 0;
+        existing.receives += (s.receives ?? 0) + (s.dives ?? 0);
         existing.assists += s.assists ?? 0;
         existing.ape_kills += s.ape_kills ?? 0;
         existing.aces += s.aces ?? 0;
@@ -2475,7 +2477,7 @@ export default function SAVLSitePage() {
           player_roblox_id: meta.robloxId,
           team: meta.team || s.team_country,
           kills: totalKills,
-          receives: s.receives ?? 0,
+          receives: (s.receives ?? 0) + (s.dives ?? 0),
           assists: s.assists ?? 0,
           ape_kills: s.ape_kills ?? 0,
           aces: s.aces ?? 0,
@@ -2564,9 +2566,7 @@ export default function SAVLSitePage() {
 
     const seasonMvp = [buildSelectedPlayer("Fake_MattX")];
 
-    const mostImproved = ["CLypX_9", "ykGznn", "SOBRINHODOSILVA"].map(
-      buildSelectedPlayer,
-    );
+    const mostImproved = ["Seitm1"].map(buildSelectedPlayer);
 
     const teamOfSeason = [
       "Fake_MattX",
@@ -3905,13 +3905,14 @@ export default function SAVLSitePage() {
 
     const { data, error } = await supabase
       .from("league_settings")
-      .select("registrations_open, awards_public")
+      .select("*")
       .eq("id", 1)
       .single();
 
     if (!error && data) {
-      setRegistrationsOpen(data.registrations_open);
+      setRegistrationsOpen(Boolean(data.registrations_open));
       setAwardsPublic(Boolean(data.awards_public));
+      setLeaderboardPublic(Boolean(data.leaderboard_public));
     }
   }
 
@@ -3949,6 +3950,28 @@ export default function SAVLSitePage() {
       nextValue
         ? "Awards are now public. Everyone can see them."
         : "Awards are now hidden from the public.",
+      true,
+    );
+  }
+
+  async function handleToggleLeaderboardPublic() {
+    if (!supabase) return;
+    setLeaderboardPublicLoading(true);
+    const nextValue = !leaderboardPublic;
+    const { error } = await supabase
+      .from("league_settings")
+      .update({ leaderboard_public: nextValue, updated_at: new Date().toISOString() })
+      .eq("id", 1);
+    setLeaderboardPublicLoading(false);
+    if (error) {
+      showNotice(error.message, true);
+      return;
+    }
+    setLeaderboardPublic(nextValue);
+    showNotice(
+      nextValue
+        ? "Leaderboard is now public. Everyone can see it."
+        : "Leaderboard is now hidden from the public.",
       true,
     );
   }
@@ -4786,19 +4809,21 @@ export default function SAVLSitePage() {
                 Open Stat Track
               </Link>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setShowLeaderboard((prev) => !prev);
-                  if (!showLeaderboard) {
-                    reloadPlayerStats();
-                    setTimeout(() => scrollToSection("leaderboard-section"), 50);
-                  }
-                }}
-                className="inline-flex rounded-2xl border border-sky-400/20 bg-sky-400/10 px-6 py-3 font-semibold text-sky-300 transition duration-200 hover:-translate-y-1 hover:bg-sky-400/15 active:translate-y-0.5"
-              >
-                Leaderboard
-              </button>
+              {(adminLogged || leaderboardPublic) ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLeaderboard((prev) => !prev);
+                    if (!showLeaderboard) {
+                      reloadPlayerStats();
+                      setTimeout(() => scrollToSection("leaderboard-section"), 50);
+                    }
+                  }}
+                  className="inline-flex rounded-2xl border border-sky-400/20 bg-sky-400/10 px-6 py-3 font-semibold text-sky-300 transition duration-200 hover:-translate-y-1 hover:bg-sky-400/15 active:translate-y-0.5"
+                >
+                  Leaderboard
+                </button>
+              ) : null}
 
               {(adminLogged || awardsPublic) ? (
                 <button
@@ -4830,7 +4855,7 @@ export default function SAVLSitePage() {
             </div>
 
             {/* Leaderboard Section */}
-            {showLeaderboard ? (
+            {showLeaderboard && (adminLogged || leaderboardPublic) ? (
               <div
                 id="leaderboard-section"
                 className="mt-8 rounded-[2rem] border border-sky-400/15 bg-[#080F1A] p-6"
@@ -4844,13 +4869,33 @@ export default function SAVLSitePage() {
                       Aggregate stats across all matches. Filter by team or round.
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowLeaderboard(false)}
-                    className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:bg-white/10"
-                  >
-                    Close
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    {adminLogged ? (
+                      <button
+                        type="button"
+                        disabled={leaderboardPublicLoading}
+                        onClick={handleToggleLeaderboardPublic}
+                        className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 ${
+                          leaderboardPublic
+                            ? "border-sky-400/30 bg-sky-400/15 text-sky-300 hover:bg-sky-400/20"
+                            : "border-white/10 bg-white/5 text-white/80 hover:bg-white/10"
+                        }`}
+                      >
+                        {leaderboardPublicLoading
+                          ? "Saving…"
+                          : leaderboardPublic
+                            ? "Leaderboard: Public ✓"
+                            : "Open Leaderboard"}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => setShowLeaderboard(false)}
+                      className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:bg-white/10"
+                    >
+                      Close
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mb-5 flex flex-wrap gap-3">
