@@ -1494,11 +1494,11 @@ function bestAperScore(player: LeaderboardPlayer) {
 const BEST_SETTER_MIN_ASSISTS = 30;
 
 function bestSetterScore(player: LeaderboardPlayer) {
+  const assistAverage = statAverage(player, "assists");
   const apeKillAverage = statAverage(player, "ape_kills");
   const receiveAverage = statAverage(player, "receives");
-  const assistAverage = statAverage(player, "assists");
 
-  return apeKillAverage * 0.4 + receiveAverage * 0.3 + assistAverage * 0.3;
+  return assistAverage * 0.35 + apeKillAverage * 0.35 + receiveAverage * 0.3;
 }
 
 function isEligibleBestSetter(player: LeaderboardPlayer) {
@@ -5254,10 +5254,10 @@ export default function SAVLSitePage() {
                     {awardsTab === "best_setter" ? (
                       <AwardsPodium
                         title="Best Setter"
-                        subtitle="Top 3 by weighted score: 40% Ape Kills, 30% Recs, 30% Assists. Minimum 30 assists required."
+                        subtitle="Top 3 by weighted score: 35% Assists, 35% Ape Kills, 30% Recs. Minimum 30 assists required."
                         players={awardsData.bestSetter}
-                        mainStat="ape_kills"
-                        mainStatLabel="Ape Kills"
+                        mainStat="assists"
+                        mainStatLabel="Assists"
                         teams={approvedTeams}
                       />
                     ) : null}
