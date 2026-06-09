@@ -10,6 +10,10 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 const supabase: SupabaseClient | null =
   supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
+function cleanDiscordUsername(value?: string | null) {
+  return String(value ?? "").trim().replace(/^@/, "").replace(/#0$/, "");
+}
+
 type PlayerProfile = {
   id: string;
   auth_user_id?: string | null;
@@ -79,7 +83,7 @@ function getDiscordIdentity(session: Session | null) {
 
   return {
     discordId: discordId ? String(discordId) : null,
-    username: username ? String(username).replace(/^@/, "") : null,
+    username: username ? cleanDiscordUsername(String(username)) : null,
     globalName: globalName ? String(globalName) : null,
     avatarUrl: avatarUrl ? String(avatarUrl) : null,
   };
@@ -98,6 +102,43 @@ function formatDate(value?: string | null) {
   } catch {
     return value;
   }
+}
+
+function RobloxAvatar({ userId, name }: { userId?: string | null; name?: string | null }) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const cleanUserId = String(userId ?? "").trim();
+
+    if (!/^\d+$/.test(cleanUserId)) {
+      setImageUrl(null);
+      return;
+    }
+
+    fetch(`/api/roblox-avatar?userId=${encodeURIComponent(cleanUserId)}`)
+      .then((response) => response.json())
+      .then((data) => {
+        if (!cancelled) setImageUrl(data?.imageUrl ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setImageUrl(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  if (imageUrl) {
+    return <img src={imageUrl} alt={name || "Roblox avatar"} className="h-14 w-14 rounded-2xl border border-white/10 bg-black/20 object-cover" />;
+  }
+
+  return (
+    <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-emerald-400/10 text-sm font-black text-emerald-200">
+      {(name || "?").slice(0, 1).toUpperCase()}
+    </div>
+  );
 }
 
 export default function ProfilePage() {
@@ -134,63 +175,51 @@ export default function ProfilePage() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!supabase || !profile) return;
+
+    const interval = window.setInterval(() => {
+      const discordId = profile.discord_id ?? discordIdentity?.discordId ?? null;
+      const discordUsername = profile.discord_username ?? discordIdentity?.username ?? null;
+      loadTransactions(discordId, discordUsername);
+      loadMembership(discordId, discordUsername);
+    }, 15000);
+
+    return () => window.clearInterval(interval);
+  }, [profile?.discord_id, profile?.discord_username, discordIdentity?.discordId, discordIdentity?.username]);
+
   async function syncProfile(currentSession: Session | null) {
     if (!supabase || !currentSession?.user) return;
 
     const identity = getDiscordIdentity(currentSession);
-    const payload = {
-      auth_user_id: currentSession.user.id,
-      discord_id: identity?.discordId,
-      discord_username: identity?.username,
-      discord_global_name: identity?.globalName,
-      avatar_url: identity?.avatarUrl,
-    };
+    const token = currentSession.access_token;
 
-    let nextProfile: PlayerProfile | null = null;
-
-    if (identity?.discordId) {
-      const existing = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("discord_id", identity.discordId)
-        .maybeSingle();
-
-      if (existing.error) {
-        setNotice(`Profile table is not ready yet: ${existing.error.message}`);
-        return;
-      }
-
-      if (existing.data) {
-        const updated = await supabase
-          .from("profiles")
-          .update(payload)
-          .eq("id", existing.data.id)
-          .select("*")
-          .maybeSingle();
-
-        if (updated.error) {
-          setNotice(updated.error.message);
-          return;
-        }
-
-        nextProfile = updated.data as PlayerProfile;
-      }
+    if (!identity?.discordId && !identity?.username) {
+      setNotice("Discord identity was not detected. Log out and login with Discord again.");
+      return;
     }
 
-    if (!nextProfile) {
-      const { data, error } = await supabase
-        .from("profiles")
-        .upsert(payload, { onConflict: "auth_user_id" })
-        .select("*")
-        .maybeSingle();
+    const response = await fetch("/api/profile-sync", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        discordId: identity?.discordId,
+        discordUsername: identity?.username,
+        discordGlobalName: identity?.globalName,
+        avatarUrl: identity?.avatarUrl,
+      }),
+    });
 
-      if (error) {
-        setNotice(`Profile table is not ready yet: ${error.message}`);
-        return;
-      }
-
-      nextProfile = data as PlayerProfile;
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setNotice(`Profile sync failed: ${result?.error || response.statusText}`);
+      return;
     }
+
+    const nextProfile = result.profile as PlayerProfile;
     setProfile(nextProfile);
     setRobloxUsername(nextProfile.roblox_username ?? "");
     setRobloxUserId(nextProfile.roblox_user_id ?? "");
@@ -206,7 +235,7 @@ export default function ProfilePage() {
 
     const filters: string[] = [];
     const cleanDiscordId = discordId?.trim();
-    const cleanUsername = discordUsername?.replace(/^@/, "").trim();
+    const cleanUsername = cleanDiscordUsername(discordUsername);
 
     if (cleanDiscordId) {
       filters.push(`player_discord_id.eq.${cleanDiscordId}`);
@@ -215,9 +244,12 @@ export default function ProfilePage() {
     }
 
     if (cleanUsername) {
-      filters.push(`player_discord_username.eq.${cleanUsername}`);
-      filters.push(`requester_discord_username.eq.${cleanUsername}`);
-      filters.push(`handled_by_discord_username.eq.${cleanUsername}`);
+      const usernameOptions = Array.from(new Set([cleanUsername, `${cleanUsername}#0`]));
+      for (const name of usernameOptions) {
+        filters.push(`player_discord_username.eq.${name}`);
+        filters.push(`requester_discord_username.eq.${name}`);
+        filters.push(`handled_by_discord_username.eq.${name}`);
+      }
     }
 
     if (filters.length === 0) {
@@ -244,7 +276,7 @@ export default function ProfilePage() {
     if (!supabase) return;
 
     const cleanDiscordId = discordId?.trim();
-    const cleanUsername = discordUsername?.replace(/^@/, "").trim();
+    const cleanUsername = cleanDiscordUsername(discordUsername);
 
     if (cleanDiscordId) {
       const captainById = await supabase
@@ -271,7 +303,7 @@ export default function ProfilePage() {
       const captainByName = await supabase
         .from("teams")
         .select("id,country,captain_name")
-        .ilike("captain_discord", cleanUsername)
+        .in("captain_discord", [cleanUsername, `${cleanUsername}#0`])
         .limit(1)
         .maybeSingle();
 
@@ -304,7 +336,7 @@ export default function ProfilePage() {
       const byName = await supabase
         .from("team_players")
         .select("*")
-        .ilike("discord_username", cleanUsername)
+        .in("discord_username", [cleanUsername, `${cleanUsername}#0`])
         .limit(1)
         .maybeSingle();
       if (!byName.error && byName.data) player = byName.data;
@@ -376,26 +408,42 @@ export default function ProfilePage() {
       return;
     }
 
-    setSaving(true);
-    const { data, error } = await supabase
-      .from("profiles")
-      .update({
-        roblox_username: cleanUsername,
-        roblox_user_id: cleanUserId,
-      })
-      .eq("id", profile.id)
-      .select("*")
-      .maybeSingle();
-
-    setSaving(false);
-
-    if (error) {
-      setNotice(error.message);
+    const { data: authData } = await supabase.auth.getSession();
+    const token = authData.session?.access_token;
+    if (!token) {
+      setNotice("Login session expired. Log in again before saving Roblox.");
       return;
     }
 
-    setProfile(data as PlayerProfile);
+    setSaving(true);
+    const response = await fetch("/api/profile-sync", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        discordId: profile.discord_id ?? discordIdentity?.discordId,
+        discordUsername: profile.discord_username ?? discordIdentity?.username,
+        discordGlobalName: profile.discord_global_name ?? discordIdentity?.globalName,
+        avatarUrl: profile.avatar_url ?? discordIdentity?.avatarUrl,
+        robloxUsername: cleanUsername,
+        robloxUserId: cleanUserId,
+      }),
+    });
+
+    const result = await response.json().catch(() => ({}));
+    setSaving(false);
+
+    if (!response.ok) {
+      setNotice(result?.error || "Unable to save Roblox account.");
+      return;
+    }
+
+    setProfile(result.profile as PlayerProfile);
     setNotice("Roblox account linked successfully.");
+    await loadMembership(profile.discord_id ?? discordIdentity?.discordId ?? null, profile.discord_username ?? discordIdentity?.username ?? null);
+    await loadTransactions(profile.discord_id ?? discordIdentity?.discordId ?? null, profile.discord_username ?? discordIdentity?.username ?? null);
   }
 
   async function logout() {
@@ -509,7 +557,7 @@ export default function ProfilePage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">Transactions</p>
-                <h2 className="mt-2 text-3xl font-black">Your Discord Transactions</h2>
+                <h2 className="mt-2 text-3xl font-black">Your Transactions</h2>
               </div>
               <button onClick={() => loadTransactions(profile?.discord_id ?? discordIdentity?.discordId ?? null, profile?.discord_username ?? discordIdentity?.username ?? null)} className="rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-white/75 hover:bg-white/10">
                 Refresh
@@ -525,19 +573,24 @@ export default function ProfilePage() {
                 transactions.map((item) => (
                   <article key={item.id} className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm uppercase tracking-[0.2em] text-white/40">{item.transaction_type || "transaction"}</p>
-                        <h3 className="mt-1 text-xl font-bold">{item.team_name || "Unknown Team"}</h3>
+                      <div className="flex min-w-0 items-center gap-4">
+                        <RobloxAvatar userId={item.roblox_user_id} name={item.roblox_username || item.player_discord_username} />
+                        <div className="min-w-0">
+                          <p className="text-sm uppercase tracking-[0.2em] text-white/40">{item.transaction_type || "transaction"}</p>
+                          <h3 className="mt-1 truncate text-xl font-bold">{item.team_name || "Unknown Team"}</h3>
+                          <p className="mt-1 text-sm text-white/55">{item.roblox_username || item.player_discord_username || item.player_discord_id || "Unknown player"}</p>
+                        </div>
                       </div>
                       <span className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-[0.2em] ${item.status === "accepted" ? "bg-emerald-400/15 text-emerald-300" : item.status === "denied" ? "bg-red-400/15 text-red-300" : "bg-yellow-400/15 text-yellow-200"}`}>
                         {item.status || "pending"}
                       </span>
                     </div>
                     <div className="mt-4 grid gap-2 text-sm text-white/65 md:grid-cols-2">
-                      <p>Player: {item.player_discord_username || item.player_discord_id || "—"}</p>
+                      <p>Player Discord: {item.player_discord_username || item.player_discord_id || "—"}</p>
                       <p>Role: {item.requested_role || "—"}</p>
-                      <p>Roblox: {item.roblox_username || "—"}</p>
+                      <p>Roblox ID: {item.roblox_user_id || "—"}</p>
                       <p>Requested by: {item.requester_discord_username || "—"}</p>
+                      <p>Handled by: {item.handled_by_discord_username || "—"}</p>
                       <p>Created: {formatDate(item.created_at)}</p>
                     </div>
                     {item.reason ? <p className="mt-3 rounded-xl bg-red-400/10 p-3 text-sm text-red-200">{item.reason}</p> : null}

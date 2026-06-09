@@ -54,7 +54,7 @@ function cleanText(value: unknown) {
 }
 
 function cleanDiscordUsername(value: unknown) {
-  return cleanText(value).replace(/^@/, "");
+  return cleanText(value).replace(/^@/, "").replace(/#0$/, "");
 }
 
 async function getAuthContext(request: NextRequest) {
@@ -166,7 +166,7 @@ async function findProfileByDiscordUsername(discordUsername?: string | null) {
   const { data } = await supabaseAdmin
     .from("profiles")
     .select("*")
-    .ilike("discord_username", clean)
+    .in("discord_username", [clean, `${clean}#0`])
     .limit(1)
     .maybeSingle();
   return data ?? null;

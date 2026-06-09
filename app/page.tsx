@@ -2248,7 +2248,7 @@ export default function SAVLSitePage() {
 
     return {
       discordId: discordId ? String(discordId) : null,
-      username: username ? String(username).replace(/^@/, "") : null,
+      username: username ? cleanDiscordUsername(String(username)) : null,
       globalName: source.global_name ?? source.full_name ?? source.name ?? null,
       avatarUrl: source.avatar_url ?? source.picture ?? null,
     };
@@ -2261,46 +2261,30 @@ export default function SAVLSitePage() {
     }
 
     const identity = getDiscordIdentityFromSession(session);
-    const payload = {
-      auth_user_id: session.user.id,
-      discord_id: identity?.discordId,
-      discord_username: identity?.username,
-      discord_global_name: identity?.globalName,
-      avatar_url: identity?.avatarUrl,
-    };
+    const token = session.access_token;
 
-    let nextProfile: SiteProfile | null = null;
-
-    if (identity?.discordId) {
-      const existing = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("discord_id", identity.discordId)
-        .maybeSingle();
-
-      if (!existing.error && existing.data) {
-        const updated = await supabase
-          .from("profiles")
-          .update(payload)
-          .eq("id", existing.data.id)
-          .select("*")
-          .maybeSingle();
-        if (!updated.error && updated.data) nextProfile = updated.data as SiteProfile;
-      }
+    if (!token || (!identity?.discordId && !identity?.username)) {
+      setSiteProfile(null);
+      return;
     }
 
-    if (!nextProfile) {
-      const { data, error } = await supabase
-        .from("profiles")
-        .upsert(payload, { onConflict: "auth_user_id" })
-        .select("*")
-        .maybeSingle();
+    const response = await fetch("/api/profile-sync", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        discordId: identity?.discordId,
+        discordUsername: identity?.username,
+        discordGlobalName: identity?.globalName,
+        avatarUrl: identity?.avatarUrl,
+      }),
+    });
 
-      if (!error && data) nextProfile = data as SiteProfile;
-    }
-
-    if (nextProfile) {
-      setSiteProfile(nextProfile);
+    const result = await response.json().catch(() => ({}));
+    if (response.ok && result?.profile) {
+      setSiteProfile(result.profile as SiteProfile);
     }
   }
 
@@ -4669,10 +4653,14 @@ export default function SAVLSitePage() {
                 href="/profile"
                 className="inline-flex items-center gap-2 rounded-2xl border border-[#5865F2]/35 bg-[#5865F2]/15 px-4 py-2 text-sm font-black text-white shadow-lg shadow-[#5865F2]/10 transition duration-200 hover:-translate-y-0.5 hover:bg-[#5865F2]/25 active:translate-y-0.5"
               >
+                {siteProfile.avatar_url ? (
+                  <img src={siteProfile.avatar_url} alt="Discord avatar" className="h-6 w-6 rounded-full border border-white/10 object-cover" />
+                ) : (
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-white/10 text-[10px]">
+                    {(siteProfile.discord_global_name || siteProfile.discord_username || "P").slice(0, 1).toUpperCase()}
+                  </span>
+                )}
                 <span>Profile</span>
-                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-[#AEB6FF]">
-                  <path d="M20.3 5.37A16.1 16.1 0 0 0 16.34 4c-.17.31-.36.73-.49 1.06a14.9 14.9 0 0 0-4.4 0A8.4 8.4 0 0 0 10.96 4a16.2 16.2 0 0 0-3.98 1.38C4.46 9.13 3.78 12.8 4.12 16.4A16.4 16.4 0 0 0 9 18.9c.4-.54.75-1.11 1.05-1.72-.58-.22-1.14-.49-1.66-.8.14-.1.27-.21.4-.32a11.55 11.55 0 0 0 10.24 0c.13.11.26.22.4.32-.52.31-1.08.58-1.66.8.3.61.66 1.18 1.05 1.72a16.3 16.3 0 0 0 4.88-2.5c.42-4.17-.72-7.8-3.4-11.03ZM9.75 14.17c-.95 0-1.73-.89-1.73-1.98s.76-1.99 1.73-1.99c.97 0 1.75.9 1.73 1.99 0 1.09-.76 1.98-1.73 1.98Zm6.2 0c-.95 0-1.73-.89-1.73-1.98s.76-1.99 1.73-1.99c.97 0 1.75.9 1.73 1.99 0 1.09-.76 1.98-1.73 1.98Z" />
-                </svg>
               </Link>
             ) : (
               <button

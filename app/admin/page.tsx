@@ -2235,6 +2235,32 @@ export default function SAVLSitePage() {
     return result;
   }
 
+
+  async function notifyMatchToDiscord(match: MatchRow, eventType: MatchStatus) {
+    if (!supabase || !adminLogged) return;
+
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) {
+      showNotice("Match saved, but Discord notification was skipped because the admin session expired.", true);
+      return;
+    }
+
+    const response = await fetch("/api/match-notify", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ match, eventType }),
+    });
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      showNotice(`Match saved, but Discord notification failed: ${result?.error || response.statusText}`, true);
+    }
+  }
+
   function isStatTrackerRole(role: string | null) {
     if (!role) return false;
 
@@ -2426,6 +2452,16 @@ export default function SAVLSitePage() {
 
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!supabase || !adminLogged) return;
+
+    const interval = window.setInterval(() => {
+      reloadTeamTransactions();
+    }, 15000);
+
+    return () => window.clearInterval(interval);
+  }, [adminLogged]);
 
   const availableCountries = useMemo(() => {
     const used = new Set(teams.map((team) => normalizeText(team.country)));
@@ -3522,7 +3558,7 @@ export default function SAVLSitePage() {
       matchForm.status,
     );
 
-    const { error } = await supabase.from("matches").insert({
+    const { data: createdMatch, error } = await supabase.from("matches").insert({
       home_country: matchForm.home_country,
       away_country: matchForm.away_country,
       stage: matchForm.stage.trim(),
@@ -3543,7 +3579,9 @@ export default function SAVLSitePage() {
       season_id: activeSeasonId,
 
       ...setsPayload,
-    });
+    })
+      .select("*")
+      .single();
 
     if (error) {
       showNotice(error.message, true);
@@ -3551,6 +3589,7 @@ export default function SAVLSitePage() {
     }
 
     await reloadMatches();
+    if (createdMatch) await notifyMatchToDiscord(createdMatch as MatchRow, (createdMatch as MatchRow).status);
 
     setMatchForm({
       home_country: "",
@@ -3628,7 +3667,7 @@ export default function SAVLSitePage() {
       const homeScore = Number.isFinite(draft.home_score) ? draft.home_score : 0;
       const awayScore = Number.isFinite(draft.away_score) ? draft.away_score : 0;
 
-      const { error } = await supabase
+      const { data: updatedMatch, error } = await supabase
         .from("matches")
         .update({
           ...baseAdminPayload,
@@ -3642,7 +3681,9 @@ export default function SAVLSitePage() {
             draft.status,
           ),
         })
-        .eq("id", matchId);
+        .eq("id", matchId)
+        .select("*")
+        .maybeSingle();
 
       if (error) {
         showNotice(error.message, true);
@@ -3650,6 +3691,9 @@ export default function SAVLSitePage() {
       }
 
       await reloadMatches();
+      if (updatedMatch && current.status !== (updatedMatch as MatchRow).status) {
+        await notifyMatchToDiscord(updatedMatch as MatchRow, (updatedMatch as MatchRow).status);
+      }
       showNotice("Match updated. Finalized stats were kept locked.", true);
       return;
     }
@@ -3692,11 +3736,13 @@ export default function SAVLSitePage() {
       ...commonStatsPayload,
     };
 
-    const { error } = await supabase
+    const { data: updatedMatch, error } = await supabase
       .from("matches")
       .update(canEditAsAdmin ? adminPayload : trackerPayload)
       .eq("id", matchId)
-      .eq("stats_finalized", false);
+      .eq("stats_finalized", false)
+      .select("*")
+      .maybeSingle();
 
     if (error) {
       showNotice(error.message, true);
@@ -3704,6 +3750,9 @@ export default function SAVLSitePage() {
     }
 
     await reloadMatches();
+    if (canEditAsAdmin && updatedMatch && current.status !== (updatedMatch as MatchRow).status) {
+      await notifyMatchToDiscord(updatedMatch as MatchRow, (updatedMatch as MatchRow).status);
+    }
     showNotice("Match updated.", true);
   }
 
@@ -3768,7 +3817,7 @@ export default function SAVLSitePage() {
       "Finished",
     );
 
-    const { error } = await supabase
+    const { data: finishedMatch, error } = await supabase
       .from("matches")
       .update({
         status: "Finished",
@@ -3798,7 +3847,9 @@ export default function SAVLSitePage() {
         stats_submitted_for_review: false,
       })
       .eq("id", matchId)
-      .eq("stats_finalized", false);
+      .eq("stats_finalized", false)
+      .select("*")
+      .maybeSingle();
 
     if (error) {
       showNotice(error.message, true);
@@ -3806,6 +3857,9 @@ export default function SAVLSitePage() {
     }
 
     await reloadMatches();
+    if (finishedMatch && current.status !== "Finished") {
+      await notifyMatchToDiscord(finishedMatch as MatchRow, "Finished");
+    }
     showNotice("Stats finalized.", true);
   }
 
