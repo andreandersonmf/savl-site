@@ -107,6 +107,7 @@ type StandingRow = {
 type LeaderboardPlayer = {
   player_username: string;
   player_key: string;
+  player_roblox_id?: string | null;
   team: string;
   matches_played: number;
   kills: number;
@@ -114,8 +115,20 @@ type LeaderboardPlayer = {
   assists: number;
   receives: number;
   aces: number;
+  attempts: number;
+  ape_attempts: number;
+  one_touches: number;
+  kill_blocks: number;
   blocks: number;
 };
+
+type LeaderboardStatKey =
+  | "kills"
+  | "receives"
+  | "assists"
+  | "ape_kills"
+  | "aces"
+  | "blocks";
 
 type TeamTheme = {
   name: string;
@@ -290,48 +303,461 @@ function buildStandings(teams: Team[], matches: MatchRow[]): StandingRow[] {
     .map((team, index) => ({ ...team, position: index + 1 }));
 }
 
-function buildLeaderboard(stats: PlayerStat[]): LeaderboardPlayer[] {
+function statAverage(player: LeaderboardPlayer, key: LeaderboardStatKey) {
+  if (!player.matches_played) return 0;
+  return player[key] / player.matches_played;
+}
+
+function percentValue(value: number, total: number) {
+  if (!total) return "0.00%";
+  return `${((value / total) * 100).toFixed(2)}%`;
+}
+
+function playerTotalAttempts(player: LeaderboardPlayer) {
+  return player.attempts + player.ape_attempts;
+}
+
+function playerTotalKillPercentage(player: LeaderboardPlayer) {
+  return percentValue(player.kills, playerTotalAttempts(player));
+}
+
+function sortByAverage(key: LeaderboardStatKey) {
+  return (a: LeaderboardPlayer, b: LeaderboardPlayer) => {
+    const avgDiff = statAverage(b, key) - statAverage(a, key);
+    if (avgDiff !== 0) return avgDiff;
+    if (b[key] !== a[key]) return b[key] - a[key];
+    return a.player_username.localeCompare(b.player_username);
+  };
+}
+
+const APER_FULL_WEIGHT_MATCHES = 3;
+const BEST_SETTER_MIN_ASSISTS = 30;
+
+function matchReliability(player: LeaderboardPlayer) {
+  return Math.min(1, player.matches_played / APER_FULL_WEIGHT_MATCHES);
+}
+
+function apeKillRate(player: LeaderboardPlayer) {
+  if (!player.ape_attempts) return 0;
+  return player.ape_kills / player.ape_attempts;
+}
+
+function bestAperScore(player: LeaderboardPlayer) {
+  return statAverage(player, "ape_kills") * matchReliability(player);
+}
+
+function bestSetterScore(player: LeaderboardPlayer) {
+  const assistAverage = statAverage(player, "assists");
+  const apeKillAverage = statAverage(player, "ape_kills");
+  const receiveAverage = statAverage(player, "receives");
+
+  return assistAverage * 0.35 + apeKillAverage * 0.35 + receiveAverage * 0.3;
+}
+
+function isEligibleBestSetter(player: LeaderboardPlayer) {
+  return player.assists >= BEST_SETTER_MIN_ASSISTS;
+}
+
+function compareBestSetter(a: LeaderboardPlayer, b: LeaderboardPlayer) {
+  const scoreDiff = bestSetterScore(b) - bestSetterScore(a);
+  if (scoreDiff !== 0) return scoreDiff;
+
+  const apeAvgDiff = statAverage(b, "ape_kills") - statAverage(a, "ape_kills");
+  if (apeAvgDiff !== 0) return apeAvgDiff;
+
+  const receiveAvgDiff = statAverage(b, "receives") - statAverage(a, "receives");
+  if (receiveAvgDiff !== 0) return receiveAvgDiff;
+
+  const assistAvgDiff = statAverage(b, "assists") - statAverage(a, "assists");
+  if (assistAvgDiff !== 0) return assistAvgDiff;
+
+  if (b.ape_kills !== a.ape_kills) return b.ape_kills - a.ape_kills;
+  if (b.receives !== a.receives) return b.receives - a.receives;
+  if (b.assists !== a.assists) return b.assists - a.assists;
+  if (b.matches_played !== a.matches_played) return b.matches_played - a.matches_played;
+
+  return a.player_username.localeCompare(b.player_username);
+}
+
+function compareBestAper(a: LeaderboardPlayer, b: LeaderboardPlayer) {
+  const scoreDiff = bestAperScore(b) - bestAperScore(a);
+  if (scoreDiff !== 0) return scoreDiff;
+
+  const avgDiff = statAverage(b, "ape_kills") - statAverage(a, "ape_kills");
+  if (avgDiff !== 0) return avgDiff;
+
+  if (b.matches_played !== a.matches_played) return b.matches_played - a.matches_played;
+  if (b.ape_kills !== a.ape_kills) return b.ape_kills - a.ape_kills;
+
+  const rateDiff = apeKillRate(b) - apeKillRate(a);
+  if (rateDiff !== 0) return rateDiff;
+
+  return a.player_username.localeCompare(b.player_username);
+}
+
+function compareBestBlocker(a: LeaderboardPlayer, b: LeaderboardPlayer) {
+  if (b.blocks !== a.blocks) return b.blocks - a.blocks;
+  if (b.kill_blocks !== a.kill_blocks) return b.kill_blocks - a.kill_blocks;
+
+  const avgDiff = statAverage(b, "blocks") - statAverage(a, "blocks");
+  if (avgDiff !== 0) return avgDiff;
+
+  if (b.matches_played !== a.matches_played) return b.matches_played - a.matches_played;
+
+  return a.player_username.localeCompare(b.player_username);
+}
+
+function buildLeaderboard(stats: PlayerStat[], teams: Team[] = [], players: TeamPlayer[] = []): LeaderboardPlayer[] {
   const map = new Map<string, LeaderboardPlayer & { matchIds: Set<number> }>();
 
+  const findPlayerMeta = (playerName: string, playerKey?: string | null, teamCountry?: string | null) => {
+    const normalizedName = normalizeText(playerName);
+    const normalizedKey = normalizeText(playerKey ?? "");
+    const rosterPlayer = players.find((player) => {
+      const usernameMatch = normalizeText(player.roblox_username) === normalizedName;
+      const idMatch = normalizedKey ? normalizeText(player.roblox_user_id ?? "") === normalizedKey : false;
+      return usernameMatch || idMatch;
+    });
+
+    if (rosterPlayer) {
+      const rosterTeam = teams.find((team) => team.id === rosterPlayer.team_id);
+      return {
+        username: rosterPlayer.roblox_username,
+        robloxId: rosterPlayer.roblox_user_id ?? null,
+        team: rosterTeam?.country ?? teamCountry ?? "Archived",
+      };
+    }
+
+    const captainTeam = teams.find(
+      (team) =>
+        normalizeText(team.captain_name) === normalizedName ||
+        (normalizedKey ? normalizeText(team.captain_roblox_id ?? "") === normalizedKey : false),
+    );
+
+    if (captainTeam) {
+      return {
+        username: captainTeam.captain_name,
+        robloxId: captainTeam.captain_roblox_id ?? null,
+        team: captainTeam.country,
+      };
+    }
+
+    return {
+      username: playerName,
+      robloxId: playerKey ?? null,
+      team: teamCountry ?? "Archived",
+    };
+  };
+
   for (const row of stats) {
-    const key = `${row.player_key}-${normalizeText(row.team_country)}`;
+    const meta = findPlayerMeta(row.player_name, row.player_key, row.team_country);
+    const key = row.player_key || `${normalizeText(meta.username)}-${normalizeText(row.team_country)}`;
+    const totalKills = (row.kills ?? 0) + (row.ape_kills ?? 0);
     const existing = map.get(key);
 
     if (existing) {
       existing.matchIds.add(row.match_id);
       existing.matches_played = existing.matchIds.size;
-      existing.kills += row.kills;
-      existing.ape_kills += row.ape_kills;
-      existing.assists += row.assists;
-      existing.receives += row.receives;
-      existing.aces += row.aces;
-      existing.blocks += row.kill_blocks + row.one_touches;
+      existing.kills += totalKills;
+      existing.ape_kills += row.ape_kills ?? 0;
+      existing.assists += row.assists ?? 0;
+      existing.receives += (row.receives ?? 0) + (row.dives ?? 0);
+      existing.aces += row.aces ?? 0;
+      existing.attempts += row.attempts ?? 0;
+      existing.ape_attempts += row.ape_attempts ?? 0;
+      existing.one_touches += row.one_touches ?? 0;
+      existing.kill_blocks += row.kill_blocks ?? 0;
+      existing.blocks += (row.kill_blocks ?? 0) + (row.one_touches ?? 0);
     } else {
       map.set(key, {
-        player_username: row.player_name,
-        player_key: row.player_key,
-        team: row.team_country,
+        player_username: meta.username,
+        player_key: key,
+        player_roblox_id: meta.robloxId,
+        team: meta.team,
         matches_played: 1,
-        kills: row.kills,
-        ape_kills: row.ape_kills,
-        assists: row.assists,
-        receives: row.receives,
-        aces: row.aces,
-        blocks: row.kill_blocks + row.one_touches,
+        kills: totalKills,
+        ape_kills: row.ape_kills ?? 0,
+        assists: row.assists ?? 0,
+        receives: (row.receives ?? 0) + (row.dives ?? 0),
+        aces: row.aces ?? 0,
+        attempts: row.attempts ?? 0,
+        ape_attempts: row.ape_attempts ?? 0,
+        one_touches: row.one_touches ?? 0,
+        kill_blocks: row.kill_blocks ?? 0,
+        blocks: (row.kill_blocks ?? 0) + (row.one_touches ?? 0),
         matchIds: new Set([row.match_id]),
       });
     }
   }
 
-  return Array.from(map.values())
-    .map(({ matchIds, ...player }) => player)
-    .sort((a, b) => {
-      const aScore = a.kills + a.ape_kills + a.assists + a.receives + a.aces + a.blocks;
-      const bScore = b.kills + b.ape_kills + b.assists + b.receives + b.aces + b.blocks;
-      if (bScore !== aScore) return bScore - aScore;
-      return a.player_username.localeCompare(b.player_username);
-    });
+  return Array.from(map.values()).map(({ matchIds, ...player }) => player);
 }
+
+function buildSelectedArchivedPlayer(username: string, leaderboard: LeaderboardPlayer[], teams: Team[], players: TeamPlayer[]): LeaderboardPlayer {
+  const statsPlayer = leaderboard.find(
+    (player) => normalizeText(player.player_username) === normalizeText(username),
+  );
+  if (statsPlayer) return statsPlayer;
+
+  const rosterPlayer = players.find(
+    (player) => normalizeText(player.roblox_username) === normalizeText(username),
+  );
+  if (rosterPlayer) {
+    const rosterTeam = teams.find((team) => team.id === rosterPlayer.team_id);
+    return {
+      player_username: rosterPlayer.roblox_username,
+      player_key: rosterPlayer.roblox_user_id || normalizeText(rosterPlayer.roblox_username),
+      player_roblox_id: rosterPlayer.roblox_user_id ?? null,
+      team: rosterTeam?.country ?? "Archived",
+      matches_played: 0,
+      kills: 0,
+      ape_kills: 0,
+      assists: 0,
+      receives: 0,
+      aces: 0,
+      attempts: 0,
+      ape_attempts: 0,
+      one_touches: 0,
+      kill_blocks: 0,
+      blocks: 0,
+    };
+  }
+
+  const captainTeam = teams.find((team) => normalizeText(team.captain_name) === normalizeText(username));
+  return {
+    player_username: captainTeam?.captain_name ?? username,
+    player_key: captainTeam?.captain_roblox_id || normalizeText(username),
+    player_roblox_id: captainTeam?.captain_roblox_id ?? null,
+    team: captainTeam?.country ?? "Staff Pick",
+    matches_played: 0,
+    kills: 0,
+    ape_kills: 0,
+    assists: 0,
+    receives: 0,
+    aces: 0,
+    attempts: 0,
+    ape_attempts: 0,
+    one_touches: 0,
+    kill_blocks: 0,
+    blocks: 0,
+  };
+}
+
+function buildAwardsData(leaderboard: LeaderboardPlayer[], teams: Team[], players: TeamPlayer[]) {
+  const bestSpiker = [...leaderboard].sort(sortByAverage("kills")).slice(0, 3);
+  const bestReceiver = [...leaderboard].sort(sortByAverage("receives")).slice(0, 3);
+  const bestServer = [...leaderboard].sort(sortByAverage("aces")).slice(0, 3);
+  const bestSetter = [...leaderboard].filter(isEligibleBestSetter).sort(compareBestSetter).slice(0, 3);
+  const bestAper = [...leaderboard].sort(compareBestAper).slice(0, 3);
+  const bestBlocker = [...leaderboard].sort(compareBestBlocker).slice(0, 3);
+  const seasonMvp = [buildSelectedArchivedPlayer("Fake_MattX", leaderboard, teams, players)];
+  const mostImproved = ["CLypX_9", "ykGznn", "Seitm1"].map((name) =>
+    buildSelectedArchivedPlayer(name, leaderboard, teams, players),
+  );
+  const teamOfSeason = [
+    "Fake_MattX",
+    "ykGznn",
+    "CLypX_9",
+    "Vitin_xd11",
+    "yoylenguren",
+    "calgues2018",
+  ].map((name) => buildSelectedArchivedPlayer(name, leaderboard, teams, players));
+
+  return {
+    bestSpiker,
+    bestReceiver,
+    bestServer,
+    bestSetter,
+    bestAper,
+    bestBlocker,
+    seasonMvp,
+    mostImproved,
+    teamOfSeason,
+  };
+}
+
+function getTeamForPlayer(teams: Team[], player: LeaderboardPlayer) {
+  return teams.find((team) => normalizeText(team.country) === normalizeText(player.team));
+}
+
+function StatPill({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-center">
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/40">{label}</p>
+      <p className="mt-1 text-sm font-black text-white">{value}</p>
+    </div>
+  );
+}
+
+function ArchivedLeaderboardTable({
+  title,
+  players,
+  statKey,
+  statLabel,
+  teams,
+  description = "Ranked by average per match",
+}: {
+  title: string;
+  players: LeaderboardPlayer[];
+  statKey: LeaderboardStatKey;
+  statLabel: string;
+  teams: Team[];
+  description?: string;
+}) {
+  return (
+    <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] overflow-hidden">
+      <div className="border-b border-white/10 bg-white/[0.04] px-5 py-4">
+        <p className="text-sm font-black uppercase tracking-[0.2em] text-emerald-300">{title}</p>
+        <p className="mt-1 text-xs text-white/45">{description}</p>
+      </div>
+      <div className="divide-y divide-white/5">
+        {players.length === 0 ? (
+          <div className="px-5 py-4 text-sm text-white/50">No stats recorded.</div>
+        ) : null}
+        {players.map((player, index) => {
+          const team = getTeamForPlayer(teams, player);
+          const average = statAverage(player, statKey);
+          return (
+            <div key={`${title}-${player.player_key}-${player.team}`} className="grid grid-cols-[34px_1fr_auto] items-center gap-3 px-5 py-3">
+              <span className={`flex h-8 w-8 items-center justify-center rounded-full border text-sm font-black ${
+                index === 0
+                  ? "border-yellow-300/30 bg-yellow-300/10 text-yellow-300"
+                  : index === 1
+                    ? "border-white/20 bg-white/10 text-white/75"
+                    : index === 2
+                      ? "border-amber-500/30 bg-amber-500/10 text-amber-400"
+                      : "border-white/10 bg-white/5 text-white/45"
+              }`}>
+                {index + 1}
+              </span>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  {team ? <img src={getTeamImageUrl(team.code)} alt="" className="h-4 w-6 rounded-sm object-cover" /> : null}
+                  <span className="truncate text-sm font-bold text-white">{player.player_username}</span>
+                </div>
+                <p className="mt-0.5 truncate text-xs text-white/45">{player.team} • {player.matches_played} matches</p>
+              </div>
+              <div className="text-right">
+                <p className="text-lg font-black text-emerald-300">{average.toFixed(1)}</p>
+                <p className="text-xs text-white/45">{player[statKey]} total {statLabel}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ArchivedAwardPodium({
+  title,
+  subtitle,
+  players,
+  mainStat,
+  mainStatLabel,
+  teams,
+}: {
+  title: string;
+  subtitle: string;
+  players: LeaderboardPlayer[];
+  mainStat: LeaderboardStatKey;
+  mainStatLabel: string;
+  teams: Team[];
+}) {
+  return (
+    <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
+      <div className="mb-4">
+        <p className="text-lg font-black text-white">{title}</p>
+        <p className="mt-1 text-sm text-white/55">{subtitle}</p>
+      </div>
+      <div className="grid gap-3 md:grid-cols-3">
+        {players.length === 0 ? (
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/50 md:col-span-3">No eligible stats recorded.</div>
+        ) : null}
+        {players.map((player, index) => {
+          const team = getTeamForPlayer(teams, player);
+          const average = statAverage(player, mainStat);
+          return (
+            <div key={`${title}-${player.player_username}-${index}`} className={`rounded-2xl border p-4 ${
+              index === 0
+                ? "border-yellow-400/30 bg-yellow-400/[0.08]"
+                : index === 1
+                  ? "border-white/15 bg-white/[0.06]"
+                  : "border-amber-700/30 bg-amber-900/10"
+            }`}>
+              <div className="flex items-center justify-between gap-3">
+                <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-black">#{index + 1}</span>
+                {team ? <img src={getTeamImageUrl(team.code)} alt="" className="h-5 w-7 rounded-sm object-cover" /> : null}
+              </div>
+              <p className="mt-4 truncate text-lg font-black text-white">{player.player_username}</p>
+              <p className="truncate text-sm text-white/55">{player.team}</p>
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <StatPill label={`Avg ${mainStatLabel}`} value={mainStat === "kills" ? playerTotalKillPercentage(player) : average.toFixed(1)} />
+                <StatPill label={`Total ${mainStatLabel}`} value={player[mainStat]} />
+                <StatPill label="Recs" value={player.receives} />
+                <StatPill label="Matches" value={player.matches_played} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ArchivedSingleAward({
+  title,
+  subtitle,
+  player,
+  teams,
+}: {
+  title: string;
+  subtitle: string;
+  player: LeaderboardPlayer | null;
+  teams: Team[];
+}) {
+  if (!player) return null;
+  const team = getTeamForPlayer(teams, player);
+  return (
+    <div className="rounded-[1.5rem] border border-yellow-400/25 bg-yellow-400/[0.08] p-5">
+      <p className="text-lg font-black text-white">{title}</p>
+      <p className="mt-1 text-sm text-white/55">{subtitle}</p>
+      <div className="mt-5 flex items-center justify-between gap-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+        <div>
+          <p className="text-2xl font-black text-yellow-200">{player.player_username}</p>
+          <p className="mt-1 text-sm text-white/55">{player.team}</p>
+        </div>
+        {team ? <img src={getTeamImageUrl(team.code)} alt="" className="h-10 w-14 rounded-lg object-cover" /> : null}
+      </div>
+    </div>
+  );
+}
+
+function ArchivedTeamOfSeason({ players, teams }: { players: LeaderboardPlayer[]; teams: Team[] }) {
+  return (
+    <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-5">
+      <p className="text-lg font-black text-white">Team of the Season</p>
+      <p className="mt-1 text-sm text-white/55">Staff-selected Season 1 six.</p>
+      <div className="mt-5 grid gap-3 md:grid-cols-3">
+        {players.map((player) => {
+          const team = getTeamForPlayer(teams, player);
+          return (
+            <div key={`tos-${player.player_username}`} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="font-black text-white">{player.player_username}</p>
+                  <p className="text-sm text-white/55">{player.team}</p>
+                </div>
+                {team ? <img src={getTeamImageUrl(team.code)} alt="" className="h-8 w-11 rounded-lg object-cover" /> : null}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 
 
 function shouldShowSeasonInArchive(season: Season) {
@@ -376,7 +802,8 @@ export default function ArchivesPage() {
   }, [seasons, selectedSeasonId]);
 
   const standings = useMemo(() => buildStandings(teams, matches), [teams, matches]);
-  const leaderboard = useMemo(() => buildLeaderboard(stats), [stats]);
+  const leaderboard = useMemo(() => buildLeaderboard(stats, teams, players), [stats, teams, players]);
+  const awardsData = useMemo(() => buildAwardsData(leaderboard, teams, players), [leaderboard, teams, players]);
   const finishedMatches = useMemo(
     () => matches.filter((match) => match.status === "Finished"),
     [matches],
@@ -509,8 +936,8 @@ export default function ArchivesPage() {
                 {selectedSeason?.name ?? "Archive"}
               </h2>
               <p className="mt-4 max-w-2xl text-white/65">
-                Frozen history for past seasons: teams, standings, match history,
-                stats, and awards status.
+                Frozen history for past seasons: teams, final leaderboard, awards,
+                standings, match history, and complete player stats.
               </p>
             </div>
 
@@ -573,17 +1000,141 @@ export default function ArchivesPage() {
                   <p className="text-sm font-semibold uppercase tracking-[0.25em] text-emerald-300">
                     Awards
                   </p>
-                  <h3 className="mt-2 text-2xl font-black">Season Awards</h3>
+                  <h3 className="mt-2 text-2xl font-black">Season 1 Awards Archive</h3>
                 </div>
                 <span className="rounded-full border border-amber-400/20 bg-amber-400/10 px-4 py-2 text-xs font-black uppercase tracking-[0.2em] text-amber-200">
-                  {selectedSeason.awards_status === "completed" ? "Completed" : "Coming Soon"}
+                  {selectedSeason.awards_status === "completed" ? "Completed" : "Archived"}
                 </span>
               </div>
               <p className="mt-4 text-white/65">
-                {selectedSeason.awards_status === "completed"
-                  ? "Awards for this archived season are marked as completed."
-                  : "This season is archived, but the awards ceremony/results are still pending."}
+                Full archived awards view for this season. Staff-selected awards are preserved manually;
+                stat awards are recalculated from the archived Season 1 stats.
               </p>
+
+              <div className="mt-6 space-y-5">
+                <ArchivedAwardPodium
+                  title="Best Spiker"
+                  subtitle="Top 3 by kill percentage / kill average from archived stats."
+                  players={awardsData.bestSpiker}
+                  mainStat="kills"
+                  mainStatLabel="Kills"
+                  teams={teams}
+                />
+                <ArchivedAwardPodium
+                  title="Best Receiver"
+                  subtitle="Top 3 by Recs average."
+                  players={awardsData.bestReceiver}
+                  mainStat="receives"
+                  mainStatLabel="Recs"
+                  teams={teams}
+                />
+                <ArchivedAwardPodium
+                  title="Best Server"
+                  subtitle="Top 3 by Aces average."
+                  players={awardsData.bestServer}
+                  mainStat="aces"
+                  mainStatLabel="Aces"
+                  teams={teams}
+                />
+                <ArchivedAwardPodium
+                  title="Best Setter"
+                  subtitle="35% Assists, 35% Ape Kills, 30% Recs. Minimum 30 assists required."
+                  players={awardsData.bestSetter}
+                  mainStat="assists"
+                  mainStatLabel="Assists"
+                  teams={teams}
+                />
+                <ArchivedAwardPodium
+                  title="Best Aper"
+                  subtitle="Weighted Ape Kill average with match reliability."
+                  players={awardsData.bestAper}
+                  mainStat="ape_kills"
+                  mainStatLabel="Ape Kills"
+                  teams={teams}
+                />
+                <ArchivedAwardPodium
+                  title="Best Blocker"
+                  subtitle="Kill blocks + one touch blocks, with kill blocks as strong tiebreaker."
+                  players={awardsData.bestBlocker}
+                  mainStat="blocks"
+                  mainStatLabel="Blocks"
+                  teams={teams}
+                />
+                <div className="grid gap-5 lg:grid-cols-2">
+                  <ArchivedSingleAward
+                    title="Season MVP"
+                    subtitle="Staff-selected MVP."
+                    player={awardsData.seasonMvp[0] ?? null}
+                    teams={teams}
+                  />
+                  <ArchivedAwardPodium
+                    title="Most Improved Player"
+                    subtitle="Staff-selected ranking: CLypX_9, ykGznn, Seitm1."
+                    players={awardsData.mostImproved}
+                    mainStat="kills"
+                    mainStatLabel="Kills"
+                    teams={teams}
+                  />
+                </div>
+                <ArchivedTeamOfSeason players={awardsData.teamOfSeason} teams={teams} />
+              </div>
+            </section>
+
+            <section className="mt-8 rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
+              <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.25em] text-emerald-300">Leaderboard</p>
+                  <h3 className="mt-2 text-2xl font-black">Season 1 Final Leaderboard</h3>
+                </div>
+                <p className="text-sm text-white/50">Archived from Season 1 stats only.</p>
+              </div>
+
+              <div className="mt-6 grid gap-5 lg:grid-cols-2">
+                <ArchivedLeaderboardTable
+                  title="Top Kills"
+                  players={[...leaderboard].sort(sortByAverage("kills")).slice(0, 10)}
+                  statKey="kills"
+                  statLabel="kills"
+                  teams={teams}
+                  description="Total kills + ape kills, ranked by average per match."
+                />
+                <ArchivedLeaderboardTable
+                  title="Top Recs"
+                  players={[...leaderboard].sort(sortByAverage("receives")).slice(0, 10)}
+                  statKey="receives"
+                  statLabel="recs"
+                  teams={teams}
+                />
+                <ArchivedLeaderboardTable
+                  title="Top Assists"
+                  players={[...leaderboard].sort(sortByAverage("assists")).slice(0, 10)}
+                  statKey="assists"
+                  statLabel="assists"
+                  teams={teams}
+                />
+                <ArchivedLeaderboardTable
+                  title="Top Ape Kills"
+                  players={[...leaderboard].sort(sortByAverage("ape_kills")).slice(0, 10)}
+                  statKey="ape_kills"
+                  statLabel="ape kills"
+                  teams={teams}
+                />
+                <ArchivedLeaderboardTable
+                  title="Top Aces"
+                  players={[...leaderboard].sort(sortByAverage("aces")).slice(0, 10)}
+                  statKey="aces"
+                  statLabel="aces"
+                  teams={teams}
+                />
+                <ArchivedLeaderboardTable
+                  title="Top Blocks"
+                  players={[...leaderboard].sort(sortByAverage("blocks")).slice(0, 10)}
+                  statKey="blocks"
+                  statLabel="blocks"
+                  teams={teams}
+                  description="Kill blocks + one touch blocks, ranked by average per match."
+                />
+              </div>
             </section>
 
             <section className="mt-8 rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
@@ -671,7 +1222,14 @@ export default function ArchivesPage() {
                   {leaderboard.length === 0 ? (
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/55">No player stats found for this season.</div>
                   ) : null}
-                  {leaderboard.map((player, index) => (
+                  {[...leaderboard]
+                    .sort((a, b) => {
+                      const aScore = a.kills + a.assists + a.receives + a.aces + a.blocks;
+                      const bScore = b.kills + b.assists + b.receives + b.aces + b.blocks;
+                      if (bScore !== aScore) return bScore - aScore;
+                      return a.player_username.localeCompare(b.player_username);
+                    })
+                    .map((player, index) => (
                     <div key={`${player.player_key}-${player.team}`} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                       <div className="flex items-center justify-between gap-3">
                         <div>
@@ -679,7 +1237,7 @@ export default function ArchivesPage() {
                           <p className="text-lg font-black">{player.player_username}</p>
                           <p className="text-sm text-white/55">{player.team} • {player.matches_played} matches</p>
                         </div>
-                        <p className="text-2xl font-black text-emerald-300">{player.kills + player.ape_kills + player.assists + player.receives + player.aces + player.blocks}</p>
+                        <p className="text-2xl font-black text-emerald-300">{player.kills + player.assists + player.receives + player.aces + player.blocks}</p>
                       </div>
                       <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs text-white/65 md:grid-cols-6">
                         <span>K {player.kills}</span>
