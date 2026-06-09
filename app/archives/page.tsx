@@ -333,6 +333,34 @@ function buildLeaderboard(stats: PlayerStat[]): LeaderboardPlayer[] {
     });
 }
 
+
+function shouldShowSeasonInArchive(season: Season) {
+  const searchable = `${season.name ?? ""} ${season.slug ?? ""} ${season.status ?? ""}`.toLowerCase();
+
+  return Boolean(
+    season.is_archived ||
+      season.is_active === false ||
+      searchable.includes("season-1") ||
+      searchable.includes("season 1") ||
+      searchable.includes("archived") ||
+      searchable.includes("completed"),
+  );
+}
+
+function isLegacySeasonOne(season?: Season | null) {
+  if (!season) return false;
+  const searchable = `${season.name ?? ""} ${season.slug ?? ""}`.toLowerCase();
+  return searchable.includes("season-1") || searchable.includes("season 1");
+}
+
+function applyArchiveSeasonFilter(query: any, seasonId: string, includeLegacyNullSeason: boolean) {
+  if (includeLegacyNullSeason) {
+    return query.or(`season_id.eq.${seasonId},season_id.is.null`);
+  }
+
+  return query.eq("season_id", seasonId);
+}
+
 export default function ArchivesPage() {
   const [seasons, setSeasons] = useState<Season[]>([]);
   const [selectedSeasonId, setSelectedSeasonId] = useState("");
@@ -366,7 +394,6 @@ export default function ArchivesPage() {
     const { data, error } = await supabase
       .from("seasons")
       .select("*")
-      .eq("is_archived", true)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -375,47 +402,61 @@ export default function ArchivesPage() {
       return;
     }
 
-    const archivedSeasons = (data ?? []) as Season[];
-    setSeasons(archivedSeasons);
+    const archiveSeasons = ((data ?? []) as Season[]).filter(shouldShowSeasonInArchive);
+    setSeasons(archiveSeasons);
 
-    if (archivedSeasons.length > 0) {
-      const firstSeasonId = archivedSeasons[0].id;
-      setSelectedSeasonId(firstSeasonId);
-      await loadSeasonData(firstSeasonId);
+    if (archiveSeasons.length > 0) {
+      const seasonOne = archiveSeasons.find(isLegacySeasonOne);
+      const firstSeason = seasonOne ?? archiveSeasons[0];
+      setSelectedSeasonId(firstSeason.id);
+      await loadSeasonData(firstSeason.id, firstSeason);
     } else {
-      setNotice("No archived seasons found yet.");
+      setNotice("No archived seasons found yet. Run the Season 1 archive SQL again, then refresh this page.");
       setLoading(false);
     }
   }
 
-  async function loadSeasonData(seasonId: string) {
+  async function loadSeasonData(seasonId: string, seasonOverride?: Season | null) {
     if (!supabase || !seasonId) return;
+
+    const seasonForData = seasonOverride ?? seasons.find((season) => season.id === seasonId) ?? null;
+    const includeLegacyNullSeason = isLegacySeasonOne(seasonForData);
 
     setLoading(true);
 
+    const teamsQuery = applyArchiveSeasonFilter(
+      supabase.from("teams").select("*"),
+      seasonId,
+      includeLegacyNullSeason,
+    ).order("country", { ascending: true });
+
+    const matchesQuery = applyArchiveSeasonFilter(
+      supabase.from("matches").select("*"),
+      seasonId,
+      includeLegacyNullSeason,
+    )
+      .order("match_date", { ascending: true })
+      .order("match_time", { ascending: true });
+
+    const playersQuery = applyArchiveSeasonFilter(
+      supabase.from("team_players").select("*"),
+      seasonId,
+      includeLegacyNullSeason,
+    ).order("created_at", { ascending: true });
+
+    const statsQuery = applyArchiveSeasonFilter(
+      supabase.from("match_player_stats").select("*"),
+      seasonId,
+      includeLegacyNullSeason,
+    )
+      .order("team_country", { ascending: true })
+      .order("player_name", { ascending: true });
+
     const [teamsResult, matchesResult, playersResult, statsResult] = await Promise.all([
-      supabase
-        .from("teams")
-        .select("*")
-        .eq("season_id", seasonId)
-        .order("country", { ascending: true }),
-      supabase
-        .from("matches")
-        .select("*")
-        .eq("season_id", seasonId)
-        .order("match_date", { ascending: true })
-        .order("match_time", { ascending: true }),
-      supabase
-        .from("team_players")
-        .select("*")
-        .eq("season_id", seasonId)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("match_player_stats")
-        .select("*")
-        .eq("season_id", seasonId)
-        .order("team_country", { ascending: true })
-        .order("player_name", { ascending: true }),
+      teamsQuery,
+      matchesQuery,
+      playersQuery,
+      statsQuery,
     ]);
 
     if (teamsResult.error) setNotice(teamsResult.error.message);
@@ -477,8 +518,10 @@ export default function ArchivesPage() {
               <select
                 value={selectedSeasonId}
                 onChange={(event) => {
-                  setSelectedSeasonId(event.target.value);
-                  loadSeasonData(event.target.value);
+                  const nextSeasonId = event.target.value;
+                  const nextSeason = seasons.find((season) => season.id === nextSeasonId) ?? null;
+                  setSelectedSeasonId(nextSeasonId);
+                  loadSeasonData(nextSeasonId, nextSeason);
                 }}
                 className="rounded-2xl border border-white/10 bg-[#0B1712] px-4 py-3 text-white outline-none"
               >

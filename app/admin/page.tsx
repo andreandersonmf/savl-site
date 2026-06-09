@@ -4326,8 +4326,8 @@ export default function SAVLSitePage() {
     <div className="min-h-screen bg-[#03110D] text-white selection:bg-emerald-400/20 selection:text-white">
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#03110D]/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-          <div className="flex min-w-0 items-center gap-4">
-            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/5">
+          <div className="flex min-w-0 flex-1 items-center gap-4">
+            <Link href="/" className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/5" aria-label="SAVL Home">
               <Image
                 src="/savl-logo.png"
                 alt="SAVL logo"
@@ -4335,38 +4335,36 @@ export default function SAVLSitePage() {
                 className="object-cover"
                 priority
               />
-            </div>
-            <p className="truncate text-sm font-semibold uppercase tracking-[0.22em] text-emerald-300 md:text-base">
-              South America Volleyball League
-            </p>
+            </Link>
+
+            <nav className="hidden min-w-0 flex-wrap items-center justify-start gap-2 md:flex">
+              <Link
+                href="/"
+                className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
+              >
+                Public Site
+              </Link>
+              <Link
+                href="/stats"
+                className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
+              >
+                Stats
+              </Link>
+              <Link
+                href="/archives"
+                className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
+              >
+                Archives
+              </Link>
+            </nav>
           </div>
 
-          <nav className="hidden items-center gap-2 md:flex">
-            <Link
-              href="/"
-              className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
-            >
-              Public Site
-            </Link>
-            <Link
-              href="/stats"
-              className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
-            >
-              Stats
-            </Link>
-            <Link
-              href="/archives"
-              className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
-            >
-              Archives
-            </Link>
-            <Link
-              href="/profile"
-              className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
-            >
-              Profile
-            </Link>
-          </nav>
+          <Link
+            href="/profile"
+            className="inline-flex shrink-0 items-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-400/15 px-4 py-2 text-sm font-black text-emerald-200 shadow-lg shadow-emerald-500/10 transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-400/25 hover:text-white active:translate-y-0.5"
+          >
+            Profile
+          </Link>
         </div>
       </header>
 

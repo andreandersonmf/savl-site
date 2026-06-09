@@ -4453,34 +4453,43 @@ export default function SAVLSitePage() {
     <div className="min-h-screen bg-[#03110D] text-white selection:bg-emerald-400/20 selection:text-white">
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#03110D]/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-          <Link href="/" className="flex shrink-0 items-center gap-3" aria-label="SAVL Home">
-            <div className="relative h-12 w-12 overflow-hidden rounded-full border border-white/10 bg-white/5 shadow-lg shadow-emerald-500/10">
-              <Image
-                src="/savl-logo.png"
-                alt="SAVL logo"
-                fill
-                className="object-cover"
-                priority
-              />
-            </div>
-          </Link>
-
-          <nav className="hidden items-center gap-1 md:flex">
-            <AnimatedNavButton label="Home" targetId="home" />
-            <AnimatedNavButton label="Teams" targetId="teams" />
-            <AnimatedNavButton label="Schedule" targetId="schedule" />
-            <AnimatedNavButton label="Groups" targetId="groups" />
-            <AnimatedNavButton label="Standings" targetId="standings" />
-
-            <AnimatedNavButton label="Stat Track" targetId="stat-track" />
-            <Link
-              href="/archives"
-              className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
-            >
-              Archives
+          <div className="flex min-w-0 flex-1 items-center gap-4">
+            <Link href="/" className="flex shrink-0 items-center" aria-label="SAVL Home">
+              <div className="relative h-12 w-12 overflow-hidden rounded-full border border-white/10 bg-white/5 shadow-lg shadow-emerald-500/10">
+                <Image
+                  src="/savl-logo.png"
+                  alt="SAVL logo"
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              </div>
             </Link>
 
-            <AnimatedNavButton label="Register" targetId="register" />
+            <nav className="hidden min-w-0 flex-wrap items-center justify-start gap-1 md:flex">
+              <AnimatedNavButton label="Home" targetId="home" />
+              <AnimatedNavButton label="Teams" targetId="teams" />
+              <AnimatedNavButton label="Schedule" targetId="schedule" />
+              <AnimatedNavButton label="Groups" targetId="groups" />
+              <AnimatedNavButton label="Standings" targetId="standings" />
+              <AnimatedNavButton label="Stat Track" targetId="stat-track" />
+              <Link
+                href="/archives"
+                className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
+              >
+                Archives
+              </Link>
+              <AnimatedNavButton label="Register" targetId="register" />
+              <Link
+                href="/admin"
+                className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
+              >
+                Admin
+              </Link>
+            </nav>
+          </div>
+
+          <div className="flex shrink-0 items-center justify-end">
             {siteProfile ? (
               <Link
                 href="/profile"
@@ -4501,13 +4510,7 @@ export default function SAVLSitePage() {
                 Login with Discord
               </button>
             )}
-            <Link
-              href="/admin"
-              className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
-            >
-              Admin
-            </Link>
-          </nav>
+          </div>
         </div>
       </header>
 
