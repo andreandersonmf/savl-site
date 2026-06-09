@@ -613,9 +613,11 @@ function getRosterRoleBadgeClass(role: TeamPlayerRole) {
 
 function Avatar({
   robloxUserId,
+  robloxUsername,
   name,
 }: {
-  robloxUserId: string;
+  robloxUserId?: string;
+  robloxUsername?: string;
   name: string;
 }) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
@@ -625,7 +627,10 @@ function Avatar({
     let cancelled = false;
 
     async function loadAvatar() {
-      if (!/^\d+$/.test(robloxUserId.trim())) {
+      const cleanId = String(robloxUserId ?? "").trim();
+      const cleanUsername = String(robloxUsername ?? "").trim();
+
+      if (!cleanId && !cleanUsername) {
         setAvatarUrl(null);
         setLoading(false);
         return;
@@ -634,10 +639,17 @@ function Avatar({
       try {
         setLoading(true);
 
-        const response = await fetch(
-          `/api/roblox-avatar?userId=${encodeURIComponent(robloxUserId.trim())}`,
-          { cache: "no-store" },
-        );
+        const params = new URLSearchParams();
+
+        if (cleanId && /^\d+$/.test(cleanId)) {
+          params.set("userId", cleanId);
+        } else {
+          params.set("username", cleanUsername);
+        }
+
+        const response = await fetch(`/api/roblox-avatar?${params.toString()}`, {
+          cache: "no-store",
+        });
 
         const data = await response.json();
 
@@ -658,7 +670,7 @@ function Avatar({
     return () => {
       cancelled = true;
     };
-  }, [robloxUserId]);
+  }, [robloxUserId, robloxUsername]);
 
   if (loading) {
     return (
@@ -1647,15 +1659,32 @@ function compareBestBlocker(a: LeaderboardPlayer, b: LeaderboardPlayer) {
   return a.player_username.localeCompare(b.player_username);
 }
 
-function PlayerAvatar({ player }: { player: Pick<LeaderboardPlayer, "player_username" | "player_roblox_id"> }) {
-  if (player.player_roblox_id) {
-    return <Avatar robloxUserId={player.player_roblox_id} name={player.player_username} />;
-  }
+function isFakeArchiveRobloxId(value?: string | null) {
+  const id = String(value ?? "").trim();
+
+  if (!id) return true;
+  if (id === "0") return true;
+  if (!/^\d+$/.test(id)) return true;
+
+  // IDs falsos que usamos para recuperar roster do Archive
+  if (id.startsWith("900")) return true;
+
+  return false;
+}
+
+function PlayerAvatar({
+  player,
+}: {
+  player: Pick<LeaderboardPlayer, "player_username" | "player_roblox_id">;
+}) {
+  const robloxId = String(player.player_roblox_id ?? "").trim();
 
   return (
-    <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs font-bold text-white/70">
-      {player.player_username.slice(0, 2).toUpperCase()}
-    </div>
+    <Avatar
+      robloxUserId={isFakeArchiveRobloxId(robloxId) ? "" : robloxId}
+      robloxUsername={player.player_username}
+      name={player.player_username}
+    />
   );
 }
 
