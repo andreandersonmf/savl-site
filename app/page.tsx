@@ -1492,17 +1492,17 @@ function bestAperScore(player: LeaderboardPlayer) {
 }
 
 function compareBestSetter(a: LeaderboardPlayer, b: LeaderboardPlayer) {
-  const receiveAvgDiff = statAverage(b, "receives") - statAverage(a, "receives");
-  if (receiveAvgDiff !== 0) return receiveAvgDiff;
-
   const assistAvgDiff = statAverage(b, "assists") - statAverage(a, "assists");
   if (assistAvgDiff !== 0) return assistAvgDiff;
+
+  const receiveAvgDiff = statAverage(b, "receives") - statAverage(a, "receives");
+  if (receiveAvgDiff !== 0) return receiveAvgDiff;
 
   const apeAvgDiff = statAverage(b, "ape_kills") - statAverage(a, "ape_kills");
   if (apeAvgDiff !== 0) return apeAvgDiff;
 
-  if (b.receives !== a.receives) return b.receives - a.receives;
   if (b.assists !== a.assists) return b.assists - a.assists;
+  if (b.receives !== a.receives) return b.receives - a.receives;
   if (b.ape_kills !== a.ape_kills) return b.ape_kills - a.ape_kills;
   if (b.matches_played !== a.matches_played) return b.matches_played - a.matches_played;
 
@@ -4006,51 +4006,30 @@ export default function SAVLSitePage() {
   async function saveLeagueVisibilitySetting(
     update: Partial<{ awards_public: boolean; leaderboard_public: boolean }>,
   ) {
-    if (!supabase) return { data: null, error: null };
+    if (!supabase) return { error: null };
 
-    const payload = {
-      ...update,
-      updated_at: new Date().toISOString(),
-    };
-
-    const updated = await supabase
+    const { error } = await supabase
       .from("league_settings")
-      .update(payload)
-      .eq("id", 1)
-      .select("awards_public, leaderboard_public")
-      .maybeSingle();
+      .update({
+        ...update,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", 1);
 
-    if (updated.error || updated.data) return updated;
-
-    return supabase
-      .from("league_settings")
-      .upsert(
-        {
-          id: 1,
-          registrations_open: registrationsOpen,
-          awards_public: awardsPublic,
-          leaderboard_public: leaderboardPublic,
-          ...update,
-          updated_at: payload.updated_at,
-        },
-        { onConflict: "id" },
-      )
-      .select("awards_public, leaderboard_public")
-      .single();
+    return { error };
   }
 
   async function handleToggleAwardsPublic() {
     if (!supabase) return;
     setAwardsPublicLoading(true);
     const nextValue = !awardsPublic;
-    const { data, error } = await saveLeagueVisibilitySetting({ awards_public: nextValue });
+    const { error } = await saveLeagueVisibilitySetting({ awards_public: nextValue });
     setAwardsPublicLoading(false);
     if (error) {
       showNotice(error.message, true);
       return;
     }
-    setAwardsPublic(Boolean(data?.awards_public));
-    setLeaderboardPublic(Boolean(data?.leaderboard_public));
+    setAwardsPublic(nextValue);
     showNotice(
       nextValue
         ? "Awards are now public. Everyone can see them."
@@ -4063,14 +4042,13 @@ export default function SAVLSitePage() {
     if (!supabase) return;
     setLeaderboardPublicLoading(true);
     const nextValue = !leaderboardPublic;
-    const { data, error } = await saveLeagueVisibilitySetting({ leaderboard_public: nextValue });
+    const { error } = await saveLeagueVisibilitySetting({ leaderboard_public: nextValue });
     setLeaderboardPublicLoading(false);
     if (error) {
       showNotice(error.message, true);
       return;
     }
-    setAwardsPublic(Boolean(data?.awards_public));
-    setLeaderboardPublic(Boolean(data?.leaderboard_public));
+    setLeaderboardPublic(nextValue);
     showNotice(
       nextValue
         ? "Leaderboard is now public. Everyone can see it."
@@ -5101,14 +5079,14 @@ export default function SAVLSitePage() {
                     />
                     {/* Setter Leaderboard */}
                     <LeaderboardTable
-                      title="Top Setters (Recs Priority)"
+                      title="Top Setters (Assists Priority)"
                       accentClass="text-emerald-300"
                       borderClass="border-emerald-400/20"
                       players={[...leaderboardStats]
                         .sort(compareBestSetter)
                         .slice(0, 10)}
-                      statKey="receives"
-                      statLabel="Recs"
+                      statKey="assists"
+                      statLabel="Assists"
                       teams={approvedTeams}
                     />
                     {/* Ape Kills Leaderboard */}
@@ -5253,10 +5231,10 @@ export default function SAVLSitePage() {
                     {awardsTab === "best_setter" ? (
                       <AwardsPodium
                         title="Best Setter"
-                        subtitle="Top 3 by Recs first, then Assists, then Ape Kills"
+                        subtitle="Top 3 by Assists first, then Recs, then Ape Kills"
                         players={awardsData.bestSetter}
-                        mainStat="receives"
-                        mainStatLabel="Recs"
+                        mainStat="assists"
+                        mainStatLabel="Assists"
                         teams={approvedTeams}
                       />
                     ) : null}
