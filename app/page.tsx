@@ -1434,10 +1434,19 @@ type LeaderboardPlayer = {
   aces: number;
   attempts: number;
   ape_attempts: number;
+  one_touches: number;
+  kill_blocks: number;
+  blocks: number;
   matches_played: number;
 };
 
-type LeaderboardStatKey = "kills" | "receives" | "assists" | "ape_kills" | "aces";
+type LeaderboardStatKey =
+  | "kills"
+  | "receives"
+  | "assists"
+  | "ape_kills"
+  | "aces"
+  | "blocks";
 
 function statAverage(player: LeaderboardPlayer, key: LeaderboardStatKey) {
   if (!player.matches_played) return 0;
@@ -1464,6 +1473,68 @@ function sortByAverage(key: LeaderboardStatKey) {
     if (b[key] !== a[key]) return b[key] - a[key];
     return a.player_username.localeCompare(b.player_username);
   };
+}
+
+const APER_FULL_WEIGHT_MATCHES = 3;
+
+function matchReliability(player: LeaderboardPlayer) {
+  return Math.min(1, player.matches_played / APER_FULL_WEIGHT_MATCHES);
+}
+
+function apeKillRate(player: LeaderboardPlayer) {
+  if (!player.ape_attempts) return 0;
+  return player.ape_kills / player.ape_attempts;
+}
+
+function bestAperScore(player: LeaderboardPlayer) {
+  // Rewards high ape-kill average, but reduces the impact of one-match samples.
+  return statAverage(player, "ape_kills") * matchReliability(player);
+}
+
+function compareBestSetter(a: LeaderboardPlayer, b: LeaderboardPlayer) {
+  const receiveAvgDiff = statAverage(b, "receives") - statAverage(a, "receives");
+  if (receiveAvgDiff !== 0) return receiveAvgDiff;
+
+  const assistAvgDiff = statAverage(b, "assists") - statAverage(a, "assists");
+  if (assistAvgDiff !== 0) return assistAvgDiff;
+
+  const apeAvgDiff = statAverage(b, "ape_kills") - statAverage(a, "ape_kills");
+  if (apeAvgDiff !== 0) return apeAvgDiff;
+
+  if (b.receives !== a.receives) return b.receives - a.receives;
+  if (b.assists !== a.assists) return b.assists - a.assists;
+  if (b.ape_kills !== a.ape_kills) return b.ape_kills - a.ape_kills;
+  if (b.matches_played !== a.matches_played) return b.matches_played - a.matches_played;
+
+  return a.player_username.localeCompare(b.player_username);
+}
+
+function compareBestAper(a: LeaderboardPlayer, b: LeaderboardPlayer) {
+  const scoreDiff = bestAperScore(b) - bestAperScore(a);
+  if (scoreDiff !== 0) return scoreDiff;
+
+  const avgDiff = statAverage(b, "ape_kills") - statAverage(a, "ape_kills");
+  if (avgDiff !== 0) return avgDiff;
+
+  if (b.matches_played !== a.matches_played) return b.matches_played - a.matches_played;
+  if (b.ape_kills !== a.ape_kills) return b.ape_kills - a.ape_kills;
+
+  const rateDiff = apeKillRate(b) - apeKillRate(a);
+  if (rateDiff !== 0) return rateDiff;
+
+  return a.player_username.localeCompare(b.player_username);
+}
+
+function compareBestBlocker(a: LeaderboardPlayer, b: LeaderboardPlayer) {
+  if (b.blocks !== a.blocks) return b.blocks - a.blocks;
+  if (b.kill_blocks !== a.kill_blocks) return b.kill_blocks - a.kill_blocks;
+
+  const avgDiff = statAverage(b, "blocks") - statAverage(a, "blocks");
+  if (avgDiff !== 0) return avgDiff;
+
+  if (b.matches_played !== a.matches_played) return b.matches_played - a.matches_played;
+
+  return a.player_username.localeCompare(b.player_username);
 }
 
 function PlayerAvatar({ player }: { player: Pick<LeaderboardPlayer, "player_username" | "player_roblox_id"> }) {
@@ -1874,6 +1945,7 @@ export default function SAVLSitePage() {
     | "best_server"
     | "best_setter"
     | "best_aper"
+    | "best_blocker"
     | "season_mvp"
     | "most_improved"
     | "team_of_season"
@@ -2469,6 +2541,9 @@ export default function SAVLSitePage() {
         existing.aces += s.aces ?? 0;
         existing.attempts += s.attempts ?? 0;
         existing.ape_attempts += s.ape_attempts ?? 0;
+        existing.one_touches += s.one_touches ?? 0;
+        existing.kill_blocks += s.kill_blocks ?? 0;
+        existing.blocks += (s.one_touches ?? 0) + (s.kill_blocks ?? 0);
         existing.matchIds.add(s.match_id);
         existing.matches_played = existing.matchIds.size;
       } else {
@@ -2483,6 +2558,9 @@ export default function SAVLSitePage() {
           aces: s.aces ?? 0,
           attempts: s.attempts ?? 0,
           ape_attempts: s.ape_attempts ?? 0,
+          one_touches: s.one_touches ?? 0,
+          kill_blocks: s.kill_blocks ?? 0,
+          blocks: (s.one_touches ?? 0) + (s.kill_blocks ?? 0),
           matches_played: 1,
           matchIds: new Set([s.match_id]),
         });
@@ -2537,6 +2615,9 @@ export default function SAVLSitePage() {
         aces: 0,
         attempts: 0,
         ape_attempts: 0,
+        one_touches: 0,
+        kill_blocks: 0,
+        blocks: 0,
         matches_played: 0,
       };
     };
@@ -2547,26 +2628,15 @@ export default function SAVLSitePage() {
 
     const bestServer = [...all].sort(sortByAverage("aces")).slice(0, 3);
 
-    const bestSetter = [...all]
-      .sort((a, b) => {
-        const apeDiff = statAverage(b, "ape_kills") - statAverage(a, "ape_kills");
-        if (apeDiff !== 0) return apeDiff;
+    const bestSetter = [...all].sort(compareBestSetter).slice(0, 3);
 
-        const receiveDiff = statAverage(b, "receives") - statAverage(a, "receives");
-        if (receiveDiff !== 0) return receiveDiff;
+    const bestAper = [...all].sort(compareBestAper).slice(0, 3);
 
-        const assistDiff = statAverage(b, "assists") - statAverage(a, "assists");
-        if (assistDiff !== 0) return assistDiff;
-
-        return a.player_username.localeCompare(b.player_username);
-      })
-      .slice(0, 3);
-
-    const bestAper = [...all].sort(sortByAverage("ape_kills")).slice(0, 3);
+    const bestBlocker = [...all].sort(compareBestBlocker).slice(0, 3);
 
     const seasonMvp = [buildSelectedPlayer("Fake_MattX")];
 
-    const mostImproved = ["Seitm1"].map(buildSelectedPlayer);
+    const mostImproved = ["CLypX_9", "ykGznn", "Seitm1"].map(buildSelectedPlayer);
 
     const teamOfSeason = [
       "Fake_MattX",
@@ -2583,6 +2653,7 @@ export default function SAVLSitePage() {
       bestServer,
       bestSetter,
       bestAper,
+      bestBlocker,
       seasonMvp,
       mostImproved,
       teamOfSeason,
@@ -3932,20 +4003,54 @@ export default function SAVLSitePage() {
     }
   }
 
+  async function saveLeagueVisibilitySetting(
+    update: Partial<{ awards_public: boolean; leaderboard_public: boolean }>,
+  ) {
+    if (!supabase) return { data: null, error: null };
+
+    const payload = {
+      ...update,
+      updated_at: new Date().toISOString(),
+    };
+
+    const updated = await supabase
+      .from("league_settings")
+      .update(payload)
+      .eq("id", 1)
+      .select("awards_public, leaderboard_public")
+      .maybeSingle();
+
+    if (updated.error || updated.data) return updated;
+
+    return supabase
+      .from("league_settings")
+      .upsert(
+        {
+          id: 1,
+          registrations_open: registrationsOpen,
+          awards_public: awardsPublic,
+          leaderboard_public: leaderboardPublic,
+          ...update,
+          updated_at: payload.updated_at,
+        },
+        { onConflict: "id" },
+      )
+      .select("awards_public, leaderboard_public")
+      .single();
+  }
+
   async function handleToggleAwardsPublic() {
     if (!supabase) return;
     setAwardsPublicLoading(true);
     const nextValue = !awardsPublic;
-    const { error } = await supabase
-      .from("league_settings")
-      .update({ awards_public: nextValue, updated_at: new Date().toISOString() })
-      .eq("id", 1);
+    const { data, error } = await saveLeagueVisibilitySetting({ awards_public: nextValue });
     setAwardsPublicLoading(false);
     if (error) {
       showNotice(error.message, true);
       return;
     }
-    setAwardsPublic(nextValue);
+    setAwardsPublic(Boolean(data?.awards_public));
+    setLeaderboardPublic(Boolean(data?.leaderboard_public));
     showNotice(
       nextValue
         ? "Awards are now public. Everyone can see them."
@@ -3958,16 +4063,14 @@ export default function SAVLSitePage() {
     if (!supabase) return;
     setLeaderboardPublicLoading(true);
     const nextValue = !leaderboardPublic;
-    const { error } = await supabase
-      .from("league_settings")
-      .update({ leaderboard_public: nextValue, updated_at: new Date().toISOString() })
-      .eq("id", 1);
+    const { data, error } = await saveLeagueVisibilitySetting({ leaderboard_public: nextValue });
     setLeaderboardPublicLoading(false);
     if (error) {
       showNotice(error.message, true);
       return;
     }
-    setLeaderboardPublic(nextValue);
+    setAwardsPublic(Boolean(data?.awards_public));
+    setLeaderboardPublic(Boolean(data?.leaderboard_public));
     showNotice(
       nextValue
         ? "Leaderboard is now public. Everyone can see it."
@@ -4996,28 +5099,40 @@ export default function SAVLSitePage() {
                       statLabel="Aces"
                       teams={approvedTeams}
                     />
-                    {/* Assists Leaderboard */}
+                    {/* Setter Leaderboard */}
                     <LeaderboardTable
-                      title="Top Setters (Assists)"
+                      title="Top Setters (Recs Priority)"
                       accentClass="text-emerald-300"
                       borderClass="border-emerald-400/20"
                       players={[...leaderboardStats]
-                        .sort(sortByAverage("assists"))
+                        .sort(compareBestSetter)
                         .slice(0, 10)}
-                      statKey="assists"
-                      statLabel="Assists"
+                      statKey="receives"
+                      statLabel="Recs"
                       teams={approvedTeams}
                     />
                     {/* Ape Kills Leaderboard */}
                     <LeaderboardTable
-                      title="Top Apers (Ape Kills)"
+                      title="Top Apers (Weighted)"
                       accentClass="text-amber-300"
                       borderClass="border-amber-400/20"
                       players={[...leaderboardStats]
-                        .sort(sortByAverage("ape_kills"))
+                        .sort(compareBestAper)
                         .slice(0, 10)}
                       statKey="ape_kills"
                       statLabel="Ape Kills"
+                      teams={approvedTeams}
+                    />
+                    {/* Blocks Leaderboard */}
+                    <LeaderboardTable
+                      title="Top Blockers"
+                      accentClass="text-cyan-300"
+                      borderClass="border-cyan-400/20"
+                      players={[...leaderboardStats]
+                        .sort(compareBestBlocker)
+                        .slice(0, 10)}
+                      statKey="blocks"
+                      statLabel="Blocks"
                       teams={approvedTeams}
                     />
                   </div>
@@ -5078,6 +5193,7 @@ export default function SAVLSitePage() {
                       { key: "best_server", label: "Best Server" },
                       { key: "best_setter", label: "Best Setter" },
                       { key: "best_aper", label: "Best Aper" },
+                      { key: "best_blocker", label: "Best Blocker" },
                       { key: "season_mvp", label: "Season MVP" },
                       { key: "most_improved", label: "Most Improved Player" },
                       { key: "team_of_season", label: "Team of the Season" },
@@ -5137,20 +5253,30 @@ export default function SAVLSitePage() {
                     {awardsTab === "best_setter" ? (
                       <AwardsPodium
                         title="Best Setter"
-                        subtitle="Top 3 players by average ape kills, then receives, then assists"
+                        subtitle="Top 3 by Recs first, then Assists, then Ape Kills"
                         players={awardsData.bestSetter}
-                        mainStat="ape_kills"
-                        mainStatLabel="Ape Kills"
+                        mainStat="receives"
+                        mainStatLabel="Recs"
                         teams={approvedTeams}
                       />
                     ) : null}
                     {awardsTab === "best_aper" ? (
                       <AwardsPodium
                         title="Best Aper"
-                        subtitle="Top 3 players by average ape kills per match"
+                        subtitle="Top 3 by weighted ape-kill average, rewarding players with more matches"
                         players={awardsData.bestAper}
                         mainStat="ape_kills"
                         mainStatLabel="Ape Kills"
+                        teams={approvedTeams}
+                      />
+                    ) : null}
+                    {awardsTab === "best_blocker" ? (
+                      <AwardsPodium
+                        title="Best Blocker"
+                        subtitle="Top 3 by total blocks, with kill blocks used ahead of one-touch blocks"
+                        players={awardsData.bestBlocker}
+                        mainStat="blocks"
+                        mainStatLabel="Blocks"
                         teams={approvedTeams}
                       />
                     ) : null}
@@ -5165,7 +5291,7 @@ export default function SAVLSitePage() {
                     {awardsTab === "most_improved" ? (
                       <AwardsPodium
                         title="Most Improved Player"
-                        subtitle="Chosen top 3: CLypX_9, ykGznn, SOBRINHODOSILVA"
+                        subtitle="Chosen by staff team: #1 CLypX_9, #2 ykGznn, #3 Seitm1"
                         players={awardsData.mostImproved}
                         mainStat="kills"
                         mainStatLabel="Kills"
