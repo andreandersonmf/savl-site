@@ -1491,19 +1491,36 @@ function bestAperScore(player: LeaderboardPlayer) {
   return statAverage(player, "ape_kills") * matchReliability(player);
 }
 
-function compareBestSetter(a: LeaderboardPlayer, b: LeaderboardPlayer) {
-  const assistAvgDiff = statAverage(b, "assists") - statAverage(a, "assists");
-  if (assistAvgDiff !== 0) return assistAvgDiff;
+const BEST_SETTER_MIN_ASSISTS = 30;
 
-  const receiveAvgDiff = statAverage(b, "receives") - statAverage(a, "receives");
-  if (receiveAvgDiff !== 0) return receiveAvgDiff;
+function bestSetterScore(player: LeaderboardPlayer) {
+  const apeKillAverage = statAverage(player, "ape_kills");
+  const receiveAverage = statAverage(player, "receives");
+  const assistAverage = statAverage(player, "assists");
+
+  return apeKillAverage * 0.4 + receiveAverage * 0.3 + assistAverage * 0.3;
+}
+
+function isEligibleBestSetter(player: LeaderboardPlayer) {
+  return player.assists >= BEST_SETTER_MIN_ASSISTS;
+}
+
+function compareBestSetter(a: LeaderboardPlayer, b: LeaderboardPlayer) {
+  const scoreDiff = bestSetterScore(b) - bestSetterScore(a);
+  if (scoreDiff !== 0) return scoreDiff;
 
   const apeAvgDiff = statAverage(b, "ape_kills") - statAverage(a, "ape_kills");
   if (apeAvgDiff !== 0) return apeAvgDiff;
 
-  if (b.assists !== a.assists) return b.assists - a.assists;
-  if (b.receives !== a.receives) return b.receives - a.receives;
+  const receiveAvgDiff = statAverage(b, "receives") - statAverage(a, "receives");
+  if (receiveAvgDiff !== 0) return receiveAvgDiff;
+
+  const assistAvgDiff = statAverage(b, "assists") - statAverage(a, "assists");
+  if (assistAvgDiff !== 0) return assistAvgDiff;
+
   if (b.ape_kills !== a.ape_kills) return b.ape_kills - a.ape_kills;
+  if (b.receives !== a.receives) return b.receives - a.receives;
+  if (b.assists !== a.assists) return b.assists - a.assists;
   if (b.matches_played !== a.matches_played) return b.matches_played - a.matches_played;
 
   return a.player_username.localeCompare(b.player_username);
@@ -1557,6 +1574,7 @@ function LeaderboardTable({
   statKey,
   statLabel,
   teams,
+  description = "Ranked by average per match",
 }: {
   title: string;
   accentClass: string;
@@ -1565,6 +1583,7 @@ function LeaderboardTable({
   statKey: LeaderboardStatKey;
   statLabel: string;
   teams: Team[];
+  description?: string;
 }) {
   if (players.length === 0) return null;
 
@@ -1574,7 +1593,7 @@ function LeaderboardTable({
         <p className={`text-sm font-bold uppercase tracking-[0.2em] ${accentClass}`}>
           {title}
         </p>
-        <p className="mt-1 text-xs text-white/45">Ranked by average per match</p>
+        <p className="mt-1 text-xs text-white/45">{description}</p>
       </div>
       <div className="divide-y divide-white/5">
         {players.map((player, index) => {
@@ -2628,7 +2647,10 @@ export default function SAVLSitePage() {
 
     const bestServer = [...all].sort(sortByAverage("aces")).slice(0, 3);
 
-    const bestSetter = [...all].sort(compareBestSetter).slice(0, 3);
+    const bestSetter = [...all]
+      .filter(isEligibleBestSetter)
+      .sort(compareBestSetter)
+      .slice(0, 3);
 
     const bestAper = [...all].sort(compareBestAper).slice(0, 3);
 
@@ -5077,17 +5099,18 @@ export default function SAVLSitePage() {
                       statLabel="Aces"
                       teams={approvedTeams}
                     />
-                    {/* Setter Leaderboard */}
+                    {/* Assists Leaderboard */}
                     <LeaderboardTable
-                      title="Top Setters (Assists Priority)"
+                      title="Top Assists"
                       accentClass="text-emerald-300"
                       borderClass="border-emerald-400/20"
                       players={[...leaderboardStats]
-                        .sort(compareBestSetter)
+                        .sort(sortByAverage("assists"))
                         .slice(0, 10)}
                       statKey="assists"
                       statLabel="Assists"
                       teams={approvedTeams}
+                      description="Ranked by average assists per match. All players are eligible."
                     />
                     {/* Ape Kills Leaderboard */}
                     <LeaderboardTable
@@ -5231,10 +5254,10 @@ export default function SAVLSitePage() {
                     {awardsTab === "best_setter" ? (
                       <AwardsPodium
                         title="Best Setter"
-                        subtitle="Top 3 by Assists first, then Recs, then Ape Kills"
+                        subtitle="Top 3 by weighted score: 40% Ape Kills, 30% Recs, 30% Assists. Minimum 30 assists required."
                         players={awardsData.bestSetter}
-                        mainStat="assists"
-                        mainStatLabel="Assists"
+                        mainStat="ape_kills"
+                        mainStatLabel="Ape Kills"
                         teams={approvedTeams}
                       />
                     ) : null}
