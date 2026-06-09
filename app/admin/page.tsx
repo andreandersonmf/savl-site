@@ -3933,7 +3933,7 @@ export default function SAVLSitePage() {
     await reloadMatches();
     await reloadStaffApplications();
 
-    setTimeout(() => scrollToSection("stat-track"), 100);
+    setTimeout(() => scrollToSection("admin"), 100);
     showNotice("Stat Tracker unlocked.", true);
   }
 
@@ -4345,1599 +4345,2139 @@ export default function SAVLSitePage() {
           </div>
 
           <nav className="hidden items-center gap-2 md:flex">
-            <AnimatedNavButton label="Home" targetId="home" />
-            <AnimatedNavButton label="Teams" targetId="teams" />
-            <AnimatedNavButton label="Schedule" targetId="schedule" />
-            <AnimatedNavButton label="Groups" targetId="groups" />
-            <AnimatedNavButton label="Standings" targetId="standings" />
-
-            <AnimatedNavButton label="Stat Track" targetId="stat-track" />
+            <Link
+              href="/"
+              className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
+            >
+              Public Site
+            </Link>
+            <Link
+              href="/stats"
+              className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
+            >
+              Stats
+            </Link>
             <Link
               href="/archives"
               className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
             >
               Archives
             </Link>
-
-            <AnimatedNavButton label="Register" targetId="register" />
-            <Link
-              href="/admin"
-              className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
-            >
-              Admin
-            </Link>
           </nav>
         </div>
       </header>
 
       <main>
-        <section
-          id="home"
-          className="relative isolate overflow-hidden scroll-mt-28 bg-[#03110D]"
-        >
-          <Image
-            src="/savl-gfx.png"
-            alt=""
-            fill
-            priority
-            sizes="100vw"
-            aria-hidden="true"
-            className="pointer-events-none z-0 select-none object-cover object-center opacity-30 blur-[1px] scale-105 md:opacity-40"
-          />
-
-          <div className="pointer-events-none absolute inset-0 z-[1] bg-[linear-gradient(90deg,rgba(3,17,13,0.94)_0%,rgba(3,17,13,0.72)_45%,rgba(3,17,13,0.84)_100%)]" />
-
-          <div className="pointer-events-none absolute inset-0 z-[2] bg-[radial-gradient(circle_at_top,rgba(16,185,129,0.20),transparent_42%)]" />
-
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 z-[3] h-36 bg-gradient-to-b from-transparent to-[#03110D]" />
-
-          <div className="relative z-10 mx-auto grid max-w-7xl gap-10 px-6 py-20 md:grid-cols-2 md:items-center md:py-28">
-            <div>
-              <span className="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-300">
-                Roblox Volleyball 4.2 League • {activeSeason?.name ?? CURRENT_SEASON_LABEL} • {activeSeason?.theme_name ?? CURRENT_SEASON_THEME}
-              </span>
-
-              <h1 className="mt-6 text-5xl font-black leading-none tracking-tight md:text-7xl">
-                South America
-                <span className="block text-emerald-300">
-                  Volleyball League
-                </span>
-              </h1>
-
-              <p className="mt-5 max-w-xl text-base leading-7 text-white/70 md:text-lg">
-                SAVL is a Volleyball 4.2 league created by xImTutu, focused on
-                organized fixtures and a clean competitive experience for
-                players, captains, and staff.
-              </p>
-
-              <div className="mt-8 flex flex-wrap gap-4">
-                <NavScrollLink
-                  label="Register Team"
-                  targetId="register"
-                  className="rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.02] active:translate-y-0.5"
-                />
-
-                <NavScrollLink
-                  label="View Matches"
-                  targetId="schedule"
-                  className="rounded-2xl border border-white/15 bg-white/5 px-6 py-3 font-semibold transition duration-200 hover:-translate-y-1 hover:bg-white/10 active:translate-y-0.5"
-                />
-              </div>
-
-              <div className="mt-10 grid max-w-lg grid-cols-2 gap-4 md:grid-cols-3">
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-2xl font-black">6v6</p>
-                  <p className="text-sm text-white/60">Format</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-2xl font-black">BRT</p>
-                  <p className="text-sm text-white/60">Timezone</p>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-2xl font-black">{approvedTeams.length}</p>
-                  <p className="text-sm text-white/60">Registered</p>
-                </div>
-              </div>
-
-              {notice ? (
-                <p className="mt-5 text-sm text-emerald-300">{notice}</p>
-              ) : null}
-            </div>
-
-            <div className="flex justify-center md:justify-end">
-              <div className="w-full max-w-xl rounded-[2rem] border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-8 shadow-2xl shadow-black/30 backdrop-blur-sm">
-                <div className="rounded-[1.5rem] border border-emerald-400/15 bg-[#062019]/90 p-8 text-center">
-                  <div className="relative mx-auto h-40 w-40 overflow-hidden rounded-[2rem] border border-white/10 bg-[#03110D]">
-                    <Image
-                      src="/savl-logo.png"
-                      alt="SAVL logo"
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-
-                  <p className="mt-6 text-sm uppercase tracking-[0.35em] text-emerald-300">
-                    Official League Hub
-                  </p>
-
-                  <p className="mt-3 text-white/65">
-                    Built for registrations, standings, schedule viewing, and
-                    admin control in one clean page.
-                  </p>
-
-                  <div className="relative z-20 mt-6 flex items-center justify-center gap-5 sm:gap-6">
-                    <a
-                      href="https://discord.gg/uvVkWBq74Q"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group flex flex-col items-center gap-2"
-                    >
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-[#5865F2]/10 text-[#5865F2] transition duration-200 group-hover:-translate-y-1 group-hover:bg-[#5865F2] group-hover:text-white">
-                        <img
-                          src="/discord.png"
-                          alt="Discord"
-                          className="h-6 w-6 object-contain"
-                        />
-                      </div>
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 group-hover:text-[#5865F2]">
-                        Discord
-                      </span>
-                    </a>
-
-                    <a
-                      href="https://www.youtube.com/channel/UCfaCI_phe5ug5_sWA9Ozavw"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group flex flex-col items-center gap-2"
-                    >
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-[#FF0000]/10 text-[#FF0000] transition duration-200 group-hover:-translate-y-1 group-hover:bg-[#FF0000] group-hover:text-white">
-                        <img
-                          src="/youtube.png"
-                          alt="YouTube"
-                          className="h-6 w-6 object-contain"
-                        />
-                      </div>
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 group-hover:text-[#FF0000]">
-                        YouTube
-                      </span>
-                    </a>
-
-                    <a
-                      href="https://challonge.com/pt_BR/communities/savl"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="group flex flex-col items-center gap-2"
-                    >
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-[#FF7A1A]/10 text-[#FF7A1A] transition duration-200 group-hover:-translate-y-1 group-hover:bg-[#FF7A1A] group-hover:text-white">
-                        <img
-                          src="/challonge.png"
-                          alt="Challonge"
-                          className="h-8 w-8 scale-[1.25] object-contain"
-                        />
-                      </div>
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 group-hover:text-[#FF7A1A]">
-                        Challonge
-                      </span>
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section
-          id="teams"
-          className="mx-auto max-w-7xl scroll-mt-28 px-6 py-16"
-        >
-          <div className="mb-8 flex items-end justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
-                League Teams
-              </p>
-              <h2 className="mt-2 text-3xl font-black md:text-4xl">
-                Registered Teams
-              </h2>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => scrollToSection("register")}
-              className="text-sm font-medium text-white/70 transition duration-200 hover:-translate-y-0.5 hover:text-white active:translate-y-0.5"
-            >
-              Add your team
-            </button>
-          </div>
-
-          {loading ? (
-            <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.03] p-10 text-center text-white/60">
-              Loading teams...
-            </div>
-          ) : approvedTeams.length === 0 ? (
-            <div className="rounded-[1.75rem] border border-dashed border-white/15 bg-white/[0.03] p-10 text-center">
-              <p className="text-lg font-semibold text-white">
-                No teams registered yet
-              </p>
-              <p className="mt-2 text-white/60">
-                Once captains submit their teams and an admin approves them,
-                they will appear here with flags and avatars.
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {approvedTeams.map((team) => (
-                <TeamCard
-                  key={team.id}
-                  team={team}
-                  players={getPlayersByTeam(team.id)}
-                  expanded={expandedTeamId === team.id}
-                  onToggle={() =>
-                    setExpandedTeamId((prev) =>
-                      prev === team.id ? null : team.id,
-                    )
-                  }
-                />
-              ))}
-            </div>
-          )}
-        </section>
-
-        <section id="schedule" className="scroll-mt-28 bg-white/[0.03] py-16">
+        <section id="admin" className="scroll-mt-28 bg-[#03110D] py-12 md:py-16">
           <div className="mx-auto max-w-7xl px-6">
-            <div className="mb-8 space-y-6">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
-                  Fixtures
-                </p>
-                <h2 className="mt-2 text-3xl font-black md:text-4xl">
-                  Upcoming Matches
-                </h2>
-              </div>
-
-              <div>
-                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                  Filter by stage
-                </p>
+            <div className="mb-8 overflow-hidden rounded-[2rem] border border-white/10 bg-[radial-gradient(circle_at_top_left,rgba(16,185,129,0.18),transparent_36%),#071A13] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.25)] md:p-8">
+              <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
+                    Admin Dashboard
+                  </p>
+                  <h1 className="mt-2 text-4xl font-black md:text-5xl">
+                    League Control Center
+                  </h1>
+                  <p className="mt-3 max-w-3xl text-white/65">
+                    A dedicated page for registrations, public visibility, teams, staff, rosters, matches, and stats review.
+                  </p>
+                </div>
 
                 <div className="flex flex-wrap gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setFilterStage("All")}
-                    className={`inline-flex min-h-[52px] items-center justify-center whitespace-nowrap rounded-2xl border px-5 py-3 text-sm font-semibold transition duration-200 ${
-                      filterStage === "All"
-                        ? "border-emerald-400/35 bg-[#062019] text-emerald-300 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.18),0_0_18px_rgba(16,185,129,0.08)]"
-                        : "border-white/10 bg-white/5 text-white/80 hover:-translate-y-0.5 hover:border-emerald-400/20 hover:bg-white/10 hover:text-white"
-                    }`}
+                  <Link
+                    href="/"
+                    className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-white/10 active:translate-y-0.5"
                   >
-                    All
-                  </button>
-
-                  {availableStages.map((stage) => (
-                    <button
-                      key={stage}
-                      type="button"
-                      onClick={() => setFilterStage(stage)}
-                      className={`inline-flex min-h-[52px] items-center justify-center whitespace-nowrap rounded-2xl border px-5 py-3 text-sm font-semibold transition duration-200 ${
-                        filterStage === stage
-                          ? "border-emerald-400/35 bg-[#062019] text-emerald-300 shadow-[inset_0_0_0_1px_rgba(16,185,129,0.18),0_0_18px_rgba(16,185,129,0.08)]"
-                          : "border-white/10 bg-white/5 text-white/80 hover:-translate-y-0.5 hover:border-emerald-400/20 hover:bg-white/10 hover:text-white"
-                      }`}
-                    >
-                      {stage}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="mb-8 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-              <div className="grid gap-4 md:grid-cols-2 xl:flex xl:flex-1 xl:flex-wrap xl:items-end">
-                <div className="min-w-[220px] xl:flex-1">
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                    Filter by team
-                  </label>
-                  <SelectPicker
-                    value={filterTeam}
-                    onChange={setFilterTeam}
-                    options={[
-                      { label: "All teams", value: "All" },
-                      ...teamFilterOptions,
-                    ]}
-                    placeholder="Select team"
-                  />
-                </div>
-
-                <div className="min-w-[220px] xl:flex-1">
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                    Filter by group
-                  </label>
-                  <SelectPicker
-                    value={filterGroup}
-                    onChange={setFilterGroup}
-                    options={[
-                      { label: "All groups", value: "All" },
-                      ...groupOptions,
-                    ]}
-                    placeholder="Select group"
-                  />
-                </div>
-
-                <div className="min-w-[220px] xl:flex-1">
-                  <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                    Filter by status
-                  </label>
-                  <SelectPicker
-                    value={filterStatus}
-                    onChange={(value) =>
-                      setFilterStatus(value as "All" | MatchStatus)
-                    }
-                    options={[
-                      { label: "All statuses", value: "All" },
-                      ...statusOptions,
-                    ]}
-                    placeholder="Select status"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setFilterStatus("All");
-                  setFilterStage("All");
-                  setFilterTeam("All");
-                  setFilterGroup("All");
-                }}
-                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white/80 transition duration-200 hover:-translate-y-0.5 hover:border-emerald-400/20 hover:bg-white/10 hover:text-white"
-              >
-                Clear Filters
-              </button>
-            </div>
-
-            <div className="space-y-4 md:hidden">
-              {filteredMatches.length === 0 ? (
-                <div className="rounded-[1.5rem] border border-white/10 bg-[#0B1712] px-6 py-8 text-white/60">
-                  No matches added yet. Use the admin panel to create them.
-                </div>
-              ) : (
-                filteredMatches.map((match) => (
-                  <ScheduleCard
-                    key={match.id}
-                    match={match}
-                    getStaffById={getStaffById}
-                  />
-                ))
-              )}
-            </div>
-
-            <div className="hidden overflow-hidden rounded-[2rem] border border-white/10 bg-[#0B1712] md:block">
-              <div className="grid grid-cols-[2.2fr_1fr_1fr_1fr] border-b border-white/10 px-6 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/50">
-                <span>Match</span>
-                <span>Date</span>
-                <span>Time</span>
-                <span>Status</span>
-              </div>
-
-              {filteredMatches.length === 0 ? (
-                <div className="px-6 py-8 text-white/60">
-                  No matches added yet. Use the admin panel to create them.
-                </div>
-              ) : (
-                filteredMatches.map((match) => {
-                  const homeCountry = getCountryByName(match.home_country);
-                  const awayCountry = getCountryByName(match.away_country);
-                  const resultStyles = getMatchResultStyles(match);
-                  const referee = getStaffById(match.referee_id);
-                  const media = getStaffById(match.media_id);
-
-                  return (
-                    <div
-                      key={match.id}
-                      className={`relative grid grid-cols-[2.2fr_1fr_1fr_1fr] items-center border-b px-6 py-5 text-sm last:border-none ${
-                        match.is_star_match
-                          ? "border-yellow-400/20 bg-yellow-400/[0.07]"
-                          : "border-white/5"
-                      }`}
-                    >
-                      <div>
-                        {match.is_star_match ? (
-                          <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-yellow-400/30 bg-yellow-400/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.22em] text-yellow-300">
-                            <Star className="h-3.5 w-3.5 fill-yellow-300" />
-                            Star Match
-                          </div>
-                        ) : null}
-                        {match.stage ? (
-                          <p className="mb-1 text-xs uppercase tracking-[0.18em] text-emerald-300">
-                            {match.stage}
-                          </p>
-                        ) : null}
-
-                        <p className="mt-1 flex items-center gap-3 font-semibold text-white">
-                          <span
-                            className={`inline-flex items-center gap-2 ${match.status === "Finished" ? resultStyles.homeClass : "text-white"}`}
-                          >
-                            {homeCountry ? (
-                              <img
-                                src={getFlagUrl(homeCountry.code)}
-                                alt={`${match.home_country} flag`}
-                                className="h-5 w-7 rounded-sm object-cover"
-                              />
-                            ) : null}
-                            {match.home_country}
-                          </span>
-
-                          <span className="rounded-full border border-white/10 px-3 py-1 text-xs text-white/50">
-                            VS
-                          </span>
-
-                          <span
-                            className={`inline-flex items-center gap-2 ${match.status === "Finished" ? resultStyles.awayClass : "text-white"}`}
-                          >
-                            {awayCountry ? (
-                              <img
-                                src={getFlagUrl(awayCountry.code)}
-                                alt={`${match.away_country} flag`}
-                                className="h-5 w-7 rounded-sm object-cover"
-                              />
-                            ) : null}
-                            {match.away_country}
-                          </span>
-                        </p>
-
-                        {match.status === "Finished" ? (
-                          <div className="mt-1 space-y-1 text-xs text-white/55">
-                            <p>
-                              Final score: {match.home_score} -{" "}
-                              {match.away_score}
-                            </p>
-                            {formatSetScores(match) ? (
-                              <p>Set scores: {formatSetScores(match)}</p>
-                            ) : null}
-                            {match.stats_finalized ? (
-                              <Link
-                                href={`/stats?match=${match.id}`}
-                                className="mt-1 inline-flex items-center gap-1 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-300 transition hover:bg-emerald-400/15"
-                              >
-                                View Match Stats
-                              </Link>
-                            ) : null}
-                          </div>
-                        ) : null}
-
-                        {referee || media ? (
-                          <div className="mt-3 space-y-2">
-                            {referee ? (
-                              <div className="flex items-center gap-2 text-xs text-white/70">
-                                <Avatar
-                                  robloxUserId={referee.roblox_user_id}
-                                  name={referee.roblox_username}
-                                />
-                                <span>
-                                  <span className="font-semibold text-white">
-                                    Referee:
-                                  </span>{" "}
-                                  {referee.roblox_username} • @
-                                  {referee.discord_username}
-                                </span>
-                              </div>
-                            ) : null}
-
-                            {media ? (
-                              <div className="flex items-center gap-2 text-xs text-white/70">
-                                <Avatar
-                                  robloxUserId={media.roblox_user_id}
-                                  name={media.roblox_username}
-                                />
-                                <span>
-                                  <span className="font-semibold text-white">
-                                    Media:
-                                  </span>{" "}
-                                  {media.roblox_username} • @
-                                  {media.discord_username}
-                                </span>
-                              </div>
-                            ) : null}
-                          </div>
-                        ) : null}
-                      </div>
-
-                      <div className="text-white/75">
-                        {formatDate(match.match_date)}
-                      </div>
-                      <div className="text-white/75">
-                        {match.match_time} BRT
-                      </div>
-                      <div>
-                        <span
-                          className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${getStatusBadgeClass(match.status)}`}
-                        >
-                          {match.status}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        </section>
-
-        <section
-          id="groups"
-          className="mx-auto max-w-7xl scroll-mt-28 px-6 py-16"
-        >
-          <div className="mb-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
-              Group Stage
-            </p>
-            <h2 className="mt-2 text-3xl font-black md:text-4xl">Groups</h2>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-            {(["A", "B", "C", "D"] as GroupLetter[]).map((group) => {
-              const teamsInGroup = groupedTeams[group];
-
-              return (
-                <div
-                  key={group}
-                  className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6"
-                >
-                  <div className="mb-5 flex items-center justify-between">
-                    <h3 className="text-xl font-black text-white">
-                      Group {group}
-                    </h3>
-                    <span
-                      className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${getGroupBadgeClass(group)}`}
-                    >
-                      {teamsInGroup.length} team
-                      {teamsInGroup.length === 1 ? "" : "s"}
-                    </span>
-                  </div>
-
-                  {teamsInGroup.length === 0 ? (
-                    <p className="text-sm text-white/55">
-                      No teams assigned yet.
-                    </p>
-                  ) : (
-                    <div className="space-y-3">
-                      {teamsInGroup.map((team) => (
-                        <div
-                          key={team.id}
-                          className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-3"
-                        >
-                          <img
-                            src={getFlagUrl(team.code)}
-                            alt={`${team.country} flag`}
-                            className="h-8 w-11 rounded-md object-cover"
-                          />
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold text-white">
-                              {team.country}
-                            </p>
-                            <p className="text-xs text-white/55">
-                              Captain: {team.captain_name || "Not set"}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <section
-          id="standings"
-          className="mx-auto max-w-7xl scroll-mt-28 px-6 py-16"
-        >
-          <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
-                League Table
-              </p>
-              <h2 className="mt-2 text-3xl font-black md:text-4xl">
-                Standings
-              </h2>
-            </div>
-
-            <div className="min-w-[220px]">
-              <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                Ranking view
-              </label>
-              <SelectPicker
-                value={standingsView}
-                onChange={(value) => setStandingsView(value as StandingsView)}
-                options={[
-                  { label: "Qualifiers", value: "Qualifiers" },
-                  { label: "Playoffs", value: "Playoffs" },
-                  { label: "Group A", value: "A" },
-                  { label: "Group B", value: "B" },
-                  { label: "Group C", value: "C" },
-                  { label: "Group D", value: "D" },
-                ]}
-                placeholder="Select ranking"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-4 md:hidden">
-            {standingsFiltered.length === 0 ? (
-              <div className="rounded-[1.5rem] border border-white/10 bg-[#0B1712] px-6 py-8 text-white/60">
-                Standings will appear after teams register and matches are
-                finished.
-              </div>
-            ) : (
-              standingsFiltered.map((team) => (
-                <StandingsCard key={team.country} team={team} />
-              ))
-            )}
-          </div>
-
-          <div className="hidden overflow-hidden rounded-[2rem] border border-white/10 bg-[#0B1712] md:block">
-            <div className="grid grid-cols-[0.5fr_2fr_0.8fr_0.8fr_0.8fr_0.9fr_0.9fr_0.9fr_0.9fr_0.9fr] border-b border-white/10 px-6 py-4 text-sm font-semibold uppercase tracking-[0.2em] text-white/50">
-              <span>#</span>
-              <span>Team</span>
-              <span>P</span>
-              <span>W</span>
-              <span>L</span>
-              <span>SW</span>
-              <span>SL</span>
-              <span>SD</span>
-              <span>PD</span>
-              <span>PTS</span>
-            </div>
-
-            {standingsFiltered.length === 0 ? (
-              <div className="px-6 py-8 text-white/60">
-                Standings will appear after teams register and matches are
-                finished.
-              </div>
-            ) : (
-              standingsFiltered.map((team) => (
-                <div
-                  key={team.country}
-                  className="grid grid-cols-[0.5fr_2fr_0.8fr_0.8fr_0.8fr_0.9fr_0.9fr_0.9fr_0.9fr_0.9fr] items-center border-b border-white/5 px-6 py-5 text-sm last:border-none"
-                >
-                  <span className="font-semibold text-white">
-                    {team.position}
-                  </span>
-                  <span className="flex items-center gap-3 font-semibold text-white">
-                    <img
-                      src={getFlagUrl(team.code)}
-                      alt={`${team.country} flag`}
-                      className="h-5 w-7 rounded-sm object-cover"
-                    />
-                    {team.country}
-                  </span>
-                  <span className="text-white/75">{team.played}</span>
-                  <span className="text-white/75">{team.wins}</span>
-                  <span className="text-white/75">{team.losses}</span>
-                  <span className="text-white/75">{team.setsWon}</span>
-                  <span className="text-white/75">{team.setsLost}</span>
-                  <span className="text-white/75">
-                    {team.setDiff > 0 ? `+${team.setDiff}` : team.setDiff}
-                  </span>
-                  <span className="text-white/75">
-                    {team.ptsDiff > 0 ? `+${team.ptsDiff}` : team.ptsDiff}
-                  </span>
-                  <span className="font-semibold text-emerald-300">
-                    {team.points}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className="mt-4 hidden rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-xs leading-6 text-white/60 md:block">
-            <p>
-              <strong>P</strong>: Played • <strong>W</strong>: Wins •{" "}
-              <strong>L</strong>: Losses • <strong>SW</strong>: Sets Won •{" "}
-              <strong>SL</strong>: Sets Lost • <strong>SD</strong>: Set
-              Difference • <strong>PD</strong>: Point Difference •{" "}
-              <strong>PTS</strong>: League Points
-            </p>
-            <p className="mt-2">
-              <strong>Tiebreaker order:</strong> League Points, Wins, Set
-              Difference, Point Difference, Sets Won.
-            </p>
-            <p className="mt-2">
-              <strong>Points system:</strong> 3 points for a 3-0 or 3-1 win, 2
-              points for a 3-2 win, 1 point for a 2-3 loss.
-            </p>
-          </div>
-        </section>
-
-        <section id="stat-track" className="mx-auto max-w-7xl px-6 py-16">
-          <div className="rounded-[2rem] border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-8">
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
-              Stat Track
-            </p>
-            <h2 className="mt-2 text-3xl font-black md:text-4xl">
-              Player & Team Statistics
-            </h2>
-            <p className="mt-4 max-w-2xl text-white/65">
-              View set-by-set player stats, team totals, percentages, and
-              leaderboards. Use the Leaderboard for season-wide stats and
-              filters, or click &quot;View Match Stats&quot; on any finished match for
-              match-specific Top Players.
-            </p>
-
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link
-                href="/stats"
-                className="inline-flex rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.02] active:translate-y-0.5"
-              >
-                Open Stat Track
-              </Link>
-
-              {(adminLogged || leaderboardPublic) ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowLeaderboard((prev) => !prev);
-                    if (!showLeaderboard) {
-                      reloadPlayerStats();
-                      setTimeout(() => scrollToSection("leaderboard-section"), 50);
-                    }
-                  }}
-                  className="inline-flex rounded-2xl border border-sky-400/20 bg-sky-400/10 px-6 py-3 font-semibold text-sky-300 transition duration-200 hover:-translate-y-1 hover:bg-sky-400/15 active:translate-y-0.5"
-                >
-                  Leaderboard
-                </button>
-              ) : null}
-
-              {(adminLogged || awardsPublic) ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAwards((prev) => !prev);
-                    if (!showAwards) {
-                      reloadPlayerStats();
-                      setTimeout(() => scrollToSection("awards-section"), 50);
-                    }
-                  }}
-                  className="inline-flex items-center gap-2 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-6 py-3 font-semibold text-yellow-300 transition duration-200 hover:-translate-y-1 hover:bg-yellow-400/15 active:translate-y-0.5"
-                >
-                  <Trophy className="h-4 w-4" />
-                  Awards
-                </button>
-              ) : null}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setShowStatTrackAccess(true);
-                  setTimeout(() => scrollToSection("stat-track-access"), 50);
-                }}
-                className="inline-flex rounded-2xl border border-white/10 bg-white/5 px-6 py-3 font-semibold text-white transition duration-200 hover:-translate-y-1 hover:bg-white/10 active:translate-y-0.5"
-              >
-                Stat Track Access
-              </button>
-            </div>
-
-            {/* Leaderboard Section */}
-            {showLeaderboard && (adminLogged || leaderboardPublic) ? (
-              <div
-                id="leaderboard-section"
-                className="mt-8 rounded-[2rem] border border-sky-400/15 bg-[#080F1A] p-6"
-              >
-                <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.3em] text-sky-300">
-                      Season Leaderboard
-                    </p>
-                    <p className="mt-1 text-sm text-white/60">
-                      Aggregate stats across all matches. Filter by team or round.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {adminLogged ? (
-                      <button
-                        type="button"
-                        disabled={leaderboardPublicLoading}
-                        onClick={handleToggleLeaderboardPublic}
-                        className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 ${
-                          leaderboardPublic
-                            ? "border-sky-400/30 bg-sky-400/15 text-sky-300 hover:bg-sky-400/20"
-                            : "border-white/10 bg-white/5 text-white/80 hover:bg-white/10"
-                        }`}
-                      >
-                        {leaderboardPublicLoading
-                          ? "Saving…"
-                          : leaderboardPublic
-                            ? "Leaderboard: Public ✓"
-                            : "Open Leaderboard"}
-                      </button>
-                    ) : null}
+                    Back to site
+                  </Link>
+                  {adminLogged ? (
                     <button
                       type="button"
-                      onClick={() => setShowLeaderboard(false)}
-                      className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:bg-white/10"
+                      onClick={handleAdminLogout}
+                      className="rounded-2xl border border-red-400/20 bg-red-400/10 px-5 py-3 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
                     >
-                      Close
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mb-5 flex flex-wrap gap-3">
-                  <div className="min-w-[200px]">
-                    <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                      Filter by team
-                    </label>
-                    <SelectPicker
-                      value={leaderboardFilterTeam}
-                      onChange={setLeaderboardFilterTeam}
-                      options={[
-                        { label: "All teams", value: "All" },
-                        ...approvedTeams.map((team) => ({
-                          label: team.country,
-                          value: team.country,
-                          imageUrl: getFlagUrl(team.code),
-                        })),
-                      ]}
-                      placeholder="Select team"
-                    />
-                  </div>
-
-                  <div className="min-w-[220px]">
-                    <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                      Filter by round
-                    </label>
-                    <SelectPicker
-                      value={leaderboardFilterStage}
-                      onChange={setLeaderboardFilterStage}
-                      options={[
-                        { label: "All rounds", value: "All" },
-                        ...availableStages.map((stage) => ({
-                          label: stage,
-                          value: stage,
-                        })),
-                      ]}
-                      placeholder="Select round"
-                    />
-                  </div>
-
-                  <div className="flex items-end">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setLeaderboardFilterTeam("All");
-                        setLeaderboardFilterStage("All");
-                      }}
-                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white/80 transition hover:bg-white/10"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                </div>
-
-                {playerStatsLoading ? (
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-white/60">
-                    Loading leaderboard…
-                  </div>
-                ) : leaderboardStats.length === 0 ? (
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-white/50">
-                    No stats recorded yet for the selected filters.
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {/* Kills Leaderboard */}
-                    <LeaderboardTable
-                      title="Top Killers"
-                      accentClass="text-red-300"
-                      borderClass="border-red-400/20"
-                      players={[...leaderboardStats]
-                        .sort(sortByAverage("kills"))
-                        .slice(0, 10)}
-                      statKey="kills"
-                      statLabel="Kills"
-                      teams={approvedTeams}
-                    />
-                    {/* Receives Leaderboard */}
-                    <LeaderboardTable
-                      title="Top Receivers"
-                      accentClass="text-blue-300"
-                      borderClass="border-blue-400/20"
-                      players={[...leaderboardStats]
-                        .sort(sortByAverage("receives"))
-                        .slice(0, 10)}
-                      statKey="receives"
-                      statLabel="Receives"
-                      teams={approvedTeams}
-                    />
-                    {/* Aces Leaderboard */}
-                    <LeaderboardTable
-                      title="Top Servers (Aces)"
-                      accentClass="text-purple-300"
-                      borderClass="border-purple-400/20"
-                      players={[...leaderboardStats]
-                        .sort(sortByAverage("aces"))
-                        .slice(0, 10)}
-                      statKey="aces"
-                      statLabel="Aces"
-                      teams={approvedTeams}
-                    />
-                    {/* Assists Leaderboard */}
-                    <LeaderboardTable
-                      title="Top Assists"
-                      accentClass="text-emerald-300"
-                      borderClass="border-emerald-400/20"
-                      players={[...leaderboardStats]
-                        .sort(sortByAverage("assists"))
-                        .slice(0, 10)}
-                      statKey="assists"
-                      statLabel="Assists"
-                      teams={approvedTeams}
-                      description="Ranked by average assists per match. All players are eligible."
-                    />
-                    {/* Ape Kills Leaderboard */}
-                    <LeaderboardTable
-                      title="Top Apers (Weighted)"
-                      accentClass="text-amber-300"
-                      borderClass="border-amber-400/20"
-                      players={[...leaderboardStats]
-                        .sort(compareBestAper)
-                        .slice(0, 10)}
-                      statKey="ape_kills"
-                      statLabel="Ape Kills"
-                      teams={approvedTeams}
-                    />
-                    {/* Blocks Leaderboard */}
-                    <LeaderboardTable
-                      title="Top Blockers"
-                      accentClass="text-cyan-300"
-                      borderClass="border-cyan-400/20"
-                      players={[...leaderboardStats]
-                        .sort(compareBestBlocker)
-                        .slice(0, 10)}
-                      statKey="blocks"
-                      statLabel="Blocks"
-                      teams={approvedTeams}
-                    />
-                  </div>
-                )}
-              </div>
-            ) : null}
-
-            {/* Awards Section */}
-            {showAwards && (adminLogged || awardsPublic) ? (
-              <div
-                id="awards-section"
-                className="mt-8 rounded-[2rem] border border-yellow-400/15 bg-[#120E00] p-6"
-              >
-                <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.3em] text-yellow-300">
-                      Season Awards
-                    </p>
-                    <p className="mt-1 text-sm text-white/60">
-                      Season highlights and best performers.
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {adminLogged ? (
-                      <button
-                        type="button"
-                        disabled={awardsPublicLoading}
-                        onClick={handleToggleAwardsPublic}
-                        className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 ${
-                          awardsPublic
-                            ? "border-yellow-400/30 bg-yellow-400/15 text-yellow-300 hover:bg-yellow-400/20"
-                            : "border-white/10 bg-white/5 text-white/80 hover:bg-white/10"
-                        }`}
-                      >
-                        {awardsPublicLoading
-                          ? "Saving…"
-                          : awardsPublic
-                            ? "Awards: Public ✓"
-                            : "Open Awards"}
-                      </button>
-                    ) : null}
-                    <button
-                      type="button"
-                      onClick={() => setShowAwards(false)}
-                      className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-white/70 transition hover:bg-white/10"
-                    >
-                      Close
-                    </button>
-                  </div>
-                </div>
-
-                {/* Awards Tabs */}
-                <div className="mb-6 flex flex-wrap gap-2">
-                  {(
-                    [
-                      { key: "best_spiker", label: "Best Spiker" },
-                      { key: "best_receiver", label: "Best Receiver" },
-                      { key: "best_server", label: "Best Server" },
-                      { key: "best_setter", label: "Best Setter" },
-                      { key: "best_aper", label: "Best Aper" },
-                      { key: "best_blocker", label: "Best Blocker" },
-                      { key: "season_mvp", label: "Season MVP" },
-                      { key: "most_improved", label: "Most Improved Player" },
-                      { key: "team_of_season", label: "Team of the Season" },
-                    ] as const
-                  ).map(({ key, label }) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setAwardsTab(key)}
-                      className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition duration-200 ${
-                        awardsTab === key
-                          ? "border-yellow-400/35 bg-yellow-400/15 text-yellow-300 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.15)]"
-                          : "border-white/10 bg-white/5 text-white/70 hover:border-yellow-400/20 hover:bg-white/10 hover:text-white"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-
-                {playerStatsLoading ? (
-                  <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-white/60">
-                    Loading awards…
-                  </div>
-                ) : (
-                  <div>
-                    {awardsTab === "best_spiker" ? (
-                      <AwardsPodium
-                        title="Best Spiker"
-                        subtitle="Top 3 players by average total kills per match"
-                        players={awardsData.bestSpiker}
-                        mainStat="kills"
-                        mainStatLabel="Kills"
-                        teams={approvedTeams}
-                      />
-                    ) : null}
-                    {awardsTab === "best_receiver" ? (
-                      <AwardsPodium
-                        title="Best Receiver"
-                        subtitle="Top 3 players by average receives per match"
-                        players={awardsData.bestReceiver}
-                        mainStat="receives"
-                        mainStatLabel="Receives"
-                        teams={approvedTeams}
-                      />
-                    ) : null}
-                    {awardsTab === "best_server" ? (
-                      <AwardsPodium
-                        title="Best Server"
-                        subtitle="Top 3 players by average aces per match"
-                        players={awardsData.bestServer}
-                        mainStat="aces"
-                        mainStatLabel="Aces"
-                        teams={approvedTeams}
-                      />
-                    ) : null}
-                    {awardsTab === "best_setter" ? (
-                      <AwardsPodium
-                        title="Best Setter"
-                        subtitle="Top 3 by weighted score: 35% Assists, 35% Ape Kills, 30% Recs. Minimum 30 assists required."
-                        players={awardsData.bestSetter}
-                        mainStat="assists"
-                        mainStatLabel="Assists"
-                        teams={approvedTeams}
-                      />
-                    ) : null}
-                    {awardsTab === "best_aper" ? (
-                      <AwardsPodium
-                        title="Best Aper"
-                        subtitle="Top 3 by weighted ape-kill average, rewarding players with more matches"
-                        players={awardsData.bestAper}
-                        mainStat="ape_kills"
-                        mainStatLabel="Ape Kills"
-                        teams={approvedTeams}
-                      />
-                    ) : null}
-                    {awardsTab === "best_blocker" ? (
-                      <AwardsPodium
-                        title="Best Blocker"
-                        subtitle="Top 3 by total blocks, with kill blocks used ahead of one-touch blocks"
-                        players={awardsData.bestBlocker}
-                        mainStat="blocks"
-                        mainStatLabel="Blocks"
-                        teams={approvedTeams}
-                      />
-                    ) : null}
-                    {awardsTab === "season_mvp" ? (
-                      <AwardsMVP
-                        title="Season MVP"
-                        subtitle="The player with the highest average full impact per match"
-                        player={awardsData.seasonMvp[0] ?? null}
-                        teams={approvedTeams}
-                      />
-                    ) : null}
-                    {awardsTab === "most_improved" ? (
-                      <AwardsPodium
-                        title="Most Improved Player"
-                        subtitle="Chosen by staff team: #1 CLypX_9, #2 ykGznn, #3 Seitm1"
-                        players={awardsData.mostImproved}
-                        mainStat="kills"
-                        mainStatLabel="Kills"
-                        teams={approvedTeams}
-                      />
-                    ) : null}
-                    {awardsTab === "team_of_season" ? (
-                      <TeamOfSeason players={awardsData.teamOfSeason} />
-                    ) : null}
-                  </div>
-                )}
-              </div>
-            ) : null}
-
-            {showStatTrackAccess || adminLogged || statTrackerLogged ? (
-              <div
-                id="stat-track-access"
-                className="mt-8 rounded-[2rem] border border-white/10 bg-[#0B1712] p-6"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
-                      Stat Track Access
-                    </p>
-                    <p className="mt-2 text-sm text-white/60">
-                      Stat Trackers can edit matches that have a Stat Tracker assigned. Admins can review and finish stats.
-                    </p>
-                  </div>
-
-                  {statTrackerLogged ? (
-                    <button
-                      type="button"
-                      onClick={handleStatTrackerLogout}
-                      className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-white/10 active:translate-y-0.5"
-                    >
-                      Lock Stat Tracker
+                      Lock Admin
                     </button>
                   ) : null}
                 </div>
-
-                {!adminLogged && !statTrackerLogged ? (
-                  <form
-                    onSubmit={handleStatTrackerLogin}
-                    className="mt-5 grid gap-3 md:grid-cols-[1fr_1fr_auto]"
-                  >
-                    <input
-                      type="email"
-                      value={statTrackerEmail}
-                      onChange={(e) => setStatTrackerEmail(e.target.value)}
-                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                      placeholder="savlstatsteam@gmail.com"
-                    />
-
-                    <input
-                      type="password"
-                      value={statTrackerPassword}
-                      onChange={(e) => setStatTrackerPassword(e.target.value)}
-                      className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                      placeholder="Password"
-                    />
-
-                    <button
-                      type="submit"
-                      className="rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5"
-                    >
-                      Unlock
-                    </button>
-                  </form>
-                ) : null}
-
-                {adminLogged ? (
-                  <p className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-300">
-                    Admin access enabled. You can review and finish stats.
-                  </p>
-                ) : null}
-
-                {statTrackerLogged ? (
-                  <p className="mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-300">
-                    Stat Tracker access enabled. This shared login can edit matches that have a Stat Tracker assigned, but cannot finish or unlock finalized stats.
-                  </p>
-                ) : null}
               </div>
-            ) : null}
-          </div>
-        </section>
 
-        <section
-          id="register"
-          className="mx-auto max-w-7xl scroll-mt-28 px-6 py-16"
-        >
-          <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
-                Join The League
-              </p>
-              <h2 className="mt-2 text-3xl font-black md:text-4xl">
-                Team Registration
-              </h2>
-              <p className="mt-4 max-w-lg text-white/70">
-                Choose one available element, add captain info and Roblox User
-                ID. The roster will be handled outside the site.
-              </p>
-
-              <div className="mt-8 rounded-[2rem] border border-white/10 bg-white/5 p-6">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/50">
-                  Available elements
-                </p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {availableCountries.map((country) => (
-                    <span
-                      key={country.code}
-                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-[#0B1712] px-3 py-2 text-sm text-white/75"
-                    >
-                      <img
-                        src={getFlagUrl(country.code)}
-                        alt={`${country.name} flag`}
-                        className="h-4 w-6 rounded-sm object-cover"
-                      />
-                      {country.name}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div>
-              {!registrationsOpen ? (
-                <div className="mb-6 rounded-[1.5rem] border border-red-400/20 bg-red-400/10 p-4 text-sm text-red-200">
-                  Team registrations are currently closed. New teams cannot be
-                  submitted at this time.
+              {adminLogged ? (
+                <div className="mt-6 grid gap-3 md:grid-cols-4">
+                  <a href="#admin-status" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white/75 transition hover:-translate-y-0.5 hover:bg-white/10 hover:text-white">
+                    Status
+                  </a>
+                  <a href="#admin-setup" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white/75 transition hover:-translate-y-0.5 hover:bg-white/10 hover:text-white">
+                    Setup & Schedule
+                  </a>
+                  <a href="#admin-teams-staff" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white/75 transition hover:-translate-y-0.5 hover:bg-white/10 hover:text-white">
+                    Teams & Staff
+                  </a>
+                  <a href="#admin-matches" className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white/75 transition hover:-translate-y-0.5 hover:bg-white/10 hover:text-white">
+                    Matches & Stats
+                  </a>
                 </div>
               ) : null}
-
-              <form
-                onSubmit={handleRegisterSubmit}
-                className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6 md:p-8"
-              >
-                <div className="grid gap-5 md:grid-cols-2">
-                  <div className="md:col-span-2">
-                    <label className="mb-2 block text-sm font-medium text-white/70">
-                      Element
-                    </label>
-                    <SelectPicker
-                      value={registerForm.country}
-                      onChange={(value) =>
-                        setRegisterForm((prev) => ({ ...prev, country: value }))
-                      }
-                      options={countryOptions}
-                      placeholder="Select an element"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="mb-2 block text-sm font-medium text-white/70">
-                      Brick Color
-                    </label>
-                    <SelectPicker
-                      value={registerForm.brick_color_name}
-                      onChange={(value) =>
-                        setRegisterForm((prev) => ({
-                          ...prev,
-                          brick_color_name: value,
-                        }))
-                      }
-                      options={registerBrickColorOptions}
-                      placeholder="Select a Brick Color"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-white/70">
-                      Captain Roblox Username
-                    </label>
-                    <input
-                      value={registerForm.captain_name}
-                      onChange={(e) =>
-                        setRegisterForm((prev) => ({
-                          ...prev,
-                          captain_name: e.target.value,
-                        }))
-                      }
-                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                      placeholder="xImTutu"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-white/70">
-                      Captain Discord Username
-                    </label>
-                    <input
-                      value={registerForm.captain_discord}
-                      onChange={(e) =>
-                        setRegisterForm((prev) => ({
-                          ...prev,
-                          captain_discord: e.target.value,
-                        }))
-                      }
-                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                      placeholder="ximtutu"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="mb-2 block text-sm font-medium text-white/70">
-                      Captain Roblox User ID
-                    </label>
-                    <input
-                      value={registerForm.captain_roblox_id}
-                      onChange={(e) =>
-                        setRegisterForm((prev) => ({
-                          ...prev,
-                          captain_roblox_id: e.target.value,
-                        }))
-                      }
-                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                      placeholder="123456789"
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
-                    Registration Confirmation
-                  </p>
-
-                  <div className="mt-4 space-y-4">
-                    <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-[#081712] p-4 text-sm text-white/80">
-                      <input
-                        type="checkbox"
-                        checked={registerConfirmations.captain_commitment}
-                        onChange={(e) =>
-                          setRegisterConfirmations((prev) => ({
-                            ...prev,
-                            captain_commitment: e.target.checked,
-                          }))
-                        }
-                        className="mt-1 h-4 w-4 rounded border-white/20 bg-transparent accent-emerald-500"
-                      />
-                      <span>
-                        I confirm that I am committed to the role of captain and
-                        responsible for my team during the league.
-                      </span>
-                    </label>
-
-                    <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-[#081712] p-4 text-sm text-white/80">
-                      <input
-                        type="checkbox"
-                        checked={registerConfirmations.in_discord_server}
-                        onChange={(e) =>
-                          setRegisterConfirmations((prev) => ({
-                            ...prev,
-                            in_discord_server: e.target.checked,
-                          }))
-                        }
-                        className="mt-1 h-4 w-4 rounded border-white/20 bg-transparent accent-emerald-500"
-                      />
-                      <span>
-                        I confirm that I am in the official SAVL Discord server
-                        and understand that all players must also be there:{" "}
-                        <a
-                          href="https://discord.com/invite/uvVkWBq74Q"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-semibold text-emerald-300 underline underline-offset-4"
-                        >
-                          Join Discord
-                        </a>
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={
-                    submittingTeam ||
-                    !registrationsOpen ||
-                    !registerConfirmations.captain_commitment ||
-                    !registerConfirmations.in_discord_server
-                  }
-                  className="mt-6 w-full rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:scale-100"
-                >
-                  {!registrationsOpen
-                    ? "Registrations Closed"
-                    : submittingTeam
-                      ? "Submitting..."
-                      : "Submit Registration"}
-                </button>
-              </form>
             </div>
-          </div>
-          <div className="mt-10 grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
-                Staff Applications
-              </p>
-              <h2 className="mt-2 text-3xl font-black md:text-4xl">
-                Referee / Media / Stat Tracker Registration
-              </h2>
-              <p className="mt-4 max-w-lg text-white/70">
-                Apply to join SAVL staff as a Referee, Media member, or Stat
-                Tracker. Approved applications will appear in the admin panel
-                and can be assigned to upcoming matches.
-              </p>
 
-              <div className="mt-8 rounded-[2rem] border border-white/10 bg-white/5 p-6">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/50">
-                  Staff roles
-                </p>
+            {!adminLogged && !statTrackerLogged ? (
+              <form
+                onSubmit={handleAdminLogin}
+                className="max-w-xl rounded-[2rem] border border-white/10 bg-[#0B1712] p-6"
+              >
+                <label className="mb-2 block text-sm font-medium text-white/70">
+                  Admin email
+                </label>
+                <input
+                  type="email"
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  className="mb-4 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                  placeholder="admin@email.com"
+                />
 
-                <div className="mt-4 grid gap-3">
-                  <div className="rounded-2xl border border-white/10 bg-[#0B1712] p-4">
-                    <p className="font-semibold text-white">Referee</p>
-                    <p className="mt-1 text-sm text-white/65">
-                      Responsible for officiating matches fairly and enforcing
-                      the league rules with neutrality.
+                <label className="mb-2 block text-sm font-medium text-white/70">
+                  Admin password
+                </label>
+                <div className="flex flex-col gap-3 md:flex-row">
+                  <input
+                    type="password"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                    placeholder="Enter password"
+                  />
+                  <button
+                    type="submit"
+                    className="rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5"
+                  >
+                    Unlock
+                  </button>
+                </div>
+
+                {adminNotice ? (
+                  <p className="mt-3 text-sm text-emerald-300">{adminNotice}</p>
+                ) : null}
+              </form>
+            ) : (
+              <div className="space-y-8">
+                <div className={adminLogged ? "space-y-8" : "hidden"}>
+                  <div id="admin-status" className="scroll-mt-28 rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
+                    <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                      <div>
+                        <p className="text-sm font-semibold uppercase tracking-[0.25em] text-emerald-300">
+                          Status & public access
+                        </p>
+                        <h2 className="mt-2 text-2xl font-black text-white">
+                          Season control at a glance
+                        </h2>
+                        <p className="mt-2 max-w-2xl text-sm text-white/60">
+                          Use these cards for the most common actions before touching teams, staff, or matches.
+                        </p>
+                      </div>
+                      <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                        {activeSeason?.name ?? CURRENT_SEASON_LABEL}
+                      </span>
+                    </div>
+
+                    <div className="mt-6 grid gap-4 lg:grid-cols-3">
+                      <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/45">
+                          Registrations
+                        </p>
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                          <span
+                            className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${
+                              registrationsOpen
+                                ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+                                : "border-red-400/20 bg-red-400/10 text-red-300"
+                            }`}
+                          >
+                            {registrationsOpen ? "Open" : "Closed"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleToggleRegistrations}
+                            disabled={togglingRegistrations}
+                            className={`rounded-2xl px-4 py-2 text-sm font-semibold transition duration-200 ${
+                              registrationsOpen
+                                ? "border border-red-400/20 bg-red-400/10 text-red-300 hover:-translate-y-0.5 hover:bg-red-400/15"
+                                : "bg-emerald-500 text-black hover:-translate-y-0.5 hover:scale-[1.01]"
+                            } disabled:cursor-not-allowed disabled:opacity-50`}
+                          >
+                            {togglingRegistrations
+                              ? "Updating..."
+                              : registrationsOpen
+                                ? "Close"
+                                : "Open"}
+                          </button>
+                        </div>
+                        <p className="mt-3 text-sm text-white/55">
+                          Controls whether captains can register teams for the active season.
+                        </p>
+                      </div>
+
+                      <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/45">
+                          Leaderboard
+                        </p>
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                          <span
+                            className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${
+                              leaderboardPublic
+                                ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+                                : "border-yellow-400/20 bg-yellow-400/10 text-yellow-300"
+                            }`}
+                          >
+                            {leaderboardPublic ? "Public" : "Admin only"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleToggleLeaderboardPublic}
+                            disabled={leaderboardPublicLoading}
+                            className={`rounded-2xl px-4 py-2 text-sm font-semibold transition duration-200 ${
+                              leaderboardPublic
+                                ? "border border-red-400/20 bg-red-400/10 text-red-300 hover:-translate-y-0.5 hover:bg-red-400/15"
+                                : "bg-emerald-500 text-black hover:-translate-y-0.5 hover:scale-[1.01]"
+                            } disabled:cursor-not-allowed disabled:opacity-50`}
+                          >
+                            {leaderboardPublicLoading
+                              ? "Updating..."
+                              : leaderboardPublic
+                                ? "Hide"
+                                : "Open"}
+                          </button>
+                        </div>
+                        <p className="mt-3 text-sm text-white/55">
+                          When public, everyone can see Leaderboard. Otherwise only Admin Access can.
+                        </p>
+                      </div>
+
+                      <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
+                        <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/45">
+                          Awards
+                        </p>
+                        <div className="mt-3 flex items-center justify-between gap-3">
+                          <span
+                            className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${
+                              awardsPublic
+                                ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
+                                : "border-yellow-400/20 bg-yellow-400/10 text-yellow-300"
+                            }`}
+                          >
+                            {awardsPublic ? "Public" : "Admin only"}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={handleToggleAwardsPublic}
+                            disabled={awardsPublicLoading}
+                            className={`rounded-2xl px-4 py-2 text-sm font-semibold transition duration-200 ${
+                              awardsPublic
+                                ? "border border-red-400/20 bg-red-400/10 text-red-300 hover:-translate-y-0.5 hover:bg-red-400/15"
+                                : "bg-emerald-500 text-black hover:-translate-y-0.5 hover:scale-[1.01]"
+                            } disabled:cursor-not-allowed disabled:opacity-50`}
+                          >
+                            {awardsPublicLoading
+                              ? "Updating..."
+                              : awardsPublic
+                                ? "Hide"
+                                : "Open"}
+                          </button>
+                        </div>
+                        <p className="mt-3 text-sm text-white/55">
+                          When public, everyone can see Awards. Otherwise only Admin Access can.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 md:grid-cols-4">
+                      <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-white/40">Pending teams</p>
+                        <p className="mt-1 text-2xl font-black text-yellow-300">{pendingTeams.length}</p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-white/40">Approved teams</p>
+                        <p className="mt-1 text-2xl font-black text-emerald-300">{approvedTeams.length}</p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-white/40">Staff pending</p>
+                        <p className="mt-1 text-2xl font-black text-yellow-300">{pendingStaff.length}</p>
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
+                        <p className="text-xs uppercase tracking-[0.18em] text-white/40">Matches</p>
+                        <p className="mt-1 text-2xl font-black text-white">{matches.length}</p>
+                      </div>
+                    </div>
+                  </div>
+                {adminNotice ? (
+                  <p className="text-sm text-emerald-300">{adminNotice}</p>
+                ) : null}
+
+                <div id="admin-setup" className="scroll-mt-28">
+                  <div className="mb-4">
+                    <p className="text-sm font-semibold uppercase tracking-[0.25em] text-emerald-300">
+                      Setup & schedule
+                    </p>
+                    <h2 className="mt-2 text-2xl font-black text-white">
+                      Create teams, groups, and matches
+                    </h2>
+                    <p className="mt-2 text-sm text-white/60">
+                      Use this area for manual team entry, group assignment, and new match creation.
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-white/10 bg-[#0B1712] p-4">
-                    <p className="font-semibold text-white">Media</p>
-                    <p className="mt-1 text-sm text-white/65">
-                      Responsible for streaming or recording matches with clear
-                      quality and reliable performance.
+                  <div className="grid gap-8 lg:grid-cols-2">
+                  <form
+                    onSubmit={handleAdminAddTeam}
+                    className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6"
+                  >
+                    <p className="text-xl font-bold">Add team manually</p>
+                    <div className="mt-5 grid gap-4">
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Team
+                        </label>
+                        <SelectPicker
+                          value={adminTeamForm.country}
+                          onChange={(value) =>
+                            setAdminTeamForm((prev) => ({
+                              ...prev,
+                              country: value,
+                            }))
+                          }
+                          options={countryOptions}
+                          placeholder="Select an element"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Brick Color
+                        </label>
+                        <SelectPicker
+                          value={adminTeamForm.brick_color_name}
+                          onChange={(value) =>
+                            setAdminTeamForm((prev) => ({
+                              ...prev,
+                              brick_color_name: value,
+                            }))
+                          }
+                          options={registerBrickColorOptions}
+                          placeholder="Select a Brick Color"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Captain Roblox Username
+                        </label>
+                        <input
+                          value={adminTeamForm.captain_name}
+                          onChange={(e) =>
+                            setAdminTeamForm((prev) => ({
+                              ...prev,
+                              captain_name: e.target.value,
+                            }))
+                          }
+                          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                          placeholder="Captain Roblox Username"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Discord
+                        </label>
+                        <input
+                          value={adminTeamForm.captain_discord}
+                          onChange={(e) =>
+                            setAdminTeamForm((prev) => ({
+                              ...prev,
+                              captain_discord: e.target.value,
+                            }))
+                          }
+                          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                          placeholder="discorduser"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Roblox User ID
+                        </label>
+                        <input
+                          value={adminTeamForm.captain_roblox_id}
+                          onChange={(e) =>
+                            setAdminTeamForm((prev) => ({
+                              ...prev,
+                              captain_roblox_id: e.target.value,
+                            }))
+                          }
+                          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                          placeholder="123456789"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5"
+                      >
+                        Add Team
+                      </button>
+                    </div>
+                  </form>
+
+                  <form
+                    onSubmit={handleAssignTeamGroup}
+                    className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6"
+                  >
+                    <p className="text-xl font-bold">Assign team to group</p>
+                    <p className="mt-2 text-sm text-white/60">
+                      Add an approved team to Group A, B, C or D.
+                    </p>
+
+                    <div className="mt-5 grid gap-4">
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Approved team
+                        </label>
+                        <SelectPicker
+                          value={teamGroupForm.team_id}
+                          onChange={(value) =>
+                            setTeamGroupForm((prev) => ({
+                              ...prev,
+                              team_id: value,
+                            }))
+                          }
+                          options={approvedTeams.map((team) => ({
+                            label: `${team.country}${team.group_letter ? ` (Group ${team.group_letter})` : ""}`,
+                            value: String(team.id),
+                            imageUrl: getFlagUrl(team.code),
+                          }))}
+                          placeholder="Select a team"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Group
+                        </label>
+                        <SelectPicker
+                          value={teamGroupForm.group_letter}
+                          onChange={(value) =>
+                            setTeamGroupForm((prev) => ({
+                              ...prev,
+                              group_letter: value,
+                            }))
+                          }
+                          options={groupOptions}
+                          placeholder="Select group"
+                        />
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5"
+                      >
+                        Save Group
+                      </button>
+                    </div>
+                  </form>
+
+                  <form
+                    onSubmit={handleCreateMatch}
+                    className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6"
+                  >
+                    <p className="text-xl font-bold">Create match</p>
+                    <div className="mt-5 grid gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Home Team
+                        </label>
+                        <SelectPicker
+                          value={matchForm.home_country}
+                          onChange={(value) =>
+                            setMatchForm((prev) => ({
+                              ...prev,
+                              home_country: value,
+                            }))
+                          }
+                          options={registeredCountryOptions}
+                          placeholder="Select home team"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Away Team
+                        </label>
+                        <SelectPicker
+                          value={matchForm.away_country}
+                          onChange={(value) =>
+                            setMatchForm((prev) => ({
+                              ...prev,
+                              away_country: value,
+                            }))
+                          }
+                          options={registeredCountryOptions}
+                          placeholder="Select away team"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Stage
+                        </label>
+                        <input
+                          type="text"
+                          name="stage"
+                          value={matchForm.stage}
+                          onChange={handleMatchFormChange}
+                          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                          placeholder="Qualifiers Round 1"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Date
+                        </label>
+                        <input
+                          type="date"
+                          name="match_date"
+                          value={matchForm.match_date}
+                          onChange={handleMatchFormChange}
+                          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Time
+                        </label>
+                        <input
+                          type="time"
+                          name="match_time"
+                          value={matchForm.match_time}
+                          onChange={handleMatchFormChange}
+                          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Status
+                        </label>
+                        <SelectPicker
+                          value={matchForm.status}
+                          onChange={(value) =>
+                            setMatchForm((prev) => ({
+                              ...prev,
+                              status: value as MatchStatus,
+                            }))
+                          }
+                          options={statusOptions}
+                          placeholder="Select status"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="flex items-start gap-3 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4 text-sm text-yellow-100">
+                          <input
+                            type="checkbox"
+                            checked={matchForm.is_star_match}
+                            onChange={(event) =>
+                              setMatchForm((prev) => ({
+                                ...prev,
+                                is_star_match: event.target.checked,
+                              }))
+                            }
+                            className="mt-1 h-4 w-4 rounded border-yellow-400/30 bg-transparent accent-yellow-400"
+                          />
+
+                          <span>
+                            <span className="block font-semibold text-yellow-300">
+                              Star Match
+                            </span>
+                            Mark this match as a featured match on the public
+                            schedule.
+                          </span>
+                        </label>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="mb-3 block text-sm font-medium text-white/70">
+                          Set Scores
+                        </label>
+
+                        <div className="grid gap-3">
+                          {[1, 2, 3, 4, 5].map((setNumber) => (
+                            <div
+                              key={setNumber}
+                              className="grid grid-cols-[90px_1fr_1fr] gap-3 items-end"
+                            >
+                              <p className="text-sm font-semibold text-white/70">
+                                Set {setNumber}
+                              </p>
+
+                              <div>
+                                <label className="mb-2 block text-xs font-medium text-white/50">
+                                  Home
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  name={`set${setNumber}_home`}
+                                  value={
+                                    matchForm[
+                                      `set${setNumber}_home` as keyof typeof matchForm
+                                    ] as string
+                                  }
+                                  onChange={handleMatchFormChange}
+                                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                                  placeholder="25"
+                                />
+                              </div>
+
+                              <div>
+                                <label className="mb-2 block text-xs font-medium text-white/50">
+                                  Away
+                                </label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  name={`set${setNumber}_away`}
+                                  value={
+                                    matchForm[
+                                      `set${setNumber}_away` as keyof typeof matchForm
+                                    ] as string
+                                  }
+                                  onChange={handleMatchFormChange}
+                                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                                  placeholder="22"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <p className="mt-3 text-xs text-white/45">
+                          The set result in matches and standings will be
+                          calculated automatically from these values.
+                        </p>
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <button
+                          type="submit"
+                          className="w-full rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5"
+                        >
+                          Create Match
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                  </div>
+                </div>
+
+                <div id="admin-teams-staff" className="scroll-mt-28">
+                  <div className="mb-4">
+                    <p className="text-sm font-semibold uppercase tracking-[0.25em] text-emerald-300">
+                      Teams, rosters & staff
+                    </p>
+                    <h2 className="mt-2 text-2xl font-black text-white">
+                      Approvals and roster management
+                    </h2>
+                    <p className="mt-2 text-sm text-white/60">
+                      Review registrations, approve staff, add roster players, and maintain captains.
                     </p>
                   </div>
 
-                  <div className="rounded-2xl border border-white/10 bg-[#0B1712] p-4">
-                    <p className="font-semibold text-white">Stat Tracker</p>
-                    <p className="mt-1 text-sm text-white/65">
-                      Responsible for entering match set scores and submitting
-                      stats for admin review.
+                  <div className="grid gap-8 lg:grid-cols-2">
+                  <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
+                    <p className="mb-4 text-xl font-bold">Team approvals</p>
+
+                    <div className="space-y-6">
+                      <div>
+                        <div className="mb-3 flex items-center justify-between">
+                          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-yellow-300">
+                            Pending Registrations
+                          </p>
+                          <span className="rounded-full border border-yellow-400/20 bg-yellow-400/10 px-3 py-1 text-xs font-semibold text-yellow-300">
+                            {pendingTeams.length}
+                          </span>
+                        </div>
+
+                        <div className="space-y-4">
+                          {pendingTeams.length === 0 ? (
+                            <p className="text-white/60">No pending teams.</p>
+                          ) : (
+                            pendingTeams.map((team) => (
+                              <div
+                                key={team.id}
+                                className="rounded-2xl border border-yellow-400/15 bg-yellow-400/[0.04] p-4"
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-3">
+                                      <img
+                                        src={getFlagUrl(team.code)}
+                                        alt={`${team.country} flag`}
+                                        className="h-8 w-11 rounded-md object-cover"
+                                      />
+                                      <div>
+                                        <p className="font-semibold">
+                                          {team.country}
+                                        </p>
+                                        <div className="mt-1 flex items-center gap-2 text-sm text-white/70">
+                                          <Avatar
+                                            robloxUserId={
+                                              team.captain_roblox_id
+                                            }
+                                            name={team.captain_name}
+                                          />
+                                          <span className="truncate">
+                                            {team.captain_name} • @
+                                            {team.captain_discord}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleApproveTeam(team.id)}
+                                      className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] active:translate-y-0.5"
+                                    >
+                                      Approve
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openConfirmDialog({
+                                          title: "Reject Registration",
+                                          message: `Are you sure you want to reject ${team.country}'s registration?`,
+                                          confirmLabel: "Reject",
+                                          onConfirm: () =>
+                                            handleDeleteTeam(team.id),
+                                        })
+                                      }
+                                      className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
+                                    >
+                                      Reject
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openConfirmDialog({
+                                          title: "Remove Captain",
+                                          message:
+                                            "Are you sure you want to remove the current captain from this team?",
+                                          confirmLabel: "Remove Captain",
+                                          onConfirm: async () => {
+                                            await handleRemoveCaptain(team.id);
+                                          },
+                                        })
+                                      }
+                                      className="rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-400/15"
+                                    >
+                                      Remove Captain
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="mb-3 flex items-center justify-between">
+                          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
+                            Approved Teams
+                          </p>
+                          <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+                            {approvedTeams.length}
+                          </span>
+                        </div>
+
+                        <div className="space-y-4">
+                          {approvedTeams.length === 0 ? (
+                            <p className="text-white/60">
+                              No approved teams yet.
+                            </p>
+                          ) : (
+                            approvedTeams.map((team) => (
+                              <div
+                                key={team.id}
+                                className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-3">
+                                      <img
+                                        src={getFlagUrl(team.code)}
+                                        alt={`${team.country} flag`}
+                                        className="h-8 w-11 rounded-md object-cover"
+                                      />
+                                      <div>
+                                        <p className="font-semibold">
+                                          {team.country}
+                                        </p>
+                                        <div className="mt-1 flex items-center gap-2 text-sm text-white/70">
+                                          <Avatar
+                                            robloxUserId={
+                                              team.captain_roblox_id
+                                            }
+                                            name={team.captain_name}
+                                          />
+                                          <span className="truncate">
+                                            {team.captain_name} • @
+                                            {team.captain_discord}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {team.brick_color_name &&
+                                  team.brick_color_hex ? (
+                                    <div className="mt-3 flex items-center gap-2 text-sm text-white/75">
+                                      <span
+                                        className="h-4 w-4 rounded-full border border-white/20"
+                                        style={{
+                                          backgroundColor: team.brick_color_hex,
+                                        }}
+                                      />
+                                      <span>{team.brick_color_number}</span>
+                                      {team.brick_color_number ? (
+                                        <span className="text-white/45">
+                                          #{team.brick_color_number}
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                  ) : null}
+
+                                  <div className="mt-4">
+                                    <label className="mb-2 block text-sm font-medium text-white/70">
+                                      Brick Color
+                                    </label>
+                                    <SelectPicker
+                                      value={team.brick_color_name ?? ""}
+                                      onChange={(value) =>
+                                        handleUpdateTeamBrickColor(
+                                          team.id,
+                                          value,
+                                        )
+                                      }
+                                      options={getAdminBrickColorOptions(
+                                        team.id,
+                                      )}
+                                      placeholder="Select a Brick Color"
+                                    />
+                                  </div>
+
+                                  <div className="flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedAdminTeamId(team.id);
+                                        setPlayerForm({
+                                          team_id: String(team.id),
+                                          roblox_username: "",
+                                          roblox_user_id: "",
+                                          discord_username: "",
+                                          role: "Player",
+                                        });
+                                        scrollToSection("admin");
+                                      }}
+                                      className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-300 transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-400/15 active:translate-y-0.5"
+                                    >
+                                      Add Player
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openConfirmDialog({
+                                          title: "Remove Team",
+                                          message: `Are you sure you want to remove ${team.country}? This action cannot be undone.`,
+                                          confirmLabel: "Remove",
+                                          onConfirm: () =>
+                                            handleDeleteTeam(team.id),
+                                        })
+                                      }
+                                      className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="mb-3 flex items-center justify-between">
+                          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-yellow-300">
+                            Pending Staff
+                          </p>
+                          <span className="rounded-full border border-yellow-400/20 bg-yellow-400/10 px-3 py-1 text-xs font-semibold text-yellow-300">
+                            {pendingStaff.length}
+                          </span>
+                        </div>
+
+                        <div className="space-y-4">
+                          {pendingStaff.length === 0 ? (
+                            <p className="text-white/60">
+                              No pending Staff applications.
+                            </p>
+                          ) : (
+                            pendingStaff.map((staff) => (
+                              <div
+                                key={staff.id}
+                                className="rounded-2xl border border-yellow-400/15 bg-yellow-400/[0.04] p-4"
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-3">
+                                      <Avatar
+                                        robloxUserId={staff.roblox_user_id}
+                                        name={staff.roblox_username}
+                                      />
+                                      <div>
+                                        <p className="font-semibold text-white">
+                                          {staff.roblox_username}
+                                        </p>
+                                        <p className="text-sm text-white/70">
+                                          @{staff.discord_username}
+                                        </p>
+                                        <p className="mt-1 text-xs uppercase tracking-[0.18em] text-emerald-300">
+                                          Pending{" "}
+                                          {getStaffRoleLabel(staff.role)}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleApproveStaffApplication(staff.id)
+                                      }
+                                      className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] active:translate-y-0.5"
+                                    >
+                                      Approve
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openConfirmDialog({
+                                          title: "Reject Staff Application",
+                                          message: `Are you sure you want to reject ${staff.roblox_username}'s ${staff.role} application?`,
+                                          confirmLabel: "Reject",
+                                          onConfirm: () =>
+                                            handleDeleteStaffApplication(
+                                              staff.id,
+                                            ),
+                                        })
+                                      }
+                                      className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
+                                    >
+                                      Reject
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="mb-3 flex items-center justify-between">
+                          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
+                            Approved Staff
+                          </p>
+                          <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+                            {approvedStaff.length}
+                          </span>
+                        </div>
+
+                        <div className="space-y-4">
+                          {approvedStaff.length === 0 ? (
+                            <p className="text-white/60">
+                              No approved Staff yet.
+                            </p>
+                          ) : (
+                            approvedStaff.map((staff) => (
+                              <div
+                                key={staff.id}
+                                className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                              >
+                                <div className="flex items-start justify-between gap-4">
+                                  <div className="flex min-w-0 items-center gap-3">
+                                    <Avatar
+                                      robloxUserId={staff.roblox_user_id}
+                                      name={staff.roblox_username}
+                                    />
+                                    <div className="min-w-0">
+                                      <p className="font-semibold text-white">
+                                        {staff.roblox_username}
+                                      </p>
+                                      <p className="text-sm text-white/60">
+                                        @{staff.discord_username}
+                                      </p>
+                                      <p className="mt-1 text-xs uppercase tracking-[0.18em] text-emerald-300">
+                                        {staff.role}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      openConfirmDialog({
+                                        title: "Remove Staff",
+                                        message: `Are you sure you want to remove ${staff.roblox_username} from approved staff? Assigned matches will lose this reference.`,
+                                        confirmLabel: "Remove",
+                                        onConfirm: () =>
+                                          handleDeleteStaffApplication(
+                                            staff.id,
+                                          ),
+                                      })
+                                    }
+                                    className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
+                                  >
+                                    Remove
+                                  </button>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
+                      <form
+                        onSubmit={handleAddPlayer}
+                        className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6"
+                      >
+                        <p className="text-xl font-bold">
+                          Add player to roster
+                        </p>
+
+                        <div className="mt-5 grid gap-4 md:grid-cols-2">
+                          <div className="md:col-span-2">
+                            <label className="mb-2 block text-sm font-medium text-white/70">
+                              Team
+                            </label>
+                            <SelectPicker
+                              value={playerForm.team_id}
+                              onChange={(value) =>
+                                setPlayerForm((prev) => ({
+                                  ...prev,
+                                  team_id: value,
+                                }))
+                              }
+                              options={approvedTeams.map((team) => ({
+                                label: team.country,
+                                value: String(team.id),
+                                imageUrl: getFlagUrl(team.code),
+                              }))}
+                              placeholder="Select approved team"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/70">
+                              Roblox Username
+                            </label>
+                            <input
+                              value={playerForm.roblox_username}
+                              onChange={(e) =>
+                                setPlayerForm((prev) => ({
+                                  ...prev,
+                                  roblox_username: e.target.value,
+                                }))
+                              }
+                              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                              placeholder="Player Roblox Username"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/70">
+                              Discord Username
+                            </label>
+                            <input
+                              value={playerForm.discord_username}
+                              onChange={(e) =>
+                                setPlayerForm((prev) => ({
+                                  ...prev,
+                                  discord_username: e.target.value,
+                                }))
+                              }
+                              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                              placeholder="discorduser"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/70">
+                              Roblox User ID
+                            </label>
+                            <input
+                              value={playerForm.roblox_user_id}
+                              onChange={(e) =>
+                                setPlayerForm((prev) => ({
+                                  ...prev,
+                                  roblox_user_id: e.target.value,
+                                }))
+                              }
+                              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                              placeholder="123456789"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/70">
+                              Role
+                            </label>
+                            <SelectPicker
+                              value={playerForm.role}
+                              onChange={(value) =>
+                                setPlayerForm((prev) => ({
+                                  ...prev,
+                                  role: value as TeamPlayerRole,
+                                }))
+                              }
+                              options={roleOptions}
+                              placeholder="Select role"
+                            />
+                          </div>
+
+                          <div className="md:col-span-2">
+                            <button
+                              type="submit"
+                              className="w-full rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5"
+                            >
+                              Add Player
+                            </button>
+                          </div>
+                        </div>
+                      </form>
+
+                      <div className="rounded-[1.5rem] border border-white/10 bg-[#0B1712] p-5">
+                        <h3 className="text-lg font-bold text-white">
+                          Change Team Captain
+                        </h3>
+                        <p className="mt-1 text-sm text-white/60">
+                          Replace the current captain without deleting the team.
+                        </p>
+
+                        <form
+                          onSubmit={handleChangeCaptain}
+                          className="mt-4 space-y-4"
+                        >
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/80">
+                              Team
+                            </label>
+                            <SelectPicker
+                              value={captainForm.team_id}
+                              onChange={(value) =>
+                                setCaptainForm((prev) => ({
+                                  ...prev,
+                                  team_id: value,
+                                }))
+                              }
+                              options={teams.map((team) => ({
+                                label: team.country,
+                                value: String(team.id),
+                                imageUrl: getFlagUrl(team.code),
+                              }))}
+                              placeholder="Select a team"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/80">
+                              New Captain Name
+                            </label>
+                            <input
+                              type="text"
+                              value={captainForm.captain_name}
+                              onChange={(event) =>
+                                setCaptainForm((prev) => ({
+                                  ...prev,
+                                  captain_name: event.target.value,
+                                }))
+                              }
+                              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
+                              placeholder="Roblox username"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/80">
+                              New Captain Discord
+                            </label>
+                            <input
+                              type="text"
+                              value={captainForm.captain_discord}
+                              onChange={(event) =>
+                                setCaptainForm((prev) => ({
+                                  ...prev,
+                                  captain_discord: event.target.value,
+                                }))
+                              }
+                              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
+                              placeholder="@discorduser"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/80">
+                              New Captain Roblox User ID
+                            </label>
+                            <input
+                              type="text"
+                              value={captainForm.captain_roblox_id}
+                              onChange={(event) =>
+                                setCaptainForm((prev) => ({
+                                  ...prev,
+                                  captain_roblox_id: event.target.value,
+                                }))
+                              }
+                              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
+                              placeholder="Numbers only"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/80">
+                              Old Captain New Role
+                            </label>
+                            <SelectPicker
+                              value={captainForm.old_captain_new_role}
+                              onChange={(value) =>
+                                setCaptainForm((prev) => ({
+                                  ...prev,
+                                  old_captain_new_role: value as TeamPlayerRole,
+                                }))
+                              }
+                              options={roleOptions}
+                              placeholder="Select a role"
+                            />
+                          </div>
+
+                          <button
+                            type="submit"
+                            disabled={savingCaptainChange}
+                            className="rounded-2xl border border-emerald-400/30 bg-emerald-400/10 px-5 py-3 font-semibold text-emerald-300 transition hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {savingCaptainChange
+                              ? "Saving..."
+                              : "Change Captain"}
+                          </button>
+                        </form>
+                      </div>
+
+                      <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
+                        <p className="mb-4 text-xl font-bold">
+                          Edit team rosters
+                        </p>
+
+                        <div className="space-y-4">
+                          {approvedTeams.length === 0 ? (
+                            <p className="text-white/60">
+                              No approved teams yet.
+                            </p>
+                          ) : (
+                            approvedTeams.map((team) => {
+                              const players = getPlayersByTeam(team.id);
+                              const isOpen = selectedAdminTeamId === team.id;
+
+                              return (
+                                <div
+                                  key={team.id}
+                                  className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setSelectedAdminTeamId((prev) =>
+                                        prev === team.id ? null : team.id,
+                                      )
+                                    }
+                                    className="flex w-full items-center justify-between gap-4 rounded-[1rem] text-left focus:outline-none focus:ring-2 focus:ring-emerald-400/40"
+                                    aria-expanded={isOpen}
+                                    aria-label={
+                                      isOpen
+                                        ? `Hide roster for ${team.country}`
+                                        : `Edit roster for ${team.country}`
+                                    }
+                                  >
+                                    <div className="flex items-center gap-3">
+                                      <img
+                                        src={getFlagUrl(team.code)}
+                                        alt={`${team.country} flag`}
+                                        className="h-8 w-11 rounded-md object-cover"
+                                      />
+                                      <div>
+                                        <p className="font-semibold text-white">
+                                          {team.country}
+                                        </p>
+                                        <p className="text-sm text-white/55">
+                                          {players.length +
+                                            (team.captain_name?.trim() &&
+                                            team.captain_discord?.trim() &&
+                                            String(
+                                              team.captain_roblox_id || "",
+                                            ).trim()
+                                              ? 1
+                                              : 0)}{" "}
+                                          roster members
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    <span className="text-sm text-emerald-300">
+                                      {isOpen ? "Hide roster" : "Edit roster"}
+                                    </span>
+                                  </button>
+
+                                  {isOpen ? (
+                                    <div className="mt-4 space-y-3">
+                                      <div className="rounded-2xl border border-white/10 bg-[#081712] p-3">
+                                        <div className="flex items-center gap-3">
+                                          <Avatar
+                                            robloxUserId={
+                                              team.captain_roblox_id
+                                            }
+                                            name={team.captain_name}
+                                          />
+                                          <div>
+                                            <p className="font-semibold text-white">
+                                              {team.captain_name}
+                                            </p>
+                                            <p className="text-sm text-white/60">
+                                              @{team.captain_discord}
+                                            </p>
+                                          </div>
+                                          <span className="ml-auto rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-300">
+                                            Captain
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {players.length === 0 ? (
+                                        <p className="text-sm text-white/60">
+                                          No extra players added yet.
+                                        </p>
+                                      ) : (
+                                        players.map((player) => (
+                                          <div
+                                            key={player.id}
+                                            className="rounded-2xl border border-white/10 bg-[#081712] p-4"
+                                          >
+                                            <div className="grid gap-3 md:grid-cols-2">
+                                              <input
+                                                defaultValue={
+                                                  player.roblox_username
+                                                }
+                                                onBlur={(e) =>
+                                                  handleUpdatePlayer(
+                                                    player.id,
+                                                    {
+                                                      roblox_username:
+                                                        e.target.value.trim(),
+                                                    },
+                                                  )
+                                                }
+                                                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none"
+                                                placeholder="Roblox Username"
+                                              />
+
+                                              <input
+                                                defaultValue={
+                                                  player.discord_username
+                                                }
+                                                onBlur={(e) =>
+                                                  handleUpdatePlayer(
+                                                    player.id,
+                                                    {
+                                                      discord_username:
+                                                        e.target.value
+                                                          .trim()
+                                                          .replace(/^@/, ""),
+                                                    },
+                                                  )
+                                                }
+                                                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none"
+                                                placeholder="Discord Username"
+                                              />
+
+                                              <input
+                                                defaultValue={
+                                                  player.roblox_user_id
+                                                }
+                                                onBlur={(e) =>
+                                                  handleUpdatePlayer(
+                                                    player.id,
+                                                    {
+                                                      roblox_user_id:
+                                                        e.target.value.trim(),
+                                                    },
+                                                  )
+                                                }
+                                                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none"
+                                                placeholder="Roblox User ID"
+                                              />
+
+                                              <select
+                                                defaultValue={player.role}
+                                                onChange={(e) =>
+                                                  handleUpdatePlayer(
+                                                    player.id,
+                                                    {
+                                                      role: e.target
+                                                        .value as TeamPlayerRole,
+                                                    },
+                                                  )
+                                                }
+                                                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none"
+                                              >
+                                                <option value="Vice Captain">
+                                                  Vice Captain
+                                                </option>
+                                                <option value="Player">
+                                                  Player
+                                                </option>
+                                              </select>
+                                            </div>
+
+                                            <div className="mt-3 flex justify-end">
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  openConfirmDialog({
+                                                    title: "Remove Player",
+                                                    message: `Are you sure you want to remove ${player.roblox_username} from the roster?`,
+                                                    confirmLabel: "Remove",
+                                                    onConfirm: () =>
+                                                      handleDeletePlayer(
+                                                        player.id,
+                                                      ),
+                                                  })
+                                                }
+                                                className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:bg-red-400/15"
+                                              >
+                                                Remove Player
+                                              </button>
+                                            </div>
+                                          </div>
+                                        ))
+                                      )}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  </div>
+                </div>
+
+                <div id="admin-matches" className="scroll-mt-28 rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
+                  <div className="mb-6">
+                    <p className="text-sm font-semibold uppercase tracking-[0.25em] text-emerald-300">
+                      Matches & stats review
                     </p>
+                    <h2 className="mt-2 text-2xl font-black text-white">
+                      Manage match results
+                    </h2>
+                    <p className="mt-2 text-sm text-white/60">
+                      Filter matches, assign staff, update scores, review submitted stats, and finalize results.
+                    </p>
+                  </div>
+                  <p className="mb-4 text-xl font-bold">Manage matches</p>
+                    <div className="space-y-4">
+                      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                        <div className="flex flex-col gap-4 md:flex-row md:items-end">
+                          <div className="min-w-[220px]">
+                            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                              Filter by status
+                            </label>
+                            <SelectPicker
+                              value={adminFilterStatus}
+                              onChange={(value) =>
+                                setAdminFilterStatus(
+                                  value as "All" | MatchStatus,
+                                )
+                              }
+                              options={[
+                                { label: "All statuses", value: "All" },
+                                ...statusOptions,
+                              ]}
+                              placeholder="Select status"
+                            />
+                          </div>
+
+                          <div className="min-w-[240px]">
+                            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
+                              Filter by stage
+                            </label>
+                            <SelectPicker
+                              value={adminFilterStage}
+                              onChange={setAdminFilterStage}
+                              options={[
+                                { label: "All stages", value: "All" },
+                                ...availableStages.map((stage) => ({
+                                  label: stage,
+                                  value: stage,
+                                })),
+                              ]}
+                              placeholder="Select stage"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      {statTrackMatches.length === 0 ? (
+                        <div className="rounded-2xl border border-white/10 bg-white/5 p-6 text-sm text-white/60">
+                          No matches found with the selected filters.
+                        </div>
+                      ) : (
+                        statTrackMatches.map((match) => {
+                          const draft = matchDrafts[match.id];
+
+                          return (
+                            <div
+                              key={match.id}
+                              className={`rounded-2xl border p-4 ${
+                                match.stats_finalized
+                                  ? "border-emerald-400/30 bg-emerald-400/10"
+                                  : "border-red-400/30 bg-red-400/10"
+                              }`}
+                            >
+                              <div className="grid gap-4">
+                                <div className="flex flex-wrap items-center gap-3">
+                                  {draft?.stage || match.stage ? (
+                                    <span className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                                      {draft?.stage || match.stage}
+                                    </span>
+                                  ) : null}
+
+                                  <span className="font-semibold">
+                                    {match.home_country} vs {match.away_country}
+                                  </span>
+                                  <span
+                                    className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${getStatusBadgeClass(draft?.status ?? match.status)}`}
+                                  >
+                                    {draft?.status ?? match.status}
+                                  </span>
+                                  <span
+                                    className={`rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] ${
+                                      match.stats_finalized
+                                        ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
+                                        : "border-red-400/30 bg-red-400/10 text-red-300"
+                                    }`}
+                                  >
+                                    {match.stats_finalized ? "Stats finalized" : "Stats not finalized"}
+                                  </span>
+
+                                  {match.stats_submitted_for_review &&
+                                  !match.stats_finalized ? (
+                                    <span className="rounded-full border border-yellow-400/30 bg-yellow-400/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-yellow-300">
+                                      Waiting admin review
+                                    </span>
+                                  ) : null}
+                                </div>
+
+                                <div>
+                                  <label className="mb-2 block text-sm text-white/70">
+                                    Stage
+                                  </label>
+                                  <input
+                                    type="text"
+                                    disabled={!adminLogged}
+                                    value={draft?.stage ?? match.stage ?? ""}
+                                    onChange={(e) =>
+                                      updateMatchDraft(match.id, {
+                                        stage: e.target.value,
+                                      })
+                                    }
+                                    className="w-full rounded-2xl border border-white/10 bg-[#0B1712] px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30"
+                                    placeholder="Semifinals"
+                                  />
+                                </div>
+
+                                <div className="grid gap-3 md:grid-cols-2">
+                                  <div>
+                                    <label className="mb-2 block text-sm text-white/70">
+                                      Status
+                                    </label>
+                                    <SelectPicker
+                                      value={draft?.status ?? match.status}
+                                      onChange={(value) =>
+                                        updateMatchDraft(match.id, {
+                                          status: value as MatchStatus,
+                                        })
+                                      }
+                                      options={statusOptions}
+                                      placeholder="Select status"
+                                      disabled={!adminLogged}
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="mb-2 block text-sm text-white/70">
+                                      Date
+                                    </label>
+                                    <input
+                                      type="date"
+                                      disabled={!adminLogged}
+                                      value={
+                                        draft?.match_date ?? match.match_date
+                                      }
+                                      onChange={(e) =>
+                                        updateMatchDraft(match.id, {
+                                          match_date: e.target.value,
+                                        })
+                                      }
+                                      className="w-full rounded-2xl border border-white/10 bg-[#0B1712] px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="mb-2 block text-sm text-white/70">
+                                      Time
+                                    </label>
+                                    <input
+                                      type="time"
+                                      disabled={!adminLogged}
+                                      value={
+                                        draft?.match_time ?? match.match_time
+                                      }
+                                      onChange={(e) =>
+                                        updateMatchDraft(match.id, {
+                                          match_time: e.target.value,
+                                        })
+                                      }
+                                      className="w-full rounded-2xl border border-white/10 bg-[#0B1712] px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30"
+                                    />
+                                  </div>
+
+                                  <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                      <label className="mb-2 block text-sm text-white/70">
+                                        {match.home_country}
+                                      </label>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        disabled={
+                                          !adminLogged &&
+                                          !canCurrentStatTrackerEditMatch(
+                                            match,
+                                          )
+                                        }
+                                        value={
+                                          draft?.home_score ?? match.home_score
+                                        }
+                                        onChange={(e) =>
+                                          updateMatchDraft(match.id, {
+                                            home_score: Number(e.target.value),
+                                          })
+                                        }
+                                        className="w-full rounded-2xl border border-white/10 bg-[#0B1712] px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30"
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="mb-2 block text-sm text-white/70">
+                                        {match.away_country}
+                                      </label>
+                                      <input
+                                        type="number"
+                                        min="0"
+                                        disabled={
+                                          !adminLogged &&
+                                          !canCurrentStatTrackerEditMatch(
+                                            match,
+                                          )
+                                        }
+                                        value={
+                                          draft?.away_score ?? match.away_score
+                                        }
+                                        onChange={(e) =>
+                                          updateMatchDraft(match.id, {
+                                            away_score: Number(e.target.value),
+                                          })
+                                        }
+                                        className="w-full rounded-2xl border border-white/10 bg-[#0B1712] px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30"
+                                      />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <label className="mb-2 block text-sm text-white/70">
+                                      Referee
+                                    </label>
+                                    <SelectPicker
+                                      value={
+                                        draft?.referee_id
+                                          ? String(draft.referee_id)
+                                          : ""
+                                      }
+                                      onChange={(value) =>
+                                        updateMatchDraft(match.id, {
+                                          referee_id: value
+                                            ? Number(value)
+                                            : null,
+                                        })
+                                      }
+                                      options={refereeOptions}
+                                      placeholder="Select referee"
+                                      disabled={!adminLogged}
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="mb-2 block text-sm text-white/70">
+                                      Media
+                                    </label>
+                                    <SelectPicker
+                                      value={
+                                        draft?.media_id
+                                          ? String(draft.media_id)
+                                          : ""
+                                      }
+                                      onChange={(value) =>
+                                        updateMatchDraft(match.id, {
+                                          media_id: value
+                                            ? Number(value)
+                                            : null,
+                                        })
+                                      }
+                                      options={mediaOptions}
+                                      placeholder="Select media"
+                                      disabled={!adminLogged}
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="mb-2 block text-sm font-semibold text-white/70">
+                                      Stat Tracker
+                                    </label>
+
+                                    <SelectPicker
+                                      value={
+                                        matchDrafts[match.id]?.stat_tracker_id
+                                          ? String(
+                                              matchDrafts[match.id]
+                                                .stat_tracker_id,
+                                            )
+                                          : ""
+                                      }
+                                      onChange={(value) =>
+                                        updateMatchDraft(match.id, {
+                                          stat_tracker_id: value
+                                            ? Number(value)
+                                            : null,
+                                        })
+                                      }
+                                      options={[
+                                        { label: "No Stat Tracker", value: "" },
+                                        ...statTrackerOptions,
+                                      ]}
+                                      placeholder="Select Stat Tracker"
+                                      disabled={!adminLogged}
+                                    />
+                                  </div>
+                                </div>
+                                {getStaffById(draft?.referee_id ?? match.referee_id) ||
+                                getStaffById(draft?.media_id ?? match.media_id) ||
+                                getStaffById(draft?.stat_tracker_id ?? match.stat_tracker_id) ? (
+                                  <div className="rounded-2xl border border-white/10 bg-[#081712] p-4">
+                                    <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                                      Assigned Match Staff
+                                    </p>
+
+                                    <div className="space-y-3">
+                                      {getStaffById(
+                                        draft?.referee_id ?? match.referee_id,
+                                      ) ? (
+                                        <div className="flex items-center gap-3">
+                                          <Avatar
+                                            robloxUserId={
+                                              getStaffById(
+                                                draft?.referee_id ??
+                                                  match.referee_id,
+                                              )!.roblox_user_id
+                                            }
+                                            name={
+                                              getStaffById(
+                                                draft?.referee_id ??
+                                                  match.referee_id,
+                                              )!.roblox_username
+                                            }
+                                          />
+                                          <div>
+                                            <p className="font-semibold text-white">
+                                              Referee:{" "}
+                                              {
+                                                getStaffById(
+                                                  draft?.referee_id ??
+                                                    match.referee_id,
+                                                )!.roblox_username
+                                              }
+                                            </p>
+                                            <p className="text-sm text-white/60">
+                                              @
+                                              {
+                                                getStaffById(
+                                                  draft?.referee_id ??
+                                                    match.referee_id,
+                                                )!.discord_username
+                                              }
+                                            </p>
+                                          </div>
+                                        </div>
+                                      ) : null}
+
+                                      {getStaffById(
+                                        draft?.media_id ?? match.media_id,
+                                      ) ? (
+                                        <div className="flex items-center gap-3">
+                                          <Avatar
+                                            robloxUserId={
+                                              getStaffById(
+                                                draft?.media_id ??
+                                                  match.media_id,
+                                              )!.roblox_user_id
+                                            }
+                                            name={
+                                              getStaffById(
+                                                draft?.media_id ??
+                                                  match.media_id,
+                                              )!.roblox_username
+                                            }
+                                          />
+                                          <div>
+                                            <p className="font-semibold text-white">
+                                              Media:{" "}
+                                              {
+                                                getStaffById(
+                                                  draft?.media_id ??
+                                                    match.media_id,
+                                                )!.roblox_username
+                                              }
+                                            </p>
+                                            <p className="text-sm text-white/60">
+                                              @
+                                              {
+                                                getStaffById(
+                                                  draft?.media_id ??
+                                                    match.media_id,
+                                                )!.discord_username
+                                              }
+                                            </p>
+                                          </div>
+                                        </div>
+                                      ) : null}
+                                      {getStaffById(
+                                        draft?.stat_tracker_id ??
+                                          match.stat_tracker_id,
+                                      ) ? (
+                                        <div className="flex items-center gap-3">
+                                          <Avatar
+                                            robloxUserId={
+                                              getStaffById(
+                                                draft?.stat_tracker_id ??
+                                                  match.stat_tracker_id,
+                                              )!.roblox_user_id
+                                            }
+                                            name={
+                                              getStaffById(
+                                                draft?.stat_tracker_id ??
+                                                  match.stat_tracker_id,
+                                              )!.roblox_username
+                                            }
+                                          />
+
+                                          <div>
+                                            <p className="font-semibold text-white">
+                                              Stat Tracker:{" "}
+                                              {
+                                                getStaffById(
+                                                  draft?.stat_tracker_id ??
+                                                    match.stat_tracker_id,
+                                                )!.roblox_username
+                                              }
+                                            </p>
+                                            <p className="text-sm text-white/60">
+                                              @
+                                              {
+                                                getStaffById(
+                                                  draft?.stat_tracker_id ??
+                                                    match.stat_tracker_id,
+                                                )!.discord_username
+                                              }
+                                            </p>
+                                          </div>
+                                        </div>
+                                      ) : null}
+                                    </div>
+                                  </div>
+                                ) : null}
+
+                                {adminLogged ? (
+                                  <label className="flex items-start gap-3 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4 text-sm text-yellow-100">
+                                  <input
+                                    type="checkbox"
+                                    disabled={false}
+                                    checked={Boolean(
+                                      matchDrafts[match.id]?.is_star_match,
+                                    )}
+                                    onChange={(event) =>
+                                      updateMatchDraft(match.id, {
+                                        is_star_match: event.target.checked,
+                                      })
+                                    }
+                                    className="mt-1 h-4 w-4 rounded border-yellow-400/30 bg-transparent accent-yellow-400"
+                                  />
+
+                                  <span>
+                                    <span className="block font-semibold text-yellow-300">
+                                      Star Match
+                                    </span>
+                                    Highlight this match in the public schedule.
+                                  </span>
+                                </label>
+                               ) : null}
+
+                                <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                                  <p className="mb-4 text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">
+                                    Set Results
+                                  </p>
+                                  <p className="mt-3 text-xs text-white/55">
+                                    Set scores preview:{" "}
+                                    {formatSetScores({
+                                      set1_home:
+                                        matchDrafts[match.id]?.set1_home ??
+                                        null,
+                                      set1_away:
+                                        matchDrafts[match.id]?.set1_away ??
+                                        null,
+                                      set2_home:
+                                        matchDrafts[match.id]?.set2_home ??
+                                        null,
+                                      set2_away:
+                                        matchDrafts[match.id]?.set2_away ??
+                                        null,
+                                      set3_home:
+                                        matchDrafts[match.id]?.set3_home ??
+                                        null,
+                                      set3_away:
+                                        matchDrafts[match.id]?.set3_away ??
+                                        null,
+                                      set4_home:
+                                        matchDrafts[match.id]?.set4_home ??
+                                        null,
+                                      set4_away:
+                                        matchDrafts[match.id]?.set4_away ??
+                                        null,
+                                      set5_home:
+                                        matchDrafts[match.id]?.set5_home ??
+                                        null,
+                                      set5_away:
+                                        matchDrafts[match.id]?.set5_away ??
+                                        null,
+                                    }) || "-"}
+                                  </p>
+
+                                  <div className="grid gap-4 md:grid-cols-5">
+                                    {(
+                                      [
+                                        {
+                                          label: "Set 1",
+                                          homeField: "set1_home",
+                                          awayField: "set1_away",
+                                        },
+                                        {
+                                          label: "Set 2",
+                                          homeField: "set2_home",
+                                          awayField: "set2_away",
+                                        },
+                                        {
+                                          label: "Set 3",
+                                          homeField: "set3_home",
+                                          awayField: "set3_away",
+                                        },
+                                        {
+                                          label: "Set 4",
+                                          homeField: "set4_home",
+                                          awayField: "set4_away",
+                                        },
+                                        {
+                                          label: "Set 5",
+                                          homeField: "set5_home",
+                                          awayField: "set5_away",
+                                        },
+                                      ] as const
+                                    ).map((setItem) => (
+                                      <div
+                                        key={setItem.label}
+                                        className="rounded-2xl border border-white/10 bg-[#081712] p-3"
+                                      >
+                                        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.18em] text-white/50">
+                                          {setItem.label}
+                                        </p>
+
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            placeholder="Home"
+                                            disabled={
+                                              match.stats_finalized ||
+                                              (!adminLogged &&
+                                                !canCurrentStatTrackerEditMatch(
+                                                  match,
+                                                ))
+                                            }
+                                            value={
+                                              matchDrafts[match.id]?.[
+                                                setItem.homeField
+                                              ] ?? ""
+                                            }
+                                            onChange={(e) =>
+                                              updateMatchDraftNumber(
+                                                match.id,
+                                                setItem.homeField,
+                                                e.target.value,
+                                              )
+                                            }
+                                            className="h-14 w-full rounded-2xl border border-white/10 bg-white/5 px-3 text-center text-white placeholder:text-white/25 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40 disabled:cursor-not-allowed disabled:opacity-50"
+                                          />
+
+                                          <input
+                                            type="number"
+                                            min="0"
+                                            placeholder="Away"
+                                            disabled={
+                                              match.stats_finalized ||
+                                              (!adminLogged && !canCurrentStatTrackerEditMatch(match))
+                                            }
+                                            value={
+                                              matchDrafts[match.id]?.[
+                                                setItem.awayField
+                                              ] ?? ""
+                                            }
+                                            onChange={(e) =>
+                                              updateMatchDraftNumber(
+                                                match.id,
+                                                setItem.awayField,
+                                                e.target.value,
+                                              )
+                                            }
+                                            className="h-14 w-full rounded-2xl border border-white/10 bg-white/5 px-3 text-center text-white placeholder:text-white/25 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40 disabled:cursor-not-allowed disabled:opacity-50"
+                                          />
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <div className="flex flex-wrap gap-3">
+                                  {adminLogged ||
+                                  canCurrentStatTrackerEditMatch(match) ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => saveMatchDraft(match.id)}
+                                      className="rounded-2xl bg-emerald-500 px-4 py-2 text-sm font-semibold text-black transition duration-200 hover:-translate-y-0.5 hover:scale-[1.01] active:translate-y-0.5"
+                                    >
+                                      Save Changes
+                                    </button>
+                                  ) : null}
+
+                                  {canCurrentStatTrackerEditMatch(match) &&
+                                  !match.stats_finalized ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openConfirmDialog({
+                                          title: "Submit Stats",
+                                          message: `Send stats for ${match.home_country} vs ${match.away_country} to Admin review?`,
+                                          confirmLabel: "Submit Stats",
+                                          onConfirm: () =>
+                                            submitStatsForReview(match.id),
+                                        })
+                                      }
+                                      className="rounded-2xl border border-yellow-400/20 bg-yellow-400/10 px-4 py-2 text-sm font-semibold text-yellow-300 transition duration-200 hover:-translate-y-0.5 hover:bg-yellow-400/15 active:translate-y-0.5"
+                                    >
+                                      Submit Stats
+                                    </button>
+                                  ) : null}
+
+                                  {adminLogged && !match.stats_finalized ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openConfirmDialog({
+                                          title: "Finish Stats",
+                                          message: `Are you sure you want to finish stats for ${match.home_country} vs ${match.away_country}? After this, the stats cannot be edited.`,
+                                          confirmLabel: "Finish Stats",
+                                          onConfirm: () =>
+                                            finishStats(match.id),
+                                        })
+                                      }
+                                      className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-300 transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-400/15 active:translate-y-0.5"
+                                    >
+                                      Finish Stats
+                                    </button>
+                                  ) : null}
+
+                                  {adminLogged ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        openConfirmDialog({
+                                          title: "Delete Match",
+                                          message: `Are you sure you want to delete ${match.home_country} vs ${match.away_country}?`,
+                                          confirmLabel: "Delete",
+                                          onConfirm: () =>
+                                            handleDeleteMatch(match.id),
+                                        })
+                                      }
+                                      className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
+                                    >
+                                      Delete Match
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div>
-              <form
-                onSubmit={handleStaffRegisterSubmit}
-                className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6 md:p-8"
-              >
-                <div className="grid gap-5 md:grid-cols-2">
-                  <div className="md:col-span-2">
-                    <label className="mb-2 block text-sm font-medium text-white/70">
-                      Application Type
-                    </label>
-                    <SelectPicker
-                      value={staffRegisterForm.role}
-                      onChange={(value) =>
-                        setStaffRegisterForm((prev) => ({
-                          ...prev,
-                          role: value as StaffRole,
-                        }))
-                      }
-                      options={staffRoleOptions}
-                      placeholder="Select staff role"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-white/70">
-                      Roblox Username
-                    </label>
-                    <input
-                      value={staffRegisterForm.roblox_username}
-                      onChange={(e) =>
-                        setStaffRegisterForm((prev) => ({
-                          ...prev,
-                          roblox_username: e.target.value,
-                        }))
-                      }
-                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                      placeholder="Roblox username"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-white/70">
-                      Discord Username
-                    </label>
-                    <input
-                      value={staffRegisterForm.discord_username}
-                      onChange={(e) =>
-                        setStaffRegisterForm((prev) => ({
-                          ...prev,
-                          discord_username: e.target.value,
-                        }))
-                      }
-                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                      placeholder="discorduser"
-                    />
-                  </div>
-
-                  <div className="md:col-span-2">
-                    <label className="mb-2 block text-sm font-medium text-white/70">
-                      Roblox User ID
-                    </label>
-                    <input
-                      value={staffRegisterForm.roblox_user_id}
-                      onChange={(e) =>
-                        setStaffRegisterForm((prev) => ({
-                          ...prev,
-                          roblox_user_id: e.target.value,
-                        }))
-                      }
-                      className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
-                      placeholder="123456789"
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-6 rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
-                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-emerald-300">
-                    Application Confirmation
-                  </p>
-
-                  <div className="mt-4 space-y-4">
-                    <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-[#081712] p-4 text-sm text-white/80">
-                      <input
-                        type="checkbox"
-                        checked={staffConfirmations.commitment_confirmed}
-                        onChange={(e) =>
-                          setStaffConfirmations((prev) => ({
-                            ...prev,
-                            commitment_confirmed: e.target.checked,
-                          }))
-                        }
-                        className="mt-1 h-4 w-4 rounded border-white/20 bg-transparent accent-emerald-500"
-                      />
-                      <span>
-                        {staffRegisterForm.role === "Media"
-                          ? "I confirm that I have a computer and setup capable of recording or streaming SAVL matches with good visual quality, stability, and responsibility."
-                          : staffRegisterForm.role === "Stat Tracker"
-                            ? "I confirm that I understand the responsibility of being a Stat Tracker and will enter match stats carefully, accurately, and only for assigned matches."
-                            : "I confirm that I understand the responsibility of being a Referee and will officiate matches fairly, impartially, and according to league standards without favoring either side."}
-                      </span>
-                    </label>
-
-                    <label className="flex items-start gap-3 rounded-2xl border border-white/10 bg-[#081712] p-4 text-sm text-white/80">
-                      <input
-                        type="checkbox"
-                        checked={staffConfirmations.rulebook_confirmed}
-                        onChange={(e) =>
-                          setStaffConfirmations((prev) => ({
-                            ...prev,
-                            rulebook_confirmed: e.target.checked,
-                          }))
-                        }
-                        className="mt-1 h-4 w-4 rounded border-white/20 bg-transparent accent-emerald-500"
-                      />
-                      <span>
-                        I confirm that I am familiar with the league rules and
-                        the RVL rulebook:{" "}
-                        <a
-                          href="https://docs.google.com/document/d/1daPK-6Ud4KnbRPuuALMqET1YUfhgHcvNV8_bTHJcacY/edit?usp=sharing"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-semibold text-emerald-300 underline underline-offset-4"
-                        >
-                          View Rulebook
-                        </a>
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={
-                    submittingStaffApplication ||
-                    !staffRegisterForm.role ||
-                    !staffConfirmations.commitment_confirmed ||
-                    !staffConfirmations.rulebook_confirmed
-                  }
-                  className="mt-6 w-full rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-black transition duration-200 hover:-translate-y-1 hover:scale-[1.01] active:translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:scale-100"
-                >
-                  {submittingStaffApplication
-                    ? "Submitting..."
-                    : "Submit Staff Application"}
-                </button>
-              </form>
-            </div>
+            )}
           </div>
         </section>
 
@@ -5946,18 +6486,28 @@ export default function SAVLSitePage() {
       <footer className="border-t border-white/10 bg-[#06100C]">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-8 text-sm text-white/60 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="font-semibold text-white">SAVL</p>
-            <p>South America Volleyball League</p>
+            <p className="font-semibold text-white">SAVL Admin</p>
+            <p>South America Volleyball League Control Center</p>
           </div>
 
-          <div className="flex gap-3">
-            <AnimatedNavButton label="Schedule" targetId="schedule" />
-            <AnimatedNavButton label="Register" targetId="register" />
+          <div className="flex flex-wrap gap-3">
             <Link
-              href="/admin"
+              href="/"
               className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
             >
-              Admin
+              Public Site
+            </Link>
+            <Link
+              href="/stats"
+              className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
+            >
+              Stats
+            </Link>
+            <Link
+              href="/archives"
+              className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
+            >
+              Archives
             </Link>
           </div>
         </div>
