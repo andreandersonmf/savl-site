@@ -22,6 +22,8 @@ type Team = {
   captain_name: string;
   captain_discord: string;
   captain_roblox_id: string;
+  captain_discord_id?: string | null;
+  discord_role_id?: string | null;
   approved: boolean;
   approved_at?: string | null;
   created_at: string;
@@ -133,6 +135,7 @@ type TeamPlayer = {
   roblox_username: string;
   roblox_user_id: string;
   discord_username: string;
+  discord_id?: string | null;
   role: TeamPlayerRole;
   season_id?: string | null;
   created_at: string;
@@ -153,6 +156,21 @@ type StaffApplication = {
   approved: boolean;
   approved_at?: string | null;
   created_at: string;
+};
+
+type TeamTransaction = {
+  id: string;
+  team_id?: number | null;
+  team_name?: string | null;
+  transaction_type?: string | null;
+  requested_role?: string | null;
+  status?: string | null;
+  player_discord_id?: string | null;
+  player_discord_username?: string | null;
+  requester_discord_username?: string | null;
+  roblox_username?: string | null;
+  roblox_user_id?: string | null;
+  created_at?: string | null;
 };
 
 type BrickColor = {
@@ -2014,6 +2032,9 @@ export default function SAVLSitePage() {
   );
   const [submittingTeam, setSubmittingTeam] = useState(false);
   const [teamPlayers, setTeamPlayers] = useState<TeamPlayer[]>([]);
+  const [teamTransactions, setTeamTransactions] = useState<TeamTransaction[]>([]);
+  const [teamRoleDrafts, setTeamRoleDrafts] = useState<Record<number, string>>({});
+  const [teamSyncBusy, setTeamSyncBusy] = useState(false);
   const [selectedAdminTeamId, setSelectedAdminTeamId] = useState<number | null>(
     null,
   );
@@ -2067,6 +2088,7 @@ export default function SAVLSitePage() {
     roblox_username: "",
     roblox_user_id: "",
     discord_username: "",
+    discord_id: "",
     role: "Player" as TeamPlayerRole,
   });
 
@@ -2074,6 +2096,7 @@ export default function SAVLSitePage() {
     country: "",
     captain_name: "",
     captain_discord: "",
+    captain_discord_id: "",
     captain_roblox_id: "",
     brick_color_name: "",
   });
@@ -2093,6 +2116,7 @@ export default function SAVLSitePage() {
     country: "",
     captain_name: "",
     captain_discord: "",
+    captain_discord_id: "",
     captain_roblox_id: "",
     brick_color_name: "",
   });
@@ -2161,6 +2185,7 @@ export default function SAVLSitePage() {
     team_id: "",
     captain_name: "",
     captain_discord: "",
+    captain_discord_id: "",
     captain_roblox_id: "",
     old_captain_new_role: "Player" as TeamPlayerRole,
   });
@@ -2186,6 +2211,27 @@ export default function SAVLSitePage() {
     if (error) return null;
 
     return data?.role ?? null;
+  }
+
+  async function callTeamSync(action: string, payload: Record<string, any> = {}) {
+    if (!supabase) throw new Error("Supabase is not configured.");
+
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) throw new Error("Login session expired. Log in again before changing Discord-linked teams.");
+
+    const response = await fetch("/api/team-sync", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ action, ...payload }),
+    });
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result?.error || "Team sync failed.");
+    return result;
   }
 
   function isStatTrackerRole(role: string | null) {
@@ -2371,6 +2417,7 @@ export default function SAVLSitePage() {
         reloadMatches(seasonId),
         reloadTeamPlayers(seasonId),
         reloadStaffApplications(),
+        reloadTeamTransactions(),
         reloadPlayerStats(seasonId),
       ]);
       setLoading(false);
@@ -3035,6 +3082,7 @@ export default function SAVLSitePage() {
       country: string;
       captain_name: string;
       captain_discord: string;
+      captain_discord_id?: string;
       captain_roblox_id: string;
       brick_color_name: string;
     },
@@ -3104,6 +3152,7 @@ export default function SAVLSitePage() {
       code: selectedCountry.code,
       captain_name: cleanCaptain,
       captain_discord: cleanDiscord,
+      captain_discord_id: payload.captain_discord_id?.trim() || null,
       captain_roblox_id: cleanRobloxReference,
       approved: isAdmin,
       approved_at: isAdmin ? new Date().toISOString() : null,
@@ -3259,6 +3308,7 @@ export default function SAVLSitePage() {
         country: "",
         captain_name: "",
         captain_discord: "",
+        captain_discord_id: "",
         captain_roblox_id: "",
         brick_color_name: "",
       });
@@ -3298,6 +3348,7 @@ export default function SAVLSitePage() {
         country: "",
         captain_name: "",
         captain_discord: "",
+        captain_discord_id: "",
         captain_roblox_id: "",
         brick_color_name: "",
       });
@@ -3307,14 +3358,16 @@ export default function SAVLSitePage() {
   async function handleDeleteTeam(teamId: number) {
     if (!supabase) return;
 
-    const { error } = await supabase.from("teams").delete().eq("id", teamId);
-    if (error) {
-      showNotice(error.message, true);
-      return;
+    setTeamSyncBusy(true);
+    try {
+      await callTeamSync("delete_team", { teamId });
+      await Promise.all([reloadTeams(), reloadTeamPlayers(), reloadTeamTransactions()]);
+      showNotice("Team removed from site and Discord roles were cleaned.", true);
+    } catch (error: any) {
+      showNotice(error?.message || "Unable to remove team.", true);
+    } finally {
+      setTeamSyncBusy(false);
     }
-
-    await reloadTeams();
-    showNotice("Team removed.", true);
   }
 
   async function handleChangeCaptain(event: React.FormEvent<HTMLFormElement>) {
@@ -3324,17 +3377,11 @@ export default function SAVLSitePage() {
 
     const teamId = Number(captainForm.team_id);
     const cleanCaptainName = captainForm.captain_name.trim();
-    const cleanCaptainDiscord = cleanDiscordUsername(
-      captainForm.captain_discord,
-    );
+    const cleanCaptainDiscord = cleanDiscordUsername(captainForm.captain_discord);
+    const cleanCaptainDiscordId = captainForm.captain_discord_id.trim();
     const cleanCaptainRobloxId = captainForm.captain_roblox_id.trim();
 
-    if (
-      !teamId ||
-      !cleanCaptainName ||
-      !cleanCaptainDiscord ||
-      !cleanCaptainRobloxId
-    ) {
+    if (!teamId || !cleanCaptainName || !cleanCaptainDiscord || !cleanCaptainRobloxId) {
       showNotice("Fill in all captain fields.", true);
       return;
     }
@@ -3344,126 +3391,43 @@ export default function SAVLSitePage() {
       return;
     }
 
+    if (cleanCaptainDiscordId && !isNumericId(cleanCaptainDiscordId)) {
+      showNotice("Discord User ID must contain numbers only.", true);
+      return;
+    }
+
     const team = teams.find((item) => item.id === teamId);
     if (!team) {
       showNotice("Team not found.", true);
       return;
     }
 
-    const sameAsCurrentCaptain =
-      normalizeText(team.captain_name) === normalizeText(cleanCaptainName) &&
-      normalizeText(team.captain_discord) ===
-        normalizeText(cleanCaptainDiscord) &&
-      String(team.captain_roblox_id).trim() === cleanCaptainRobloxId;
-
-    if (sameAsCurrentCaptain) {
-      showNotice("This player is already the captain of this team.", true);
-      return;
-    }
-
-    const playerAlreadyInAnotherTeam = teamPlayers.find(
-      (player) =>
-        player.team_id !== teamId &&
-        (normalizeText(player.discord_username) ===
-          normalizeText(cleanCaptainDiscord) ||
-          String(player.roblox_user_id).trim() === cleanCaptainRobloxId),
-    );
-
-    if (playerAlreadyInAnotherTeam) {
-      showNotice("This player is already registered in another roster.", true);
-      return;
-    }
-
-    const captainAlreadyInAnotherTeam = teams.find(
-      (item) =>
-        item.id !== teamId &&
-        (normalizeText(item.captain_discord) ===
-          normalizeText(cleanCaptainDiscord) ||
-          String(item.captain_roblox_id).trim() === cleanCaptainRobloxId),
-    );
-
-    if (captainAlreadyInAnotherTeam) {
-      showNotice(
-        "This player is already registered as captain of another team.",
-        true,
-      );
-      return;
-    }
-
     setSavingCaptainChange(true);
+    try {
+      await callTeamSync("change_captain", {
+        teamId,
+        captainName: cleanCaptainName,
+        captainDiscord: cleanCaptainDiscord,
+        captainDiscordId: cleanCaptainDiscordId || null,
+        captainRobloxId: cleanCaptainRobloxId,
+        oldCaptainNewRole: captainForm.old_captain_new_role,
+      });
 
-    const existingRosterPlayer = teamPlayers.find(
-      (player) =>
-        player.team_id === teamId &&
-        (normalizeText(player.discord_username) ===
-          normalizeText(cleanCaptainDiscord) ||
-          String(player.roblox_user_id).trim() === cleanCaptainRobloxId),
-    );
-
-    if (existingRosterPlayer) {
-      const { error: deleteNewCaptainFromRosterError } = await supabase
-        .from("team_players")
-        .delete()
-        .eq("id", existingRosterPlayer.id);
-
-      if (deleteNewCaptainFromRosterError) {
-        setSavingCaptainChange(false);
-        showNotice(deleteNewCaptainFromRosterError.message, true);
-        return;
-      }
+      await Promise.all([reloadTeams(), reloadTeamPlayers()]);
+      setCaptainForm({
+        team_id: "",
+        captain_name: "",
+        captain_discord: "",
+        captain_discord_id: "",
+        captain_roblox_id: "",
+        old_captain_new_role: "Player",
+      });
+      showNotice("Captain changed on the site and Discord.", true);
+    } catch (error: any) {
+      showNotice(error?.message || "Unable to change captain.", true);
+    } finally {
+      setSavingCaptainChange(false);
     }
-
-    const shouldDemoteOldCaptain =
-      team.captain_name.trim() &&
-      cleanDiscordUsername(team.captain_discord).trim() &&
-      String(team.captain_roblox_id).trim();
-
-    if (shouldDemoteOldCaptain) {
-      const { error: insertOldCaptainError } = await supabase
-        .from("team_players")
-        .insert({
-          team_id: team.id,
-          roblox_username: team.captain_name.trim(),
-          roblox_user_id: String(team.captain_roblox_id).trim(),
-          discord_username: cleanDiscordUsername(team.captain_discord),
-          role: captainForm.old_captain_new_role,
-        });
-
-      if (insertOldCaptainError) {
-        setSavingCaptainChange(false);
-        showNotice(insertOldCaptainError.message, true);
-        return;
-      }
-    }
-
-    const { error: updateTeamError } = await supabase
-      .from("teams")
-      .update({
-        captain_name: cleanCaptainName,
-        captain_discord: cleanCaptainDiscord,
-        captain_roblox_id: cleanCaptainRobloxId,
-      })
-      .eq("id", team.id);
-
-    setSavingCaptainChange(false);
-
-    if (updateTeamError) {
-      showNotice(updateTeamError.message, true);
-      return;
-    }
-
-    await reloadTeams();
-    await reloadTeamPlayers();
-
-    setCaptainForm({
-      team_id: "",
-      captain_name: "",
-      captain_discord: "",
-      captain_roblox_id: "",
-      old_captain_new_role: "Player",
-    });
-
-    showNotice("Captain changed successfully.", true);
   }
 
   async function handleRemoveCaptain(teamId: number) {
@@ -3482,6 +3446,7 @@ export default function SAVLSitePage() {
       .update({
         captain_name: "",
         captain_discord: "",
+        captain_discord_id: "",
         captain_roblox_id: "",
       })
       .eq("id", teamId);
@@ -3875,6 +3840,19 @@ export default function SAVLSitePage() {
     }
   }
 
+  async function reloadTeamTransactions() {
+    if (!supabase) return;
+
+    const { data, error } = await supabase
+      .from("team_transactions")
+      .select("*")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (!error && data) setTeamTransactions(data as TeamTransaction[]);
+  }
+
   async function reloadStaffApplications() {
     if (!supabase) return;
 
@@ -3951,14 +3929,9 @@ export default function SAVLSitePage() {
     const cleanUsername = playerForm.roblox_username.trim();
     const cleanUserId = playerForm.roblox_user_id.trim();
     const cleanDiscord = cleanDiscordUsername(playerForm.discord_username);
+    const cleanDiscordId = playerForm.discord_id.trim();
 
-    if (
-      !cleanTeamId ||
-      !cleanUsername ||
-      !cleanUserId ||
-      !cleanDiscord ||
-      !playerForm.role
-    ) {
+    if (!cleanTeamId || !cleanUsername || !cleanUserId || !cleanDiscord || !playerForm.role) {
       showNotice("Fill in all player fields.", true);
       return;
     }
@@ -3968,71 +3941,37 @@ export default function SAVLSitePage() {
       return;
     }
 
-    const team = teams.find((item) => item.id === cleanTeamId);
-    if (!team) {
-      showNotice("Team not found.", true);
+    if (cleanDiscordId && !isNumericId(cleanDiscordId)) {
+      showNotice("Discord User ID must contain numbers only.", true);
       return;
     }
 
-    const duplicateInRoster = teamPlayers.find(
-      (player) =>
-        normalizeText(player.discord_username) ===
-          normalizeText(cleanDiscord) ||
-        String(player.roblox_user_id).trim() === cleanUserId,
-    );
+    setTeamSyncBusy(true);
+    try {
+      await callTeamSync("add_player", {
+        teamId: cleanTeamId,
+        robloxUsername: cleanUsername,
+        robloxUserId: cleanUserId,
+        discordUsername: cleanDiscord,
+        discordId: cleanDiscordId || null,
+        role: playerForm.role,
+      });
 
-    if (duplicateInRoster) {
-      showNotice("This player is already registered in a roster.", true);
-      return;
+      await reloadTeamPlayers();
+      setPlayerForm({
+        team_id: "",
+        roblox_username: "",
+        roblox_user_id: "",
+        discord_username: "",
+        discord_id: "",
+        role: "Player",
+      });
+      showNotice("Player added to site and Discord roles were applied.", true);
+    } catch (error: any) {
+      showNotice(error?.message || "Unable to add player.", true);
+    } finally {
+      setTeamSyncBusy(false);
     }
-
-    const teamHasSameCaptain =
-      normalizeText(team.captain_discord) === normalizeText(cleanDiscord) ||
-      String(team.captain_roblox_id).trim() === cleanUserId;
-
-    if (teamHasSameCaptain) {
-      showNotice("This player is already the captain of this team.", true);
-      return;
-    }
-
-    const playerIsCaptainSomewhereElse = teams.find(
-      (item) =>
-        normalizeText(item.captain_discord) === normalizeText(cleanDiscord) ||
-        String(item.captain_roblox_id).trim() === cleanUserId,
-    );
-
-    if (playerIsCaptainSomewhereElse) {
-      showNotice("This player is already registered as a captain.", true);
-      return;
-    }
-
-    const payload = {
-      team_id: cleanTeamId,
-      roblox_username: cleanUsername,
-      roblox_user_id: cleanUserId,
-      discord_username: cleanDiscord,
-      role: playerForm.role,
-      season_id: activeSeasonId,
-    };
-
-    const { error } = await supabase.from("team_players").insert(payload);
-
-    if (error) {
-      showNotice(error.message, true);
-      return;
-    }
-
-    await reloadTeamPlayers();
-
-    setPlayerForm({
-      team_id: "",
-      roblox_username: "",
-      roblox_user_id: "",
-      discord_username: "",
-      role: "Player",
-    });
-
-    showNotice("Player added successfully.", true);
   }
 
   async function handleUpdatePlayer(
@@ -4077,18 +4016,16 @@ export default function SAVLSitePage() {
   async function handleDeletePlayer(playerId: number) {
     if (!supabase) return;
 
-    const { error } = await supabase
-      .from("team_players")
-      .delete()
-      .eq("id", playerId);
-
-    if (error) {
-      showNotice(error.message, true);
-      return;
+    setTeamSyncBusy(true);
+    try {
+      await callTeamSync("remove_player", { playerId });
+      await reloadTeamPlayers();
+      showNotice("Player removed from site and Discord roles.", true);
+    } catch (error: any) {
+      showNotice(error?.message || "Unable to remove player.", true);
+    } finally {
+      setTeamSyncBusy(false);
     }
-
-    await reloadTeamPlayers();
-    showNotice("Player removed.", true);
   }
 
   async function resolveActiveSeason(preferredSeasonId?: string | null) {
@@ -4322,6 +4259,42 @@ export default function SAVLSitePage() {
     showNotice("Team group updated successfully.", true);
   }
 
+  async function handleSetTeamDiscordRole(teamId: number) {
+    const discordRoleId = (teamRoleDrafts[teamId] ?? "").trim();
+    if (!discordRoleId || !isNumericId(discordRoleId)) {
+      showNotice("Enter a valid Discord Role ID for this team.", true);
+      return;
+    }
+
+    setTeamSyncBusy(true);
+    try {
+      await callTeamSync("set_team_role", { teamId, discordRoleId });
+      await reloadTeams();
+      setTeamRoleDrafts((prev) => ({ ...prev, [teamId]: "" }));
+      showNotice("Discord role connected to team.", true);
+    } catch (error: any) {
+      showNotice(error?.message || "Unable to connect Discord role.", true);
+    } finally {
+      setTeamSyncBusy(false);
+    }
+  }
+
+  async function handleClearPendingTransfer(transaction: TeamTransaction) {
+    setTeamSyncBusy(true);
+    try {
+      await callTeamSync("clear_transfer", {
+        transactionId: transaction.id,
+        playerDiscordId: transaction.player_discord_id ?? null,
+      });
+      await reloadTeamTransactions();
+      showNotice("Pending transfer cleared from the site.", true);
+    } catch (error: any) {
+      showNotice(error?.message || "Unable to clear pending transfer.", true);
+    } finally {
+      setTeamSyncBusy(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-[#03110D] text-white selection:bg-emerald-400/20 selection:text-white">
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#03110D]/90 backdrop-blur">
@@ -4361,9 +4334,12 @@ export default function SAVLSitePage() {
 
           <Link
             href="/profile"
-            className="inline-flex shrink-0 items-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-400/15 px-4 py-2 text-sm font-black text-emerald-200 shadow-lg shadow-emerald-500/10 transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-400/25 hover:text-white active:translate-y-0.5"
+            className="inline-flex shrink-0 items-center gap-2 rounded-2xl border border-[#5865F2]/35 bg-[#5865F2]/15 px-4 py-2 text-sm font-black text-white shadow-lg shadow-[#5865F2]/10 transition duration-200 hover:-translate-y-0.5 hover:bg-[#5865F2]/25 active:translate-y-0.5"
           >
-            Profile
+            <span>Profile</span>
+            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-[#AEB6FF]">
+              <path d="M20.3 5.37A16.1 16.1 0 0 0 16.34 4c-.17.31-.36.73-.49 1.06a14.9 14.9 0 0 0-4.4 0A8.4 8.4 0 0 0 10.96 4a16.2 16.2 0 0 0-3.98 1.38C4.46 9.13 3.78 12.8 4.12 16.4A16.4 16.4 0 0 0 9 18.9c.4-.54.75-1.11 1.05-1.72-.58-.22-1.14-.49-1.66-.8.14-.1.27-.21.4-.32a11.55 11.55 0 0 0 10.24 0c.13.11.26.22.4.32-.52.31-1.08.58-1.66.8.3.61.66 1.18 1.05 1.72a16.3 16.3 0 0 0 4.88-2.5c.42-4.17-.72-7.8-3.4-11.03ZM9.75 14.17c-.95 0-1.73-.89-1.73-1.98s.76-1.99 1.73-1.99c.97 0 1.75.9 1.73 1.99 0 1.09-.76 1.98-1.73 1.98Zm6.2 0c-.95 0-1.73-.89-1.73-1.98s.76-1.99 1.73-1.99c.97 0 1.75.9 1.73 1.99 0 1.09-.76 1.98-1.73 1.98Z" />
+            </svg>
           </Link>
         </div>
       </header>
@@ -4700,6 +4676,23 @@ export default function SAVLSitePage() {
                           }
                           className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
                           placeholder="discorduser"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-white/70">
+                          Captain Discord User ID <span className="text-white/40">(optional)</span>
+                        </label>
+                        <input
+                          value={adminTeamForm.captain_discord_id}
+                          onChange={(e) =>
+                            setAdminTeamForm((prev) => ({
+                              ...prev,
+                              captain_discord_id: e.target.value,
+                            }))
+                          }
+                          className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
+                          placeholder="Discord numeric ID"
                         />
                       </div>
 
@@ -5183,6 +5176,36 @@ export default function SAVLSitePage() {
                                     />
                                   </div>
 
+                                  <div className="mt-4 rounded-2xl border border-[#5865F2]/20 bg-[#5865F2]/10 p-3">
+                                    <label className="mb-2 block text-sm font-medium text-white/70">
+                                      Discord Team Role ID
+                                    </label>
+                                    <div className="flex flex-col gap-2 sm:flex-row">
+                                      <input
+                                        value={teamRoleDrafts[team.id] ?? team.discord_role_id ?? ""}
+                                        onChange={(event) =>
+                                          setTeamRoleDrafts((prev) => ({
+                                            ...prev,
+                                            [team.id]: event.target.value,
+                                          }))
+                                        }
+                                        className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none transition focus:border-[#5865F2]/50"
+                                        placeholder="Discord role ID"
+                                      />
+                                      <button
+                                        type="button"
+                                        disabled={teamSyncBusy}
+                                        onClick={() => handleSetTeamDiscordRole(team.id)}
+                                        className="rounded-2xl bg-[#5865F2] px-4 py-3 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                                      >
+                                        Save Role
+                                      </button>
+                                    </div>
+                                    <p className="mt-2 text-xs text-white/45">
+                                      This connects /team create, /team info and site roster actions to the same Discord role.
+                                    </p>
+                                  </div>
+
                                   <div className="flex flex-wrap gap-2">
                                     <button
                                       type="button"
@@ -5193,6 +5216,7 @@ export default function SAVLSitePage() {
                                           roblox_username: "",
                                           roblox_user_id: "",
                                           discord_username: "",
+                                          discord_id: "",
                                           role: "Player",
                                         });
                                         scrollToSection("admin");
@@ -5368,6 +5392,54 @@ export default function SAVLSitePage() {
                         </div>
                       </div>
 
+                      <div className="rounded-[2rem] border border-yellow-400/15 bg-yellow-400/[0.04] p-6">
+                        <div className="mb-4 flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-xl font-bold text-white">Pending transfers</p>
+                            <p className="mt-1 text-sm text-white/60">
+                              Admin-only clear button for pending /team add transactions mirrored from Discord.
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={reloadTeamTransactions}
+                            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/75 transition hover:bg-white/10"
+                          >
+                            Refresh
+                          </button>
+                        </div>
+
+                        <div className="space-y-3">
+                          {teamTransactions.length === 0 ? (
+                            <p className="text-sm text-white/55">No pending transfers.</p>
+                          ) : (
+                            teamTransactions.map((transaction) => (
+                              <div key={transaction.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                                <div className="flex flex-wrap items-start justify-between gap-3">
+                                  <div>
+                                    <p className="font-semibold text-white">{transaction.team_name || "Unknown team"}</p>
+                                    <p className="mt-1 text-sm text-white/60">
+                                      {transaction.player_discord_username || transaction.player_discord_id || "Unknown player"} → {transaction.requested_role || "Player"}
+                                    </p>
+                                    <p className="mt-1 text-xs text-white/40">
+                                      Requested by {transaction.requester_discord_username || "—"}
+                                    </p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    disabled={teamSyncBusy}
+                                    onClick={() => handleClearPendingTransfer(transaction)}
+                                    className="rounded-2xl border border-yellow-400/25 bg-yellow-400/10 px-4 py-2 text-sm font-semibold text-yellow-200 transition hover:bg-yellow-400/15 disabled:cursor-not-allowed disabled:opacity-60"
+                                  >
+                                    Clear Transfer
+                                  </button>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+
                       <form
                         onSubmit={handleAddPlayer}
                         className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6"
@@ -5429,6 +5501,23 @@ export default function SAVLSitePage() {
                               }
                               className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-emerald-400/30 focus:border-emerald-400/40"
                               placeholder="discorduser"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/70">
+                              Discord User ID
+                            </label>
+                            <input
+                              value={playerForm.discord_id}
+                              onChange={(e) =>
+                                setPlayerForm((prev) => ({
+                                  ...prev,
+                                  discord_id: e.target.value,
+                                }))
+                              }
+                              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none transition duration-200 hover:border-[#5865F2]/40 focus:border-[#5865F2]/50"
+                              placeholder="Numeric Discord ID"
                             />
                           </div>
 
@@ -5543,6 +5632,24 @@ export default function SAVLSitePage() {
                               }
                               className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-emerald-400/40"
                               placeholder="@discorduser"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-medium text-white/80">
+                              New Captain Discord User ID
+                            </label>
+                            <input
+                              type="text"
+                              value={captainForm.captain_discord_id}
+                              onChange={(event) =>
+                                setCaptainForm((prev) => ({
+                                  ...prev,
+                                  captain_discord_id: event.target.value,
+                                }))
+                              }
+                              className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition focus:border-[#5865F2]/50"
+                              placeholder="Numeric Discord ID"
                             />
                           </div>
 

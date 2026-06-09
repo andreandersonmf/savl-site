@@ -22,6 +22,8 @@ type Team = {
   captain_name: string;
   captain_discord: string;
   captain_roblox_id: string;
+  captain_discord_id?: string | null;
+  discord_role_id?: string | null;
   approved: boolean;
   approved_at?: string | null;
   created_at: string;
@@ -144,6 +146,7 @@ type TeamPlayer = {
   roblox_username: string;
   roblox_user_id: string;
   discord_username: string;
+  discord_id?: string | null;
   role: TeamPlayerRole;
   season_id?: string | null;
   created_at: string;
@@ -2083,6 +2086,7 @@ export default function SAVLSitePage() {
     roblox_username: "",
     roblox_user_id: "",
     discord_username: "",
+    discord_id: "",
     role: "Player" as TeamPlayerRole,
   });
 
@@ -2090,6 +2094,7 @@ export default function SAVLSitePage() {
     country: "",
     captain_name: "",
     captain_discord: "",
+    captain_discord_id: "",
     captain_roblox_id: "",
     brick_color_name: "",
   });
@@ -2109,6 +2114,7 @@ export default function SAVLSitePage() {
     country: "",
     captain_name: "",
     captain_discord: "",
+    captain_discord_id: "",
     captain_roblox_id: "",
     brick_color_name: "",
   });
@@ -2177,6 +2183,7 @@ export default function SAVLSitePage() {
     team_id: "",
     captain_name: "",
     captain_discord: "",
+    captain_discord_id: "",
     captain_roblox_id: "",
     old_captain_new_role: "Player" as TeamPlayerRole,
   });
@@ -3164,6 +3171,7 @@ export default function SAVLSitePage() {
       country: string;
       captain_name: string;
       captain_discord: string;
+      captain_discord_id?: string;
       captain_roblox_id: string;
       brick_color_name: string;
     },
@@ -3233,6 +3241,7 @@ export default function SAVLSitePage() {
       code: selectedCountry.code,
       captain_name: cleanCaptain,
       captain_discord: cleanDiscord,
+      captain_discord_id: payload.captain_discord_id?.trim() || (!isAdmin ? siteProfile?.discord_id ?? null : null),
       captain_roblox_id: cleanRobloxReference,
       approved: isAdmin,
       approved_at: isAdmin ? new Date().toISOString() : null,
@@ -3388,6 +3397,7 @@ export default function SAVLSitePage() {
         country: "",
         captain_name: "",
         captain_discord: "",
+        captain_discord_id: "",
         captain_roblox_id: "",
         brick_color_name: "",
       });
@@ -3427,6 +3437,7 @@ export default function SAVLSitePage() {
         country: "",
         captain_name: "",
         captain_discord: "",
+        captain_discord_id: "",
         captain_roblox_id: "",
         brick_color_name: "",
       });
@@ -3588,6 +3599,7 @@ export default function SAVLSitePage() {
       team_id: "",
       captain_name: "",
       captain_discord: "",
+      captain_discord_id: "",
       captain_roblox_id: "",
       old_captain_new_role: "Player",
     });
@@ -3611,6 +3623,7 @@ export default function SAVLSitePage() {
       .update({
         captain_name: "",
         captain_discord: "",
+        captain_discord_id: "",
         captain_roblox_id: "",
       })
       .eq("id", teamId);
@@ -4158,6 +4171,7 @@ export default function SAVLSitePage() {
       roblox_username: "",
       roblox_user_id: "",
       discord_username: "",
+      discord_id: "",
       role: "Player",
     });
 
@@ -4647,10 +4661,12 @@ export default function SAVLSitePage() {
             {siteProfile ? (
               <Link
                 href="/profile"
-                className="inline-flex items-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-400/15 px-4 py-2 text-sm font-black text-emerald-200 shadow-lg shadow-emerald-500/10 transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-400/25 hover:text-white active:translate-y-0.5"
+                className="inline-flex items-center gap-2 rounded-2xl border border-[#5865F2]/35 bg-[#5865F2]/15 px-4 py-2 text-sm font-black text-white shadow-lg shadow-[#5865F2]/10 transition duration-200 hover:-translate-y-0.5 hover:bg-[#5865F2]/25 active:translate-y-0.5"
               >
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-400 text-xs text-black">✓</span>
-                Profile
+                <span>Profile</span>
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-[#AEB6FF]">
+                  <path d="M20.3 5.37A16.1 16.1 0 0 0 16.34 4c-.17.31-.36.73-.49 1.06a14.9 14.9 0 0 0-4.4 0A8.4 8.4 0 0 0 10.96 4a16.2 16.2 0 0 0-3.98 1.38C4.46 9.13 3.78 12.8 4.12 16.4A16.4 16.4 0 0 0 9 18.9c.4-.54.75-1.11 1.05-1.72-.58-.22-1.14-.49-1.66-.8.14-.1.27-.21.4-.32a11.55 11.55 0 0 0 10.24 0c.13.11.26.22.4.32-.52.31-1.08.58-1.66.8.3.61.66 1.18 1.05 1.72a16.3 16.3 0 0 0 4.88-2.5c.42-4.17-.72-7.8-3.4-11.03ZM9.75 14.17c-.95 0-1.73-.89-1.73-1.98s.76-1.99 1.73-1.99c.97 0 1.75.9 1.73 1.99 0 1.09-.76 1.98-1.73 1.98Zm6.2 0c-.95 0-1.73-.89-1.73-1.98s.76-1.99 1.73-1.99c.97 0 1.75.9 1.73 1.99 0 1.09-.76 1.98-1.73 1.98Z" />
+                </svg>
               </Link>
             ) : (
               <button
@@ -6264,9 +6280,12 @@ export default function SAVLSitePage() {
             {siteProfile ? (
               <Link
                 href="/profile"
-                className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-3 py-1.5 text-sm font-bold text-emerald-200 transition duration-200 hover:bg-emerald-400/20 hover:text-white"
+                className="inline-flex items-center gap-2 rounded-xl border border-[#5865F2]/30 bg-[#5865F2]/15 px-3 py-1.5 text-sm font-bold text-white transition duration-200 hover:bg-[#5865F2]/25"
               >
-                Profile
+                <span>Profile</span>
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-[#AEB6FF]">
+                  <path d="M20.3 5.37A16.1 16.1 0 0 0 16.34 4c-.17.31-.36.73-.49 1.06a14.9 14.9 0 0 0-4.4 0A8.4 8.4 0 0 0 10.96 4a16.2 16.2 0 0 0-3.98 1.38C4.46 9.13 3.78 12.8 4.12 16.4A16.4 16.4 0 0 0 9 18.9c.4-.54.75-1.11 1.05-1.72-.58-.22-1.14-.49-1.66-.8.14-.1.27-.21.4-.32a11.55 11.55 0 0 0 10.24 0c.13.11.26.22.4.32-.52.31-1.08.58-1.66.8.3.61.66 1.18 1.05 1.72a16.3 16.3 0 0 0 4.88-2.5c.42-4.17-.72-7.8-3.4-11.03ZM9.75 14.17c-.95 0-1.73-.89-1.73-1.98s.76-1.99 1.73-1.99c.97 0 1.75.9 1.73 1.99 0 1.09-.76 1.98-1.73 1.98Zm6.2 0c-.95 0-1.73-.89-1.73-1.98s.76-1.99 1.73-1.99c.97 0 1.75.9 1.73 1.99 0 1.09-.76 1.98-1.73 1.98Z" />
+                </svg>
               </Link>
             ) : (
               <button

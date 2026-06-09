@@ -22,6 +22,14 @@ type PlayerProfile = {
   site_role?: string | null;
 };
 
+type TeamMembership = {
+  id: number;
+  team_id: number;
+  team_name?: string | null;
+  roblox_username?: string | null;
+  role?: string | null;
+};
+
 type TeamTransaction = {
   id: string;
   team_name?: string | null;
@@ -95,6 +103,8 @@ export default function ProfilePage() {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [transactions, setTransactions] = useState<TeamTransaction[]>([]);
+  const [membership, setMembership] = useState<TeamMembership | null>(null);
+  const [leavingTeam, setLeavingTeam] = useState(false);
   const [robloxUsername, setRobloxUsername] = useState("");
   const [robloxUserId, setRobloxUserId] = useState("");
   const [loading, setLoading] = useState(true);
@@ -184,6 +194,7 @@ export default function ProfilePage() {
     setRobloxUsername(nextProfile.roblox_username ?? "");
     setRobloxUserId(nextProfile.roblox_user_id ?? "");
     await loadTransactions(nextProfile.discord_id ?? identity?.discordId ?? null);
+    await loadMembership(nextProfile.discord_id ?? identity?.discordId ?? null, nextProfile.discord_username ?? identity?.username ?? null);
   }
 
   async function loadTransactions(discordId: string | null) {
@@ -202,6 +213,84 @@ export default function ProfilePage() {
     }
 
     setTransactions((data ?? []) as TeamTransaction[]);
+  }
+
+  async function loadMembership(discordId: string | null, discordUsername: string | null) {
+    if (!supabase) return;
+
+    let player: any = null;
+
+    if (discordId) {
+      const byId = await supabase
+        .from("team_players")
+        .select("*")
+        .eq("discord_id", discordId)
+        .limit(1)
+        .maybeSingle();
+      if (!byId.error && byId.data) player = byId.data;
+    }
+
+    if (!player && discordUsername) {
+      const byName = await supabase
+        .from("team_players")
+        .select("*")
+        .ilike("discord_username", discordUsername.replace(/^@/, ""))
+        .limit(1)
+        .maybeSingle();
+      if (!byName.error && byName.data) player = byName.data;
+    }
+
+    if (!player) {
+      setMembership(null);
+      return;
+    }
+
+    const team = await supabase
+      .from("teams")
+      .select("country")
+      .eq("id", player.team_id)
+      .maybeSingle();
+
+    setMembership({
+      id: player.id,
+      team_id: player.team_id,
+      team_name: team.data?.country ?? null,
+      roblox_username: player.roblox_username,
+      role: player.role,
+    });
+  }
+
+  async function leaveCurrentTeam() {
+    if (!supabase || !profile) return;
+
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) {
+      setNotice("Login session expired. Log in again before leaving your team.");
+      return;
+    }
+
+    setLeavingTeam(true);
+    const response = await fetch("/api/team-sync", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ action: "leave_team" }),
+    });
+
+    const result = await response.json().catch(() => ({}));
+    setLeavingTeam(false);
+
+    if (!response.ok) {
+      setNotice(result?.error || "Unable to leave team.");
+      return;
+    }
+
+    setNotice(`You left ${result.team || "your team"}.`);
+    await loadMembership(profile.discord_id ?? discordIdentity?.discordId ?? null, profile.discord_username ?? discordIdentity?.username ?? null);
+    await loadTransactions(profile.discord_id ?? discordIdentity?.discordId ?? null);
   }
 
   async function saveRoblox(event: FormEvent<HTMLFormElement>) {
@@ -244,6 +333,7 @@ export default function ProfilePage() {
     setSession(null);
     setProfile(null);
     setTransactions([]);
+    setMembership(null);
   }
 
   if (loading) {
@@ -314,6 +404,30 @@ export default function ProfilePage() {
             {notice ? <p className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-200">{notice}</p> : null}
           </div>
 
+          <div className="space-y-6">
+            <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
+              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[#AEB6FF]">Team Control</p>
+              <h2 className="mt-2 text-3xl font-black">Your Current Team</h2>
+              {membership ? (
+                <div className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+                  <p className="text-xl font-bold text-white">{membership.team_name || "Registered Team"}</p>
+                  <p className="mt-1 text-sm text-white/60">{membership.roblox_username || "Player"} • {membership.role || "Player"}</p>
+                  <button
+                    type="button"
+                    disabled={leavingTeam}
+                    onClick={leaveCurrentTeam}
+                    className="mt-4 rounded-2xl border border-red-400/25 bg-red-400/10 px-5 py-3 text-sm font-bold text-red-200 transition hover:bg-red-400/15 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {leavingTeam ? "Leaving..." : "Leave Team"}
+                  </button>
+                </div>
+              ) : (
+                <p className="mt-4 rounded-[1.5rem] border border-white/10 bg-white/5 p-5 text-white/60">
+                  You are not currently registered as a roster player. Captains are changed by Admin from the admin panel.
+                </p>
+              )}
+            </div>
+
           <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -354,6 +468,7 @@ export default function ProfilePage() {
                 ))
               )}
             </div>
+          </div>
           </div>
         </section>
       </div>
