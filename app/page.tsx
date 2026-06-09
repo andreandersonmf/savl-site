@@ -9,6 +9,8 @@ import { ChevronDown, Star, Trophy } from "lucide-react";
 type Country = {
   name: string;
   code: string;
+  emoji?: string;
+  accent?: string;
 };
 
 type GroupLetter = "A" | "B" | "C" | "D";
@@ -27,6 +29,19 @@ type Team = {
   brick_color_hex?: string | null;
   brick_color_number?: number | null;
   group_letter?: GroupLetter | null;
+  season_id?: string | null;
+};
+
+type Season = {
+  id: string;
+  name: string;
+  slug: string;
+  theme_name?: string | null;
+  status?: string | null;
+  is_active?: boolean | null;
+  is_archived?: boolean | null;
+  awards_status?: string | null;
+  created_at?: string | null;
 };
 
 type MatchStatus = "Scheduled" | "Live" | "Finished";
@@ -48,6 +63,7 @@ type MatchRow = {
   is_star_match: boolean;
   stats_finalized: boolean;
   stats_submitted_for_review: boolean;
+  season_id?: string | null;
   created_at: string;
 
   set1_home: number | null;
@@ -118,6 +134,7 @@ type TeamPlayer = {
   roblox_user_id: string;
   discord_username: string;
   role: TeamPlayerRole;
+  season_id?: string | null;
   created_at: string;
 };
 
@@ -165,6 +182,7 @@ type PlayerStat = {
   dives: number;
   aces: number;
   misc_errors: number;
+  season_id?: string | null;
   created_at?: string | null;
 };
 
@@ -204,6 +222,46 @@ const COUNTRIES: Country[] = [
   { name: "United States", code: "us" },
   { name: "Venezuela", code: "ve" },
 ];
+
+const ELEMENT_THEMES: Country[] = [
+  { name: "Fire", code: "element-fire", emoji: "🔥", accent: "#ef4444" },
+  { name: "Water", code: "element-water", emoji: "💧", accent: "#38bdf8" },
+  { name: "Thunder", code: "element-thunder", emoji: "⚡", accent: "#facc15" },
+  { name: "Earth", code: "element-earth", emoji: "⛰️", accent: "#a16207" },
+  { name: "Wind", code: "element-wind", emoji: "🌪️", accent: "#7dd3fc" },
+  { name: "Ice", code: "element-ice", emoji: "❄️", accent: "#93c5fd" },
+  { name: "Shadow", code: "element-shadow", emoji: "🌑", accent: "#7c3aed" },
+  { name: "Light", code: "element-light", emoji: "✨", accent: "#fde68a" },
+  { name: "Nature", code: "element-nature", emoji: "🌿", accent: "#22c55e" },
+  { name: "Metal", code: "element-metal", emoji: "⚙️", accent: "#94a3b8" },
+  { name: "Poison", code: "element-poison", emoji: "☠️", accent: "#a855f7" },
+  { name: "Crystal", code: "element-crystal", emoji: "💎", accent: "#67e8f9" },
+  { name: "Storm", code: "element-storm", emoji: "⛈️", accent: "#60a5fa" },
+  { name: "Lava", code: "element-lava", emoji: "🌋", accent: "#f97316" },
+  { name: "Ocean", code: "element-ocean", emoji: "🌊", accent: "#0284c7" },
+  { name: "Solar", code: "element-solar", emoji: "☀️", accent: "#f59e0b" },
+  { name: "Lunar", code: "element-lunar", emoji: "🌙", accent: "#c4b5fd" },
+  { name: "Eclipse", code: "element-eclipse", emoji: "🌘", accent: "#8b5cf6" },
+  { name: "Plasma", code: "element-plasma", emoji: "🔮", accent: "#ec4899" },
+  { name: "Frost", code: "element-frost", emoji: "🧊", accent: "#bfdbfe" },
+  { name: "Sand", code: "element-sand", emoji: "🏜️", accent: "#fbbf24" },
+  { name: "Gravity", code: "element-gravity", emoji: "🪐", accent: "#6366f1" },
+  { name: "Spirit", code: "element-spirit", emoji: "👻", accent: "#d8b4fe" },
+  { name: "Smoke", code: "element-smoke", emoji: "💨", accent: "#64748b" },
+  { name: "Venom", code: "element-venom", emoji: "🐍", accent: "#84cc16" },
+  { name: "Aurora", code: "element-aurora", emoji: "🌌", accent: "#2dd4bf" },
+  { name: "Radiance", code: "element-radiance", emoji: "🌟", accent: "#fef08a" },
+  { name: "Void", code: "element-void", emoji: "🕳️", accent: "#111827" },
+  { name: "Meteor", code: "element-meteor", emoji: "☄️", accent: "#fb7185" },
+  { name: "Stone", code: "element-stone", emoji: "🪨", accent: "#78716c" },
+  { name: "Ember", code: "element-ember", emoji: "🔥", accent: "#ea580c" },
+  { name: "Tempest", code: "element-tempest", emoji: "🌩️", accent: "#38bdf8" },
+];
+
+const ACTIVE_TEAM_THEMES = ELEMENT_THEMES;
+const CURRENT_SEASON_LABEL = "Season 2";
+const CURRENT_SEASON_THEME = "Elements";
+
 
 const BRICK_COLORS: BrickColor[] = [
   { name: "White", number: 1, hex: "#F2F3F3" },
@@ -430,15 +488,36 @@ function normalizeText(value: string) {
   return value.trim().toLowerCase();
 }
 
-function getCountryByName(name: string) {
+function getElementThemeByCode(code: string) {
   return (
-    COUNTRIES.find(
-      (country) => normalizeText(country.name) === normalizeText(name),
+    ELEMENT_THEMES.find(
+      (theme) => normalizeText(theme.code) === normalizeText(code),
     ) || null
   );
 }
 
+function getCountryByName(name: string) {
+  return (
+    ELEMENT_THEMES.find(
+      (theme) => normalizeText(theme.name) === normalizeText(name),
+    ) ||
+    COUNTRIES.find(
+      (country) => normalizeText(country.name) === normalizeText(name),
+    ) ||
+    null
+  );
+}
+
+function createElementBadgeDataUri(theme: Country) {
+  const accent = theme.accent ?? "#10B981";
+  const label = theme.emoji ?? theme.name.slice(0, 2).toUpperCase();
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="110" viewBox="0 0 160 110"><defs><radialGradient id="g" cx="30%" cy="20%" r="90%"><stop offset="0" stop-color="${accent}" stop-opacity="0.95"/><stop offset="0.55" stop-color="#0B1712"/><stop offset="1" stop-color="#03110D"/></radialGradient></defs><rect width="160" height="110" rx="24" fill="url(#g)"/><circle cx="124" cy="25" r="24" fill="${accent}" opacity="0.18"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="46">${label}</text><text x="50%" y="90" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="800" fill="white" opacity="0.92">${theme.name.toUpperCase()}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
 function getFlagUrl(code: string) {
+  const elementTheme = getElementThemeByCode(code);
+  if (elementTheme) return createElementBadgeDataUri(elementTheme);
   return `https://flagcdn.com/w160/${code}.png`;
 }
 
@@ -1920,6 +1999,8 @@ function TeamOfSeason({
 export default function SAVLSitePage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [matches, setMatches] = useState<MatchRow[]>([]);
+  const [activeSeason, setActiveSeason] = useState<Season | null>(null);
+  const [activeSeasonId, setActiveSeasonId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("");
   const [adminNotice, setAdminNotice] = useState("");
@@ -2115,16 +2196,21 @@ export default function SAVLSitePage() {
     );
   }
 
-  async function reloadTeams() {
+  async function reloadTeams(seasonId = activeSeasonId) {
     if (!supabase) {
       console.error("Supabase client is null");
       return;
     }
 
-    const result = await supabase
+    let query = supabase
       .from("teams")
-      .select("*")
-      .order("country", { ascending: true });
+      .select("*");
+
+    if (seasonId) {
+      query = query.eq("season_id", seasonId);
+    }
+
+    const result = await query.order("country", { ascending: true });
 
     console.log("reloadTeams result:", result);
 
@@ -2174,10 +2260,11 @@ export default function SAVLSitePage() {
     setAdminEmail("");
     setAdminPassword("");
 
-    await reloadTeams();
-    await reloadMatches();
-    await reloadTeamPlayers();
-    await reloadLeagueSettings();
+    const seasonId = await reloadLeagueSettings();
+    await reloadTeams(seasonId);
+    await reloadMatches(seasonId);
+    await reloadTeamPlayers(seasonId);
+    await reloadPlayerStats(seasonId);
     await reloadStaffApplications();
 
     showNotice("Admin unlocked.", true);
@@ -2191,21 +2278,28 @@ export default function SAVLSitePage() {
     setAdminLogged(false);
     setStatTrackerLogged(false);
 
-    await reloadTeams();
-    await reloadMatches();
-    await reloadTeamPlayers();
-    await reloadLeagueSettings();
+    const seasonId = await reloadLeagueSettings();
+    await reloadTeams(seasonId);
+    await reloadMatches(seasonId);
+    await reloadTeamPlayers(seasonId);
+    await reloadPlayerStats(seasonId);
     await reloadStaffApplications();
 
     showNotice("Admin locked.", true);
   }
 
-  async function reloadMatches() {
+  async function reloadMatches(seasonId = activeSeasonId) {
     if (!supabase) return;
 
-    const result = await supabase
+    let query = supabase
       .from("matches")
-      .select("*")
+      .select("*");
+
+    if (seasonId) {
+      query = query.eq("season_id", seasonId);
+    }
+
+    const result = await query
       .order("match_date", { ascending: true })
       .order("match_time", { ascending: true });
 
@@ -2276,13 +2370,14 @@ export default function SAVLSitePage() {
         setStatTrackerLogged(false);
       }
 
+      const seasonId = await reloadLeagueSettings();
+
       await Promise.all([
-        reloadTeams(),
-        reloadMatches(),
-        reloadTeamPlayers(),
-        reloadLeagueSettings(),
+        reloadTeams(seasonId),
+        reloadMatches(seasonId),
+        reloadTeamPlayers(seasonId),
         reloadStaffApplications(),
-        reloadPlayerStats(),
+        reloadPlayerStats(seasonId),
       ]);
       setLoading(false);
     }
@@ -2292,8 +2387,8 @@ export default function SAVLSitePage() {
 
   const availableCountries = useMemo(() => {
     const used = new Set(teams.map((team) => normalizeText(team.country)));
-    return COUNTRIES.filter(
-      (country) => !used.has(normalizeText(country.name)),
+    return ACTIVE_TEAM_THEMES.filter(
+      (theme) => !used.has(normalizeText(theme.name)),
     );
   }, [teams]);
 
@@ -2963,7 +3058,7 @@ export default function SAVLSitePage() {
 
     const selectedCountry = getCountryByName(payload.country);
     if (!selectedCountry) {
-      showNotice("Select a valid country.", isAdmin);
+      showNotice("Select a valid element.", isAdmin);
       return false;
     }
 
@@ -2980,7 +3075,7 @@ export default function SAVLSitePage() {
           normalizeText(team.country) === normalizeText(payload.country),
       )
     ) {
-      showNotice("This country is already registered.", isAdmin);
+      showNotice("This element is already registered.", isAdmin);
       return false;
     }
 
@@ -3018,6 +3113,7 @@ export default function SAVLSitePage() {
       captain_roblox_id: cleanRobloxReference,
       approved: isAdmin,
       approved_at: isAdmin ? new Date().toISOString() : null,
+      season_id: activeSeasonId,
 
       brick_color_name: selectedBrickColor.name,
       brick_color_hex: selectedBrickColor.hex,
@@ -3484,6 +3580,7 @@ export default function SAVLSitePage() {
       is_star_match: matchForm.is_star_match,
       stats_finalized: false,
       stats_submitted_for_review: false,
+      season_id: activeSeasonId,
 
       ...setsPayload,
     });
@@ -3765,13 +3862,18 @@ export default function SAVLSitePage() {
     showNotice("Match removed.", true);
   }
 
-  async function reloadTeamPlayers() {
+  async function reloadTeamPlayers(seasonId = activeSeasonId) {
     if (!supabase) return;
 
-    const result = await supabase
+    let query = supabase
       .from("team_players")
-      .select("*")
-      .order("created_at", { ascending: true });
+      .select("*");
+
+    if (seasonId) {
+      query = query.eq("season_id", seasonId);
+    }
+
+    const result = await query.order("created_at", { ascending: true });
 
     if (!result.error && result.data) {
       setTeamPlayers(result.data as TeamPlayer[]);
@@ -3915,6 +4017,7 @@ export default function SAVLSitePage() {
       roblox_user_id: cleanUserId,
       discord_username: cleanDiscord,
       role: playerForm.role,
+      season_id: activeSeasonId,
     };
 
     const { error } = await supabase.from("team_players").insert(payload);
@@ -3993,8 +4096,43 @@ export default function SAVLSitePage() {
     showNotice("Player removed.", true);
   }
 
+  async function resolveActiveSeason(preferredSeasonId?: string | null) {
+    if (!supabase) return null;
+
+    if (preferredSeasonId) {
+      const { data, error } = await supabase
+        .from("seasons")
+        .select("*")
+        .eq("id", preferredSeasonId)
+        .maybeSingle();
+
+      if (!error && data) {
+        setActiveSeason(data as Season);
+        setActiveSeasonId(data.id);
+        return data.id as string;
+      }
+    }
+
+    const { data, error } = await supabase
+      .from("seasons")
+      .select("*")
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+
+    if (!error && data) {
+      setActiveSeason(data as Season);
+      setActiveSeasonId(data.id);
+      return data.id as string;
+    }
+
+    setActiveSeason(null);
+    setActiveSeasonId(null);
+    return null;
+  }
+
   async function reloadLeagueSettings() {
-    if (!supabase) return;
+    if (!supabase) return null;
 
     const { data, error } = await supabase
       .from("league_settings")
@@ -4002,19 +4140,30 @@ export default function SAVLSitePage() {
       .eq("id", 1)
       .single();
 
+    let nextActiveSeasonId: string | null = null;
+
     if (!error && data) {
       setRegistrationsOpen(Boolean(data.registrations_open));
       setAwardsPublic(Boolean(data.awards_public));
       setLeaderboardPublic(Boolean(data.leaderboard_public));
+      nextActiveSeasonId = (data.active_season_id as string | null) ?? null;
     }
+
+    return resolveActiveSeason(nextActiveSeasonId);
   }
 
-  async function reloadPlayerStats() {
+  async function reloadPlayerStats(seasonId = activeSeasonId) {
     if (!supabase) return;
     setPlayerStatsLoading(true);
-    const result = await supabase
+    let query = supabase
       .from("match_player_stats")
-      .select("*")
+      .select("*");
+
+    if (seasonId) {
+      query = query.eq("season_id", seasonId);
+    }
+
+    const result = await query
       .order("match_id", { ascending: true })
       .order("set_number", { ascending: true })
       .order("team_country", { ascending: true })
@@ -4203,6 +4352,12 @@ export default function SAVLSitePage() {
             <AnimatedNavButton label="Standings" targetId="standings" />
 
             <AnimatedNavButton label="Stat Track" targetId="stat-track" />
+            <Link
+              href="/archives"
+              className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
+            >
+              Archives
+            </Link>
 
             <AnimatedNavButton label="Register" targetId="register" />
             <AnimatedNavButton label="Admin" targetId="admin" />
@@ -4234,7 +4389,7 @@ export default function SAVLSitePage() {
           <div className="relative z-10 mx-auto grid max-w-7xl gap-10 px-6 py-20 md:grid-cols-2 md:items-center md:py-28">
             <div>
               <span className="inline-flex rounded-full border border-emerald-400/20 bg-emerald-400/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-300">
-                Roblox Volleyball 4.2 League
+                Roblox Volleyball 4.2 League • {activeSeason?.name ?? CURRENT_SEASON_LABEL} • {activeSeason?.theme_name ?? CURRENT_SEASON_THEME}
               </span>
 
               <h1 className="mt-6 text-5xl font-black leading-none tracking-tight md:text-7xl">
@@ -5392,13 +5547,13 @@ export default function SAVLSitePage() {
                 Team Registration
               </h2>
               <p className="mt-4 max-w-lg text-white/70">
-                Choose one available country, add captain info and Roblox User
+                Choose one available element, add captain info and Roblox User
                 ID. The roster will be handled outside the site.
               </p>
 
               <div className="mt-8 rounded-[2rem] border border-white/10 bg-white/5 p-6">
                 <p className="text-sm font-semibold uppercase tracking-[0.2em] text-white/50">
-                  Available countries
+                  Available elements
                 </p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {availableCountries.map((country) => (
@@ -5433,7 +5588,7 @@ export default function SAVLSitePage() {
                 <div className="grid gap-5 md:grid-cols-2">
                   <div className="md:col-span-2">
                     <label className="mb-2 block text-sm font-medium text-white/70">
-                      Country
+                      Element
                     </label>
                     <SelectPicker
                       value={registerForm.country}
@@ -5441,7 +5596,7 @@ export default function SAVLSitePage() {
                         setRegisterForm((prev) => ({ ...prev, country: value }))
                       }
                       options={countryOptions}
-                      placeholder="Select a country"
+                      placeholder="Select an element"
                     />
                   </div>
 
@@ -5915,7 +6070,7 @@ export default function SAVLSitePage() {
                             }))
                           }
                           options={countryOptions}
-                          placeholder="Select a country"
+                          placeholder="Select an element"
                         />
                       </div>
 
@@ -6061,7 +6216,7 @@ export default function SAVLSitePage() {
                     <div className="mt-5 grid gap-4 md:grid-cols-2">
                       <div>
                         <label className="mb-2 block text-sm font-medium text-white/70">
-                          Home Country
+                          Home Team
                         </label>
                         <SelectPicker
                           value={matchForm.home_country}
@@ -6072,13 +6227,13 @@ export default function SAVLSitePage() {
                             }))
                           }
                           options={registeredCountryOptions}
-                          placeholder="Select home country"
+                          placeholder="Select home team"
                         />
                       </div>
 
                       <div>
                         <label className="mb-2 block text-sm font-medium text-white/70">
-                          Away Country
+                          Away Team
                         </label>
                         <SelectPicker
                           value={matchForm.away_country}
@@ -6089,7 +6244,7 @@ export default function SAVLSitePage() {
                             }))
                           }
                           options={registeredCountryOptions}
-                          placeholder="Select away country"
+                          placeholder="Select away team"
                         />
                       </div>
 

@@ -9,6 +9,7 @@ type MatchStatus = "Scheduled" | "Live" | "Finished";
 
 type MatchRow = {
   id: number;
+  season_id?: string | null;
   home_country: string;
   away_country: string;
   stage: string | null;
@@ -21,6 +22,7 @@ type MatchRow = {
 
 type Team = {
   id: number;
+  season_id?: string | null;
   country: string;
   code: string;
   captain_name: string;
@@ -31,11 +33,20 @@ type Team = {
 
 type TeamPlayer = {
   id: number;
+  season_id?: string | null;
   team_id: number;
   roblox_username: string;
   roblox_user_id: string;
   discord_username: string;
   role: "Vice Captain" | "Player";
+};
+
+type Season = {
+  id: string;
+  name: string;
+  slug: string;
+  theme_name?: string | null;
+  is_active?: boolean | null;
 };
 
 type PlayerOption = {
@@ -46,6 +57,7 @@ type PlayerOption = {
 
 type StatRow = {
   id?: number;
+  season_id?: string | null;
   match_id: number;
   team_country: string;
   player_key: string;
@@ -85,6 +97,48 @@ type StatField = keyof Pick<
   | "misc_errors"
 >;
 
+type TeamTheme = {
+  name: string;
+  code: string;
+  emoji?: string;
+  accent?: string;
+};
+
+const ELEMENT_THEMES: TeamTheme[] = [
+  { name: "Fire", code: "element-fire", emoji: "🔥", accent: "#ef4444" },
+  { name: "Water", code: "element-water", emoji: "💧", accent: "#38bdf8" },
+  { name: "Thunder", code: "element-thunder", emoji: "⚡", accent: "#facc15" },
+  { name: "Earth", code: "element-earth", emoji: "⛰️", accent: "#a16207" },
+  { name: "Wind", code: "element-wind", emoji: "🌪️", accent: "#7dd3fc" },
+  { name: "Ice", code: "element-ice", emoji: "❄️", accent: "#93c5fd" },
+  { name: "Shadow", code: "element-shadow", emoji: "🌑", accent: "#7c3aed" },
+  { name: "Light", code: "element-light", emoji: "✨", accent: "#fde68a" },
+  { name: "Nature", code: "element-nature", emoji: "🌿", accent: "#22c55e" },
+  { name: "Metal", code: "element-metal", emoji: "⚙️", accent: "#94a3b8" },
+  { name: "Poison", code: "element-poison", emoji: "☠️", accent: "#a855f7" },
+  { name: "Crystal", code: "element-crystal", emoji: "💎", accent: "#67e8f9" },
+  { name: "Storm", code: "element-storm", emoji: "⛈️", accent: "#60a5fa" },
+  { name: "Lava", code: "element-lava", emoji: "🌋", accent: "#f97316" },
+  { name: "Ocean", code: "element-ocean", emoji: "🌊", accent: "#0284c7" },
+  { name: "Solar", code: "element-solar", emoji: "☀️", accent: "#f59e0b" },
+  { name: "Lunar", code: "element-lunar", emoji: "🌙", accent: "#c4b5fd" },
+  { name: "Eclipse", code: "element-eclipse", emoji: "🌘", accent: "#8b5cf6" },
+  { name: "Plasma", code: "element-plasma", emoji: "🔮", accent: "#ec4899" },
+  { name: "Frost", code: "element-frost", emoji: "🧊", accent: "#bfdbfe" },
+  { name: "Sand", code: "element-sand", emoji: "🏜️", accent: "#fbbf24" },
+  { name: "Gravity", code: "element-gravity", emoji: "🪐", accent: "#6366f1" },
+  { name: "Spirit", code: "element-spirit", emoji: "👻", accent: "#d8b4fe" },
+  { name: "Smoke", code: "element-smoke", emoji: "💨", accent: "#64748b" },
+  { name: "Venom", code: "element-venom", emoji: "🐍", accent: "#84cc16" },
+  { name: "Aurora", code: "element-aurora", emoji: "🌌", accent: "#2dd4bf" },
+  { name: "Radiance", code: "element-radiance", emoji: "🌟", accent: "#fef08a" },
+  { name: "Void", code: "element-void", emoji: "🕳️", accent: "#111827" },
+  { name: "Meteor", code: "element-meteor", emoji: "☄️", accent: "#fb7185" },
+  { name: "Stone", code: "element-stone", emoji: "🪨", accent: "#78716c" },
+  { name: "Ember", code: "element-ember", emoji: "🔥", accent: "#ea580c" },
+  { name: "Tempest", code: "element-tempest", emoji: "🌩️", accent: "#38bdf8" },
+];
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
@@ -111,7 +165,20 @@ function normalizeText(value: string) {
   return value.trim().toLowerCase();
 }
 
+function getElementThemeByCode(code: string) {
+  return ELEMENT_THEMES.find((theme) => normalizeText(theme.code) === normalizeText(code)) ?? null;
+}
+
+function createElementBadgeDataUri(theme: TeamTheme) {
+  const accent = theme.accent ?? "#10B981";
+  const label = theme.emoji ?? theme.name.slice(0, 2).toUpperCase();
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="160" height="110" viewBox="0 0 160 110"><defs><radialGradient id="g" cx="30%" cy="20%" r="90%"><stop offset="0" stop-color="${accent}" stop-opacity="0.95"/><stop offset="0.55" stop-color="#0B1712"/><stop offset="1" stop-color="#03110D"/></radialGradient></defs><rect width="160" height="110" rx="24" fill="url(#g)"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-size="46">${label}</text><text x="50%" y="90" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-size="13" font-weight="800" fill="white" opacity="0.92">${theme.name.toUpperCase()}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
 function getFlagUrl(code: string) {
+  const elementTheme = getElementThemeByCode(code);
+  if (elementTheme) return createElementBadgeDataUri(elementTheme);
   return `https://flagcdn.com/w160/${code}.png`;
 }
 
@@ -237,6 +304,8 @@ export default function StatsPage() {
 
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
+  const [activeSeason, setActiveSeason] = useState<Season | null>(null);
+  const [activeSeasonId, setActiveSeasonId] = useState<string | null>(null);
   const [teamPlayers, setTeamPlayers] = useState<TeamPlayer[]>([]);
   const [stats, setStats] = useState<StatRow[]>([]);
 
@@ -364,6 +433,49 @@ export default function StatsPage() {
       .slice(0, 10);
   }, [playerOptions, stats, selectedMatch]);
 
+  async function resolveActiveSeason() {
+    if (!supabase) return null;
+
+    const { data: settings } = await supabase
+      .from("league_settings")
+      .select("active_season_id")
+      .eq("id", 1)
+      .maybeSingle();
+
+    const preferredSeasonId = (settings?.active_season_id as string | null) ?? null;
+
+    if (preferredSeasonId) {
+      const { data, error } = await supabase
+        .from("seasons")
+        .select("*")
+        .eq("id", preferredSeasonId)
+        .maybeSingle();
+
+      if (!error && data) {
+        setActiveSeason(data as Season);
+        setActiveSeasonId(data.id);
+        return data.id as string;
+      }
+    }
+
+    const { data, error } = await supabase
+      .from("seasons")
+      .select("*")
+      .eq("is_active", true)
+      .limit(1)
+      .maybeSingle();
+
+    if (!error && data) {
+      setActiveSeason(data as Season);
+      setActiveSeasonId(data.id);
+      return data.id as string;
+    }
+
+    setActiveSeason(null);
+    setActiveSeasonId(null);
+    return null;
+  }
+
   async function loadData() {
     if (!supabase) {
       setNotice("Configure Supabase to enable stats.");
@@ -379,25 +491,37 @@ export default function StatsPage() {
 
     setAdminLogged(!!session);
 
+    const seasonId = await resolveActiveSeason();
+
+    let matchesQuery = supabase
+      .from("matches")
+      .select("id, season_id, home_country, away_country, stage, match_date, match_time, status, home_score, away_score");
+    let teamsQuery = supabase
+      .from("teams")
+      .select("id, season_id, country, code, captain_name, captain_discord, captain_roblox_id, approved")
+      .eq("approved", true);
+    let playersQuery = supabase
+      .from("team_players")
+      .select("*");
+    let statsQuery = supabase
+      .from("match_player_stats")
+      .select("*");
+
+    if (seasonId) {
+      matchesQuery = matchesQuery.eq("season_id", seasonId);
+      teamsQuery = teamsQuery.eq("season_id", seasonId);
+      playersQuery = playersQuery.eq("season_id", seasonId);
+      statsQuery = statsQuery.eq("season_id", seasonId);
+    }
+
     const [matchesResult, teamsResult, playersResult, statsResult] =
       await Promise.all([
-        supabase
-          .from("matches")
-          .select("id, home_country, away_country, stage, match_date, match_time, status, home_score, away_score")
+        matchesQuery
           .order("match_date", { ascending: false })
           .order("match_time", { ascending: false }),
-        supabase
-          .from("teams")
-          .select("id, country, code, captain_name, captain_discord, captain_roblox_id, approved")
-          .eq("approved", true)
-          .order("country", { ascending: true }),
-        supabase
-          .from("team_players")
-          .select("*")
-          .order("created_at", { ascending: true }),
-        supabase
-          .from("match_player_stats")
-          .select("*")
+        teamsQuery.order("country", { ascending: true }),
+        playersQuery.order("created_at", { ascending: true }),
+        statsQuery
           .order("team_country", { ascending: true })
           .order("player_name", { ascending: true }),
       ]);
@@ -477,6 +601,7 @@ export default function StatsPage() {
 
       return {
         match_id: selectedMatch.id,
+        season_id: selectedMatch.season_id ?? activeSeasonId,
         team_country: player.teamCountry,
         player_key: player.key,
         player_name: player.name,
@@ -717,6 +842,10 @@ export default function StatsPage() {
               </h1>
               <p className="mt-4 max-w-2xl text-white/65">
                 Track player stats by set, team totals, and automatic percentage calculations.
+              </p>
+              <p className="mt-3 text-sm font-semibold uppercase tracking-[0.22em] text-emerald-300">
+                {activeSeason?.name ?? "Active Season"}
+                {activeSeason?.theme_name ? ` • ${activeSeason.theme_name}` : ""}
               </p>
             </div>
 
