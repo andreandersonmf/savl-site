@@ -28,6 +28,7 @@ type TeamMembership = {
   team_name?: string | null;
   roblox_username?: string | null;
   role?: string | null;
+  isCaptain?: boolean;
 };
 
 type TeamTransaction = {
@@ -193,17 +194,41 @@ export default function ProfilePage() {
     setProfile(nextProfile);
     setRobloxUsername(nextProfile.roblox_username ?? "");
     setRobloxUserId(nextProfile.roblox_user_id ?? "");
-    await loadTransactions(nextProfile.discord_id ?? identity?.discordId ?? null);
+    await loadTransactions(
+      nextProfile.discord_id ?? identity?.discordId ?? null,
+      nextProfile.discord_username ?? identity?.username ?? null,
+    );
     await loadMembership(nextProfile.discord_id ?? identity?.discordId ?? null, nextProfile.discord_username ?? identity?.username ?? null);
   }
 
-  async function loadTransactions(discordId: string | null) {
-    if (!supabase || !discordId) return;
+  async function loadTransactions(discordId: string | null, discordUsername?: string | null) {
+    if (!supabase) return;
+
+    const filters: string[] = [];
+    const cleanDiscordId = discordId?.trim();
+    const cleanUsername = discordUsername?.replace(/^@/, "").trim();
+
+    if (cleanDiscordId) {
+      filters.push(`player_discord_id.eq.${cleanDiscordId}`);
+      filters.push(`requester_discord_id.eq.${cleanDiscordId}`);
+      filters.push(`handled_by_discord_id.eq.${cleanDiscordId}`);
+    }
+
+    if (cleanUsername) {
+      filters.push(`player_discord_username.eq.${cleanUsername}`);
+      filters.push(`requester_discord_username.eq.${cleanUsername}`);
+      filters.push(`handled_by_discord_username.eq.${cleanUsername}`);
+    }
+
+    if (filters.length === 0) {
+      setTransactions([]);
+      return;
+    }
 
     const { data, error } = await supabase
       .from("team_transactions")
       .select("*")
-      .or(`player_discord_id.eq.${discordId},requester_discord_id.eq.${discordId},handled_by_discord_id.eq.${discordId}`)
+      .or(filters.join(","))
       .order("created_at", { ascending: false })
       .limit(50);
 
@@ -218,23 +243,68 @@ export default function ProfilePage() {
   async function loadMembership(discordId: string | null, discordUsername: string | null) {
     if (!supabase) return;
 
+    const cleanDiscordId = discordId?.trim();
+    const cleanUsername = discordUsername?.replace(/^@/, "").trim();
+
+    if (cleanDiscordId) {
+      const captainById = await supabase
+        .from("teams")
+        .select("id,country,captain_name")
+        .eq("captain_discord_id", cleanDiscordId)
+        .limit(1)
+        .maybeSingle();
+
+      if (!captainById.error && captainById.data) {
+        setMembership({
+          id: Number(captainById.data.id),
+          team_id: Number(captainById.data.id),
+          team_name: captainById.data.country ?? null,
+          roblox_username: captainById.data.captain_name ?? null,
+          role: "Captain",
+          isCaptain: true,
+        });
+        return;
+      }
+    }
+
+    if (cleanUsername) {
+      const captainByName = await supabase
+        .from("teams")
+        .select("id,country,captain_name")
+        .ilike("captain_discord", cleanUsername)
+        .limit(1)
+        .maybeSingle();
+
+      if (!captainByName.error && captainByName.data) {
+        setMembership({
+          id: Number(captainByName.data.id),
+          team_id: Number(captainByName.data.id),
+          team_name: captainByName.data.country ?? null,
+          roblox_username: captainByName.data.captain_name ?? null,
+          role: "Captain",
+          isCaptain: true,
+        });
+        return;
+      }
+    }
+
     let player: any = null;
 
-    if (discordId) {
+    if (cleanDiscordId) {
       const byId = await supabase
         .from("team_players")
         .select("*")
-        .eq("discord_id", discordId)
+        .eq("discord_id", cleanDiscordId)
         .limit(1)
         .maybeSingle();
       if (!byId.error && byId.data) player = byId.data;
     }
 
-    if (!player && discordUsername) {
+    if (!player && cleanUsername) {
       const byName = await supabase
         .from("team_players")
         .select("*")
-        .ilike("discord_username", discordUsername.replace(/^@/, ""))
+        .ilike("discord_username", cleanUsername)
         .limit(1)
         .maybeSingle();
       if (!byName.error && byName.data) player = byName.data;
@@ -257,6 +327,7 @@ export default function ProfilePage() {
       team_name: team.data?.country ?? null,
       roblox_username: player.roblox_username,
       role: player.role,
+      isCaptain: false,
     });
   }
 
@@ -290,7 +361,7 @@ export default function ProfilePage() {
 
     setNotice(`You left ${result.team || "your team"}.`);
     await loadMembership(profile.discord_id ?? discordIdentity?.discordId ?? null, profile.discord_username ?? discordIdentity?.username ?? null);
-    await loadTransactions(profile.discord_id ?? discordIdentity?.discordId ?? null);
+    await loadTransactions(profile.discord_id ?? discordIdentity?.discordId ?? null, profile.discord_username ?? discordIdentity?.username ?? null);
   }
 
   async function saveRoblox(event: FormEvent<HTMLFormElement>) {
@@ -412,14 +483,20 @@ export default function ProfilePage() {
                 <div className="mt-5 rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
                   <p className="text-xl font-bold text-white">{membership.team_name || "Registered Team"}</p>
                   <p className="mt-1 text-sm text-white/60">{membership.roblox_username || "Player"} • {membership.role || "Player"}</p>
-                  <button
-                    type="button"
-                    disabled={leavingTeam}
-                    onClick={leaveCurrentTeam}
-                    className="mt-4 rounded-2xl border border-red-400/25 bg-red-400/10 px-5 py-3 text-sm font-bold text-red-200 transition hover:bg-red-400/15 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {leavingTeam ? "Leaving..." : "Leave Team"}
-                  </button>
+                  {membership.isCaptain ? (
+                    <p className="mt-4 rounded-2xl border border-yellow-400/20 bg-yellow-400/10 p-4 text-sm text-yellow-100">
+                      Captains cannot leave directly from Profile. Ask an Admin to change captain or delete the team.
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={leavingTeam}
+                      onClick={leaveCurrentTeam}
+                      className="mt-4 rounded-2xl border border-red-400/25 bg-red-400/10 px-5 py-3 text-sm font-bold text-red-200 transition hover:bg-red-400/15 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {leavingTeam ? "Leaving..." : "Leave Team"}
+                    </button>
+                  )}
                 </div>
               ) : (
                 <p className="mt-4 rounded-[1.5rem] border border-white/10 bg-white/5 p-5 text-white/60">
@@ -434,7 +511,7 @@ export default function ProfilePage() {
                 <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">Transactions</p>
                 <h2 className="mt-2 text-3xl font-black">Your Discord Transactions</h2>
               </div>
-              <button onClick={() => loadTransactions(profile?.discord_id ?? discordIdentity?.discordId ?? null)} className="rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-white/75 hover:bg-white/10">
+              <button onClick={() => loadTransactions(profile?.discord_id ?? discordIdentity?.discordId ?? null, profile?.discord_username ?? discordIdentity?.username ?? null)} className="rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-white/75 hover:bg-white/10">
                 Refresh
               </button>
             </div>

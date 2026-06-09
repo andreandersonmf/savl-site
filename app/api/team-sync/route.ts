@@ -142,6 +142,23 @@ async function getRoster(teamId: number): Promise<TeamPlayerRow[]> {
   return (data ?? []) as TeamPlayerRow[];
 }
 
+async function recordTeamTransaction(payload: Record<string, any>) {
+  if (!supabaseAdmin) return;
+
+  const externalId = `site_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  const { error } = await supabaseAdmin.from("team_transactions").insert({
+    source: "site",
+    external_source: "savl_site",
+    external_id: externalId,
+    status: "accepted",
+    ...payload,
+  });
+
+  if (error) {
+    console.warn("[team-sync] transaction log skipped:", error.message);
+  }
+}
+
 async function findProfileByDiscordUsername(discordUsername?: string | null) {
   if (!supabaseAdmin || !discordUsername) return null;
   const clean = cleanDiscordUsername(discordUsername);
@@ -322,6 +339,23 @@ async function changeCaptain(ctx: NonNullable<Awaited<ReturnType<typeof getAuthC
   await removeRoles(oldCaptainDiscordId, [captainRoleId], `SAVL captain changed by ${ctx.discordUsername ?? ctx.user.email}`);
   await addRoles(oldCaptainDiscordId, [teamRoleId, oldRole === "Vice Captain" ? viceCaptainRoleId : playerRoleId], `SAVL captain changed by ${ctx.discordUsername ?? ctx.user.email}`);
 
+  await recordTeamTransaction({
+    season_id: team.season_id ?? null,
+    team_id: team.id,
+    team_name: team.country,
+    team_discord_role_id: team.discord_role_id ?? null,
+    transaction_type: "captain_change",
+    requested_role: "Captain",
+    requester_discord_id: ctx.discordId,
+    requester_discord_username: ctx.discordUsername ?? ctx.user.email,
+    handled_by_discord_id: ctx.discordId,
+    handled_by_discord_username: ctx.discordUsername ?? ctx.user.email,
+    player_discord_id: newCaptainDiscordId || newCaptain.discord_id || null,
+    player_discord_username: newCaptain.discord_username,
+    roblox_username: newCaptain.roblox_username,
+    roblox_user_id: newCaptain.roblox_user_id,
+  });
+
   return NextResponse.json({ ok: true });
 }
 
@@ -360,6 +394,23 @@ async function addPlayer(ctx: NonNullable<Awaited<ReturnType<typeof getAuthConte
 
   await addRoles(discordId || cleanId(body.discordId), [team.discord_role_id, role === "Vice Captain" ? viceCaptainRoleId : playerRoleId], `SAVL roster add by ${ctx.discordUsername ?? ctx.user.email}`);
 
+  await recordTeamTransaction({
+    season_id: team.season_id ?? null,
+    team_id: team.id,
+    team_name: team.country,
+    team_discord_role_id: team.discord_role_id ?? null,
+    transaction_type: "add_player",
+    requested_role: role,
+    requester_discord_id: ctx.discordId,
+    requester_discord_username: ctx.discordUsername ?? ctx.user.email,
+    handled_by_discord_id: ctx.discordId,
+    handled_by_discord_username: ctx.discordUsername ?? ctx.user.email,
+    player_discord_id: discordId || cleanId(body.discordId) || null,
+    player_discord_username: discordUsername,
+    roblox_username: robloxUsername,
+    roblox_user_id: robloxUserId,
+  });
+
   return NextResponse.json({ ok: true });
 }
 
@@ -383,6 +434,23 @@ async function removePlayer(ctx: NonNullable<Awaited<ReturnType<typeof getAuthCo
 
   const { error } = await supabaseAdmin.from("team_players").delete().eq("id", playerId);
   if (error) return jsonError(error.message, 500);
+
+  await recordTeamTransaction({
+    season_id: team.season_id ?? null,
+    team_id: team.id,
+    team_name: team.country,
+    team_discord_role_id: team.discord_role_id ?? null,
+    transaction_type: "remove_player",
+    requested_role: player.role ?? null,
+    requester_discord_id: ctx.discordId,
+    requester_discord_username: ctx.discordUsername ?? ctx.user.email,
+    handled_by_discord_id: ctx.discordId,
+    handled_by_discord_username: ctx.discordUsername ?? ctx.user.email,
+    player_discord_id: playerDiscordId || player.discord_id || null,
+    player_discord_username: player.discord_username ?? null,
+    roblox_username: player.roblox_username ?? null,
+    roblox_user_id: player.roblox_user_id ?? null,
+  });
 
   return NextResponse.json({ ok: true });
 }
@@ -417,6 +485,23 @@ async function leaveTeam(ctx: NonNullable<Awaited<ReturnType<typeof getAuthConte
 
   const { error } = await supabaseAdmin.from("team_players").delete().eq("id", player.id);
   if (error) return jsonError(error.message, 500);
+
+  await recordTeamTransaction({
+    season_id: team.season_id ?? null,
+    team_id: team.id,
+    team_name: team.country,
+    team_discord_role_id: team.discord_role_id ?? null,
+    transaction_type: "leave_team",
+    requested_role: player.role ?? null,
+    requester_discord_id: ctx.discordId,
+    requester_discord_username: ctx.discordUsername ?? ctx.user.email,
+    handled_by_discord_id: ctx.discordId,
+    handled_by_discord_username: ctx.discordUsername ?? ctx.user.email,
+    player_discord_id: ctx.discordId,
+    player_discord_username: ctx.discordUsername ?? null,
+    roblox_username: player.roblox_username ?? null,
+    roblox_user_id: player.roblox_user_id ?? null,
+  });
 
   return NextResponse.json({ ok: true, team: team.country });
 }

@@ -2020,6 +2020,7 @@ export default function SAVLSitePage() {
   const [statsMatches, setStatsMatches] = useState<MatchRow[]>([]);
   const [statsTeamPlayers, setStatsTeamPlayers] = useState<TeamPlayer[]>([]);
   const [siteProfile, setSiteProfile] = useState<SiteProfile | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("");
   const [adminNotice, setAdminNotice] = useState("");
@@ -4599,6 +4600,11 @@ export default function SAVLSitePage() {
     showNotice("Team group updated successfully.", true);
   }
 
+  function handleMobileNav(targetId: string) {
+    setMobileMenuOpen(false);
+    scrollToSection(targetId);
+  }
+
   async function handleDiscordLoginFromHeader() {
     if (!supabase) {
       showNotice("Login is not available right now.");
@@ -4657,7 +4663,7 @@ export default function SAVLSitePage() {
             </nav>
           </div>
 
-          <div className="flex shrink-0 items-center justify-end">
+          <div className="flex shrink-0 items-center justify-end gap-2">
             {siteProfile ? (
               <Link
                 href="/profile"
@@ -4680,8 +4686,45 @@ export default function SAVLSitePage() {
                 Login with Discord
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((open) => !open)}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white transition hover:bg-white/10 md:hidden"
+              aria-label="Open navigation menu"
+              aria-expanded={mobileMenuOpen}
+            >
+              <span className="sr-only">Menu</span>
+              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                {mobileMenuOpen ? (
+                  <path d="M6 6l12 12M18 6L6 18" />
+                ) : (
+                  <>
+                    <path d="M4 7h16" />
+                    <path d="M4 12h16" />
+                    <path d="M4 17h16" />
+                  </>
+                )}
+              </svg>
+            </button>
           </div>
         </div>
+
+        {mobileMenuOpen ? (
+          <div className="border-t border-white/10 bg-[#03110D]/95 px-6 py-4 backdrop-blur md:hidden">
+            <div className="mx-auto grid max-w-7xl gap-2 text-sm font-semibold text-white/85">
+              <button type="button" onClick={() => handleMobileNav("home")} className="rounded-2xl px-4 py-3 text-left hover:bg-white/5">Home</button>
+              <button type="button" onClick={() => handleMobileNav("teams")} className="rounded-2xl px-4 py-3 text-left hover:bg-white/5">Teams</button>
+              <button type="button" onClick={() => handleMobileNav("schedule")} className="rounded-2xl px-4 py-3 text-left hover:bg-white/5">Schedule</button>
+              <button type="button" onClick={() => handleMobileNav("groups")} className="rounded-2xl px-4 py-3 text-left hover:bg-white/5">Groups</button>
+              <button type="button" onClick={() => handleMobileNav("standings")} className="rounded-2xl px-4 py-3 text-left hover:bg-white/5">Standings</button>
+              <button type="button" onClick={() => handleMobileNav("stat-track")} className="rounded-2xl px-4 py-3 text-left hover:bg-white/5">Stat Track</button>
+              <Link href="/archives" onClick={() => setMobileMenuOpen(false)} className="rounded-2xl px-4 py-3 hover:bg-white/5">Archives</Link>
+              <button type="button" onClick={() => handleMobileNav("register")} className="rounded-2xl px-4 py-3 text-left hover:bg-white/5">Register</button>
+              <Link href="/admin" onClick={() => setMobileMenuOpen(false)} className="rounded-2xl px-4 py-3 hover:bg-white/5">Admin</Link>
+            </div>
+          </div>
+        ) : null}
       </header>
 
       <main>

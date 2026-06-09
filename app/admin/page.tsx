@@ -2020,6 +2020,7 @@ export default function SAVLSitePage() {
   const [activeSeason, setActiveSeason] = useState<Season | null>(null);
   const [activeSeasonId, setActiveSeasonId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [adminNotice, setAdminNotice] = useState("");
   const [filterStatus, setFilterStatus] = useState<"All" | MatchStatus>("All");
@@ -4332,16 +4333,49 @@ export default function SAVLSitePage() {
             </nav>
           </div>
 
-          <Link
-            href="/profile"
-            className="inline-flex shrink-0 items-center gap-2 rounded-2xl border border-[#5865F2]/35 bg-[#5865F2]/15 px-4 py-2 text-sm font-black text-white shadow-lg shadow-[#5865F2]/10 transition duration-200 hover:-translate-y-0.5 hover:bg-[#5865F2]/25 active:translate-y-0.5"
-          >
-            <span>Profile</span>
-            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-[#AEB6FF]">
-              <path d="M20.3 5.37A16.1 16.1 0 0 0 16.34 4c-.17.31-.36.73-.49 1.06a14.9 14.9 0 0 0-4.4 0A8.4 8.4 0 0 0 10.96 4a16.2 16.2 0 0 0-3.98 1.38C4.46 9.13 3.78 12.8 4.12 16.4A16.4 16.4 0 0 0 9 18.9c.4-.54.75-1.11 1.05-1.72-.58-.22-1.14-.49-1.66-.8.14-.1.27-.21.4-.32a11.55 11.55 0 0 0 10.24 0c.13.11.26.22.4.32-.52.31-1.08.58-1.66.8.3.61.66 1.18 1.05 1.72a16.3 16.3 0 0 0 4.88-2.5c.42-4.17-.72-7.8-3.4-11.03ZM9.75 14.17c-.95 0-1.73-.89-1.73-1.98s.76-1.99 1.73-1.99c.97 0 1.75.9 1.73 1.99 0 1.09-.76 1.98-1.73 1.98Zm6.2 0c-.95 0-1.73-.89-1.73-1.98s.76-1.99 1.73-1.99c.97 0 1.75.9 1.73 1.99 0 1.09-.76 1.98-1.73 1.98Z" />
-            </svg>
-          </Link>
+          <div className="flex shrink-0 items-center gap-2">
+            <Link
+              href="/profile"
+              className="inline-flex shrink-0 items-center gap-2 rounded-2xl border border-[#5865F2]/35 bg-[#5865F2]/15 px-4 py-2 text-sm font-black text-white shadow-lg shadow-[#5865F2]/10 transition duration-200 hover:-translate-y-0.5 hover:bg-[#5865F2]/25 active:translate-y-0.5"
+            >
+              <span>Profile</span>
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-[#AEB6FF]">
+                <path d="M20.3 5.37A16.1 16.1 0 0 0 16.34 4c-.17.31-.36.73-.49 1.06a14.9 14.9 0 0 0-4.4 0A8.4 8.4 0 0 0 10.96 4a16.2 16.2 0 0 0-3.98 1.38C4.46 9.13 3.78 12.8 4.12 16.4A16.4 16.4 0 0 0 9 18.9c.4-.54.75-1.11 1.05-1.72-.58-.22-1.14-.49-1.66-.8.14-.1.27-.21.4-.32a11.55 11.55 0 0 0 10.24 0c.13.11.26.22.4.32-.52.31-1.08.58-1.66.8.3.61.66 1.18 1.05 1.72a16.3 16.3 0 0 0 4.88-2.5c.42-4.17-.72-7.8-3.4-11.03ZM9.75 14.17c-.95 0-1.73-.89-1.73-1.98s.76-1.99 1.73-1.99c.97 0 1.75.9 1.73 1.99 0 1.09-.76 1.98-1.73 1.98Zm6.2 0c-.95 0-1.73-.89-1.73-1.98s.76-1.99 1.73-1.99c.97 0 1.75.9 1.73 1.99 0 1.09-.76 1.98-1.73 1.98Z" />
+              </svg>
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((open) => !open)}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-white/10 bg-white/5 text-white transition hover:bg-white/10 md:hidden"
+              aria-label="Open navigation menu"
+              aria-expanded={mobileMenuOpen}
+            >
+              <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                {mobileMenuOpen ? (
+                  <path d="M6 6l12 12M18 6L6 18" />
+                ) : (
+                  <>
+                    <path d="M4 7h16" />
+                    <path d="M4 12h16" />
+                    <path d="M4 17h16" />
+                  </>
+                )}
+              </svg>
+            </button>
+          </div>
         </div>
+
+        {mobileMenuOpen ? (
+          <div className="border-t border-white/10 bg-[#03110D]/95 px-6 py-4 backdrop-blur md:hidden">
+            <div className="mx-auto grid max-w-7xl gap-2 text-sm font-semibold text-white/85">
+              <Link href="/" onClick={() => setMobileMenuOpen(false)} className="rounded-2xl px-4 py-3 hover:bg-white/5">Public Site</Link>
+              <Link href="/stats" onClick={() => setMobileMenuOpen(false)} className="rounded-2xl px-4 py-3 hover:bg-white/5">Stats</Link>
+              <Link href="/archives" onClick={() => setMobileMenuOpen(false)} className="rounded-2xl px-4 py-3 hover:bg-white/5">Archives</Link>
+              <Link href="/profile" onClick={() => setMobileMenuOpen(false)} className="rounded-2xl px-4 py-3 hover:bg-white/5">Profile</Link>
+            </div>
+          </div>
+        ) : null}
       </header>
 
       <main>
@@ -4988,8 +5022,8 @@ export default function SAVLSitePage() {
                     </p>
                   </div>
 
-                  <div className="grid gap-8 lg:grid-cols-2">
-                  <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
+                  <div className="grid gap-8 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.75fr)]">
+                  <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6 xl:col-span-2">
                     <p className="mb-4 text-xl font-bold">Team approvals</p>
 
                     <div className="space-y-6">
@@ -5109,75 +5143,62 @@ export default function SAVLSitePage() {
                             approvedTeams.map((team) => (
                               <div
                                 key={team.id}
-                                className="rounded-2xl border border-white/10 bg-white/5 p-4"
+                                className="rounded-[2rem] border border-white/10 bg-white/5 p-5"
                               >
-                                <div className="flex items-start justify-between gap-4">
-                                  <div className="min-w-0">
-                                    <div className="flex items-center gap-3">
+                                <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)] xl:items-start">
+                                  <div className="min-w-0 space-y-4">
+                                    <div className="flex min-w-0 items-center gap-3">
                                       <img
                                         src={getFlagUrl(team.code)}
                                         alt={`${team.country} flag`}
-                                        className="h-8 w-11 rounded-md object-cover"
+                                        className="h-9 w-12 shrink-0 rounded-md object-cover"
                                       />
-                                      <div>
-                                        <p className="font-semibold">
+                                      <div className="min-w-0">
+                                        <p className="truncate text-lg font-black text-white">
                                           {team.country}
                                         </p>
-                                        <div className="mt-1 flex items-center gap-2 text-sm text-white/70">
+                                        <div className="mt-1 flex min-w-0 items-center gap-2 text-sm text-white/70">
                                           <Avatar
-                                            robloxUserId={
-                                              team.captain_roblox_id
-                                            }
+                                            robloxUserId={team.captain_roblox_id}
                                             name={team.captain_name}
                                           />
                                           <span className="truncate">
-                                            {team.captain_name} • @
-                                            {team.captain_discord}
+                                            {team.captain_name} • @{team.captain_discord}
                                           </span>
                                         </div>
                                       </div>
                                     </div>
-                                  </div>
 
-                                  {team.brick_color_name &&
-                                  team.brick_color_hex ? (
-                                    <div className="mt-3 flex items-center gap-2 text-sm text-white/75">
-                                      <span
-                                        className="h-4 w-4 rounded-full border border-white/20"
-                                        style={{
-                                          backgroundColor: team.brick_color_hex,
-                                        }}
+                                    {team.brick_color_name && team.brick_color_hex ? (
+                                      <div className="flex w-fit items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-sm text-white/75">
+                                        <span
+                                          className="h-4 w-4 rounded-full border border-white/20"
+                                          style={{ backgroundColor: team.brick_color_hex }}
+                                        />
+                                        <span>{team.brick_color_name}</span>
+                                        {team.brick_color_number ? (
+                                          <span className="text-white/45">#{team.brick_color_number}</span>
+                                        ) : null}
+                                      </div>
+                                    ) : null}
+
+                                    <div>
+                                      <label className="mb-2 block text-sm font-medium text-white/70">
+                                        Brick Color
+                                      </label>
+                                      <SelectPicker
+                                        value={team.brick_color_name ?? ""}
+                                        onChange={(value) =>
+                                          handleUpdateTeamBrickColor(team.id, value)
+                                        }
+                                        options={getAdminBrickColorOptions(team.id)}
+                                        placeholder="Select a Brick Color"
                                       />
-                                      <span>{team.brick_color_number}</span>
-                                      {team.brick_color_number ? (
-                                        <span className="text-white/45">
-                                          #{team.brick_color_number}
-                                        </span>
-                                      ) : null}
                                     </div>
-                                  ) : null}
-
-                                  <div className="mt-4">
-                                    <label className="mb-2 block text-sm font-medium text-white/70">
-                                      Brick Color
-                                    </label>
-                                    <SelectPicker
-                                      value={team.brick_color_name ?? ""}
-                                      onChange={(value) =>
-                                        handleUpdateTeamBrickColor(
-                                          team.id,
-                                          value,
-                                        )
-                                      }
-                                      options={getAdminBrickColorOptions(
-                                        team.id,
-                                      )}
-                                      placeholder="Select a Brick Color"
-                                    />
                                   </div>
 
-                                  <div className="mt-4 rounded-2xl border border-[#5865F2]/20 bg-[#5865F2]/10 p-3">
-                                    <label className="mb-2 block text-sm font-medium text-white/70">
+                                  <div className="space-y-3 rounded-[1.5rem] border border-[#5865F2]/20 bg-[#5865F2]/10 p-4">
+                                    <label className="block text-sm font-medium text-white/70">
                                       Discord Team Role ID
                                     </label>
                                     <div className="flex flex-col gap-2 sm:flex-row">
@@ -5196,51 +5217,50 @@ export default function SAVLSitePage() {
                                         type="button"
                                         disabled={teamSyncBusy}
                                         onClick={() => handleSetTeamDiscordRole(team.id)}
-                                        className="rounded-2xl bg-[#5865F2] px-4 py-3 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                                        className="rounded-2xl bg-[#5865F2] px-5 py-3 text-sm font-bold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
                                       >
                                         Save Role
                                       </button>
                                     </div>
-                                    <p className="mt-2 text-xs text-white/45">
+                                    <p className="text-xs leading-5 text-white/45">
                                       This connects /team create, /team info and site roster actions to the same Discord role.
                                     </p>
-                                  </div>
 
-                                  <div className="flex flex-wrap gap-2">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setSelectedAdminTeamId(team.id);
-                                        setPlayerForm({
-                                          team_id: String(team.id),
-                                          roblox_username: "",
-                                          roblox_user_id: "",
-                                          discord_username: "",
-                                          discord_id: "",
-                                          role: "Player",
-                                        });
-                                        scrollToSection("admin");
-                                      }}
-                                      className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-2 text-sm font-semibold text-emerald-300 transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-400/15 active:translate-y-0.5"
-                                    >
-                                      Add Player
-                                    </button>
+                                    <div className="grid gap-2 sm:grid-cols-2">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedAdminTeamId(team.id);
+                                          setPlayerForm({
+                                            team_id: String(team.id),
+                                            roblox_username: "",
+                                            roblox_user_id: "",
+                                            discord_username: "",
+                                            discord_id: "",
+                                            role: "Player",
+                                          });
+                                          scrollToSection("admin");
+                                        }}
+                                        className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 px-4 py-3 text-sm font-semibold text-emerald-300 transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-400/15 active:translate-y-0.5"
+                                      >
+                                        Add Player
+                                      </button>
 
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        openConfirmDialog({
-                                          title: "Remove Team",
-                                          message: `Are you sure you want to remove ${team.country}? This action cannot be undone.`,
-                                          confirmLabel: "Remove",
-                                          onConfirm: () =>
-                                            handleDeleteTeam(team.id),
-                                        })
-                                      }
-                                      className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
-                                    >
-                                      Remove
-                                    </button>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          openConfirmDialog({
+                                            title: "Remove Team",
+                                            message: `Are you sure you want to remove ${team.country}? This action cannot be undone.`,
+                                            confirmLabel: "Remove",
+                                            onConfirm: () => handleDeleteTeam(team.id),
+                                          })
+                                        }
+                                        className="rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm font-semibold text-red-300 transition duration-200 hover:-translate-y-0.5 hover:bg-red-400/15 active:translate-y-0.5"
+                                      >
+                                        Remove
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
