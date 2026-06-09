@@ -328,7 +328,7 @@ export default function ProfilePage() {
             <div className="mt-6 space-y-4">
               {transactions.length === 0 ? (
                 <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5 text-white/60">
-                  No transactions found yet. When the Discord bot creates or updates a transaction, it will appear here after the Supabase bridge is configured.
+                  No transactions found yet.
                 </div>
               ) : (
                 transactions.map((item) => (
@@ -347,7 +347,6 @@ export default function ProfilePage() {
                       <p>Role: {item.requested_role || "—"}</p>
                       <p>Roblox: {item.roblox_username || "—"}</p>
                       <p>Requested by: {item.requester_discord_username || "—"}</p>
-                      <p>Source: {item.source || "—"}</p>
                       <p>Created: {formatDate(item.created_at)}</p>
                     </div>
                     {item.reason ? <p className="mt-3 rounded-xl bg-red-400/10 p-3 text-sm text-red-200">{item.reason}</p> : null}

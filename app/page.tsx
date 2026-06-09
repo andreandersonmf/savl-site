@@ -2293,30 +2293,24 @@ export default function SAVLSitePage() {
   }
 
   async function reloadTeams(seasonId = activeSeasonId) {
-    if (!supabase) {
-      console.error("Supabase client is null");
+    if (!supabase) return;
+
+    if (!seasonId) {
+      setTeams([]);
       return;
     }
 
-    let query = supabase
+    const result = await supabase
       .from("teams")
-      .select("*");
-
-    if (seasonId) {
-      query = query.eq("season_id", seasonId);
-    }
-
-    const result = await query.order("country", { ascending: true });
-
-    console.log("reloadTeams result:", result);
+      .select("*")
+      .eq("season_id", seasonId)
+      .order("country", { ascending: true });
 
     if (result.error) {
-      console.error("reloadTeams error:", result.error);
       setNotice(`Teams error: ${result.error.message}`);
       return;
     }
 
-    console.log("teams loaded:", result.data);
     setTeams((result.data ?? []) as Team[]);
   }
 
@@ -2387,15 +2381,16 @@ export default function SAVLSitePage() {
   async function reloadMatches(seasonId = activeSeasonId) {
     if (!supabase) return;
 
-    let query = supabase
-      .from("matches")
-      .select("*");
-
-    if (seasonId) {
-      query = query.eq("season_id", seasonId);
+    if (!seasonId) {
+      setMatches([]);
+      setMatchDrafts({});
+      return;
     }
 
-    const result = await query
+    const result = await supabase
+      .from("matches")
+      .select("*")
+      .eq("season_id", seasonId)
       .order("match_date", { ascending: true })
       .order("match_time", { ascending: true });
 
@@ -3973,15 +3968,16 @@ export default function SAVLSitePage() {
   async function reloadTeamPlayers(seasonId = activeSeasonId) {
     if (!supabase) return;
 
-    let query = supabase
-      .from("team_players")
-      .select("*");
-
-    if (seasonId) {
-      query = query.eq("season_id", seasonId);
+    if (!seasonId) {
+      setTeamPlayers([]);
+      return;
     }
 
-    const result = await query.order("created_at", { ascending: true });
+    const result = await supabase
+      .from("team_players")
+      .select("*")
+      .eq("season_id", seasonId)
+      .order("created_at", { ascending: true });
 
     if (!result.error && result.data) {
       setTeamPlayers(result.data as TeamPlayer[]);
@@ -4263,15 +4259,17 @@ export default function SAVLSitePage() {
   async function reloadPlayerStats(seasonId = activeSeasonId) {
     if (!supabase) return;
     setPlayerStatsLoading(true);
-    let query = supabase
-      .from("match_player_stats")
-      .select("*");
 
-    if (seasonId) {
-      query = query.eq("season_id", seasonId);
+    if (!seasonId) {
+      setPlayerStats([]);
+      setPlayerStatsLoading(false);
+      return;
     }
 
-    const result = await query
+    const result = await supabase
+      .from("match_player_stats")
+      .select("*")
+      .eq("season_id", seasonId)
       .order("match_id", { ascending: true })
       .order("set_number", { ascending: true })
       .order("team_country", { ascending: true })
@@ -4433,12 +4431,30 @@ export default function SAVLSitePage() {
     showNotice("Team group updated successfully.", true);
   }
 
+  async function handleDiscordLoginFromHeader() {
+    if (!supabase) {
+      showNotice("Login is not available right now.");
+      return;
+    }
+
+    const redirectTo = `${window.location.origin}/profile`;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "discord",
+      options: {
+        redirectTo,
+        scopes: "identify email",
+      },
+    });
+
+    if (error) showNotice(error.message);
+  }
+
   return (
     <div className="min-h-screen bg-[#03110D] text-white selection:bg-emerald-400/20 selection:text-white">
       <header className="sticky top-0 z-50 border-b border-white/10 bg-[#03110D]/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4">
-          <div className="flex min-w-0 items-center gap-4">
-            <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/5">
+          <Link href="/" className="flex shrink-0 items-center gap-3" aria-label="SAVL Home">
+            <div className="relative h-12 w-12 overflow-hidden rounded-full border border-white/10 bg-white/5 shadow-lg shadow-emerald-500/10">
               <Image
                 src="/savl-logo.png"
                 alt="SAVL logo"
@@ -4447,12 +4463,9 @@ export default function SAVLSitePage() {
                 priority
               />
             </div>
-            <p className="truncate text-sm font-semibold uppercase tracking-[0.22em] text-emerald-300 md:text-base">
-              South America Volleyball League
-            </p>
-          </div>
+          </Link>
 
-          <nav className="hidden items-center gap-2 md:flex">
+          <nav className="hidden items-center gap-1 md:flex">
             <AnimatedNavButton label="Home" targetId="home" />
             <AnimatedNavButton label="Teams" targetId="teams" />
             <AnimatedNavButton label="Schedule" targetId="schedule" />
@@ -4468,12 +4481,26 @@ export default function SAVLSitePage() {
             </Link>
 
             <AnimatedNavButton label="Register" targetId="register" />
-            <Link
-              href="/profile"
-              className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
-            >
-              Profile
-            </Link>
+            {siteProfile ? (
+              <Link
+                href="/profile"
+                className="inline-flex items-center gap-2 rounded-2xl border border-emerald-400/30 bg-emerald-400/15 px-4 py-2 text-sm font-black text-emerald-200 shadow-lg shadow-emerald-500/10 transition duration-200 hover:-translate-y-0.5 hover:bg-emerald-400/25 hover:text-white active:translate-y-0.5"
+              >
+                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-400 text-xs text-black">✓</span>
+                Profile
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={handleDiscordLoginFromHeader}
+                className="inline-flex items-center gap-2 rounded-2xl bg-[#5865F2] px-4 py-2 text-sm font-black text-white shadow-lg shadow-[#5865F2]/25 transition duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0.5"
+              >
+                <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-current">
+                  <path d="M20.3 5.37A16.1 16.1 0 0 0 16.34 4c-.17.31-.36.73-.49 1.06a14.9 14.9 0 0 0-4.4 0A8.4 8.4 0 0 0 10.96 4a16.2 16.2 0 0 0-3.98 1.38C4.46 9.13 3.78 12.8 4.12 16.4A16.4 16.4 0 0 0 9 18.9c.4-.54.75-1.11 1.05-1.72-.58-.22-1.14-.49-1.66-.8.14-.1.27-.21.4-.32a11.55 11.55 0 0 0 10.24 0c.13.11.26.22.4.32-.52.31-1.08.58-1.66.8.3.61.66 1.18 1.05 1.72a16.3 16.3 0 0 0 4.88-2.5c.42-4.17-.72-7.8-3.4-11.03ZM9.75 14.17c-.95 0-1.73-.89-1.73-1.98s.76-1.99 1.73-1.99c.97 0 1.75.9 1.73 1.99 0 1.09-.76 1.98-1.73 1.98Zm6.2 0c-.95 0-1.73-.89-1.73-1.98s.76-1.99 1.73-1.99c.97 0 1.75.9 1.73 1.99 0 1.09-.76 1.98-1.73 1.98Z" />
+                </svg>
+                Login with Discord
+              </button>
+            )}
             <Link
               href="/admin"
               className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
@@ -5707,7 +5734,7 @@ export default function SAVLSitePage() {
                 {siteProfile ? (
                   <div className="mb-5 rounded-[1.5rem] border border-emerald-400/20 bg-emerald-400/10 p-4 text-sm text-emerald-200">
                     Discord profile connected: @{siteProfile.discord_username || "SAVL user"}.
-                    {siteProfile.roblox_username ? " Roblox data was pre-filled from your profile." : " Link Roblox in /profile to pre-fill this form next time."}
+                    {siteProfile.roblox_username ? " Roblox data was pre-filled from your profile." : " Add your Roblox info in Profile to auto-fill future registrations."}
                   </div>
                 ) : (
                   <div className="mb-5 rounded-[1.5rem] border border-white/10 bg-white/5 p-4 text-sm text-white/60">
@@ -6077,12 +6104,22 @@ export default function SAVLSitePage() {
           <div className="flex gap-3">
             <AnimatedNavButton label="Schedule" targetId="schedule" />
             <AnimatedNavButton label="Register" targetId="register" />
-            <Link
-              href="/profile"
-              className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"
-            >
-              Profile
-            </Link>
+            {siteProfile ? (
+              <Link
+                href="/profile"
+                className="inline-flex items-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-400/10 px-3 py-1.5 text-sm font-bold text-emerald-200 transition duration-200 hover:bg-emerald-400/20 hover:text-white"
+              >
+                Profile
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={handleDiscordLoginFromHeader}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#5865F2] px-3 py-1.5 text-sm font-bold text-white transition duration-200 hover:brightness-110"
+              >
+                Discord Login
+              </button>
+            )}
             <Link
               href="/admin"
               className="rounded-xl px-2 py-1 text-sm text-white/80 transition duration-200 hover:-translate-y-0.5 hover:bg-white/5 hover:text-white active:translate-y-0.5"

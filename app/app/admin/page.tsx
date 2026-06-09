@@ -2197,30 +2197,24 @@ export default function SAVLSitePage() {
   }
 
   async function reloadTeams(seasonId = activeSeasonId) {
-    if (!supabase) {
-      console.error("Supabase client is null");
+    if (!supabase) return;
+
+    if (!seasonId) {
+      setTeams([]);
       return;
     }
 
-    let query = supabase
+    const result = await supabase
       .from("teams")
-      .select("*");
-
-    if (seasonId) {
-      query = query.eq("season_id", seasonId);
-    }
-
-    const result = await query.order("country", { ascending: true });
-
-    console.log("reloadTeams result:", result);
+      .select("*")
+      .eq("season_id", seasonId)
+      .order("country", { ascending: true });
 
     if (result.error) {
-      console.error("reloadTeams error:", result.error);
       setNotice(`Teams error: ${result.error.message}`);
       return;
     }
 
-    console.log("teams loaded:", result.data);
     setTeams((result.data ?? []) as Team[]);
   }
 
@@ -2291,15 +2285,16 @@ export default function SAVLSitePage() {
   async function reloadMatches(seasonId = activeSeasonId) {
     if (!supabase) return;
 
-    let query = supabase
-      .from("matches")
-      .select("*");
-
-    if (seasonId) {
-      query = query.eq("season_id", seasonId);
+    if (!seasonId) {
+      setMatches([]);
+      setMatchDrafts({});
+      return;
     }
 
-    const result = await query
+    const result = await supabase
+      .from("matches")
+      .select("*")
+      .eq("season_id", seasonId)
       .order("match_date", { ascending: true })
       .order("match_time", { ascending: true });
 
@@ -3864,15 +3859,16 @@ export default function SAVLSitePage() {
   async function reloadTeamPlayers(seasonId = activeSeasonId) {
     if (!supabase) return;
 
-    let query = supabase
-      .from("team_players")
-      .select("*");
-
-    if (seasonId) {
-      query = query.eq("season_id", seasonId);
+    if (!seasonId) {
+      setTeamPlayers([]);
+      return;
     }
 
-    const result = await query.order("created_at", { ascending: true });
+    const result = await supabase
+      .from("team_players")
+      .select("*")
+      .eq("season_id", seasonId)
+      .order("created_at", { ascending: true });
 
     if (!result.error && result.data) {
       setTeamPlayers(result.data as TeamPlayer[]);
@@ -4154,15 +4150,17 @@ export default function SAVLSitePage() {
   async function reloadPlayerStats(seasonId = activeSeasonId) {
     if (!supabase) return;
     setPlayerStatsLoading(true);
-    let query = supabase
-      .from("match_player_stats")
-      .select("*");
 
-    if (seasonId) {
-      query = query.eq("season_id", seasonId);
+    if (!seasonId) {
+      setPlayerStats([]);
+      setPlayerStatsLoading(false);
+      return;
     }
 
-    const result = await query
+    const result = await supabase
+      .from("match_player_stats")
+      .select("*")
+      .eq("season_id", seasonId)
       .order("match_id", { ascending: true })
       .order("set_number", { ascending: true })
       .order("team_country", { ascending: true })

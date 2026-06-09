@@ -348,7 +348,7 @@ export default function ArchivesPage() {
   }, [seasons, selectedSeasonId]);
 
   const standings = useMemo(() => buildStandings(teams, matches), [teams, matches]);
-  const leaderboard = useMemo(() => buildLeaderboard(stats).slice(0, 10), [stats]);
+  const leaderboard = useMemo(() => buildLeaderboard(stats), [stats]);
   const finishedMatches = useMemo(
     () => matches.filter((match) => match.status === "Finished"),
     [matches],
@@ -446,12 +446,6 @@ export default function ArchivesPage() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Link
-              href="/profile"
-              className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/10 hover:text-white"
-            >
-              Profile
-            </Link>
             <Link
               href="/"
               className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white/80 transition hover:bg-white/10 hover:text-white"
@@ -590,10 +584,14 @@ export default function ArchivesPage() {
               <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
                 <h3 className="text-2xl font-black">Teams</h3>
                 <div className="mt-5 space-y-3">
+                  {teams.length === 0 ? (
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/55">No teams found for this season.</div>
+                  ) : null}
                   {teams.map((team) => {
                     const rosterCount = players.filter((player) => player.team_id === team.id).length + 1;
                     return (
-                      <div key={team.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+                      <div key={team.id}>
+                        <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
                         <div className="flex items-center gap-3">
                           <img src={getTeamImageUrl(team.code)} alt="" className="h-10 w-12 rounded-lg object-cover" />
                           <div>
@@ -604,6 +602,20 @@ export default function ArchivesPage() {
                         <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/65">
                           {rosterCount} members
                         </span>
+                        </div>
+                        <div className="mt-2 rounded-2xl border border-white/10 bg-black/10 p-3 text-sm text-white/60">
+                        <p className="font-semibold text-white/80">Roster</p>
+                        <p className="mt-1">Captain: {team.captain_name} • @{team.captain_discord}</p>
+                        {players.filter((player) => player.team_id === team.id).length > 0 ? (
+                          <div className="mt-2 space-y-1">
+                            {players.filter((player) => player.team_id === team.id).map((player) => (
+                              <p key={player.id}>
+                                {player.role}: {player.roblox_username} • @{player.discord_username}
+                              </p>
+                            ))}
+                          </div>
+                        ) : null}
+                        </div>
                       </div>
                     );
                   })}
@@ -611,8 +623,11 @@ export default function ArchivesPage() {
               </div>
 
               <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
-                <h3 className="text-2xl font-black">Top Archived Players</h3>
-                <div className="mt-5 space-y-3">
+                <h3 className="text-2xl font-black">Archived Player Stats</h3>
+                <div className="mt-5 max-h-[720px] space-y-3 overflow-y-auto pr-1">
+                  {leaderboard.length === 0 ? (
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/55">No player stats found for this season.</div>
+                  ) : null}
                   {leaderboard.map((player, index) => (
                     <div key={`${player.player_key}-${player.team}`} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                       <div className="flex items-center justify-between gap-3">
@@ -640,6 +655,9 @@ export default function ArchivesPage() {
             <section className="mt-8 rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
               <h3 className="text-2xl font-black">Match History</h3>
               <div className="mt-5 grid gap-3 md:grid-cols-2">
+                {finishedMatches.length === 0 ? (
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/55">No finished matches found for this season.</div>
+                ) : null}
                 {finishedMatches.map((match) => {
                   const { homePoints, awayPoints } = calculatePointsTotals(match);
                   return (

@@ -44,7 +44,7 @@ export default function LoginPage() {
       provider: "discord",
       options: {
         redirectTo,
-        scopes: "identify",
+        scopes: "identify email",
       },
     });
 
@@ -66,7 +66,6 @@ export default function LoginPage() {
           </Link>
           <div className="flex flex-wrap gap-2 text-sm text-white/70">
             <Link href="/" className="rounded-xl border border-white/10 px-4 py-2 hover:bg-white/5">Home</Link>
-            <Link href="/profile" className="rounded-xl border border-white/10 px-4 py-2 hover:bg-white/5">Profile</Link>
             <Link href="/archives" className="rounded-xl border border-white/10 px-4 py-2 hover:bg-white/5">Archives</Link>
           </div>
         </nav>
@@ -77,7 +76,7 @@ export default function LoginPage() {
           </p>
           <h1 className="mt-3 text-4xl font-black md:text-5xl">Login with Discord</h1>
           <p className="mt-4 max-w-2xl text-white/70">
-            Use Discord as your SAVL identity. After logging in, you can link your Roblox username/User ID and the bot can connect transactions to your site profile.
+            Use Discord as your SAVL identity. After logging in, you can link your Roblox username/User ID and follow your team activity from your profile.
           </p>
 
           <div className="mt-8 rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
@@ -103,10 +102,6 @@ export default function LoginPage() {
             )}
 
             {notice ? <p className="mt-4 text-sm text-red-300">{notice}</p> : null}
-          </div>
-
-          <div className="mt-6 rounded-[1.5rem] border border-emerald-400/15 bg-emerald-400/10 p-5 text-sm text-emerald-100/80">
-            First setup required: enable Discord OAuth in Supabase Auth and add your site URL as an allowed redirect URL. The SQL setup file included in the ZIP creates the profile and transaction tables.
           </div>
         </section>
       </div>

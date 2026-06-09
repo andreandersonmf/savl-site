@@ -493,35 +493,38 @@ export default function StatsPage() {
 
     const seasonId = await resolveActiveSeason();
 
-    let matchesQuery = supabase
-      .from("matches")
-      .select("id, season_id, home_country, away_country, stage, match_date, match_time, status, home_score, away_score");
-    let teamsQuery = supabase
-      .from("teams")
-      .select("id, season_id, country, code, captain_name, captain_discord, captain_roblox_id, approved")
-      .eq("approved", true);
-    let playersQuery = supabase
-      .from("team_players")
-      .select("*");
-    let statsQuery = supabase
-      .from("match_player_stats")
-      .select("*");
-
-    if (seasonId) {
-      matchesQuery = matchesQuery.eq("season_id", seasonId);
-      teamsQuery = teamsQuery.eq("season_id", seasonId);
-      playersQuery = playersQuery.eq("season_id", seasonId);
-      statsQuery = statsQuery.eq("season_id", seasonId);
+    if (!seasonId) {
+      setMatches([]);
+      setTeams([]);
+      setTeamPlayers([]);
+      setStats([]);
+      setLoading(false);
+      return;
     }
 
     const [matchesResult, teamsResult, playersResult, statsResult] =
       await Promise.all([
-        matchesQuery
+        supabase
+          .from("matches")
+          .select("id, season_id, home_country, away_country, stage, match_date, match_time, status, home_score, away_score")
+          .eq("season_id", seasonId)
           .order("match_date", { ascending: false })
           .order("match_time", { ascending: false }),
-        teamsQuery.order("country", { ascending: true }),
-        playersQuery.order("created_at", { ascending: true }),
-        statsQuery
+        supabase
+          .from("teams")
+          .select("id, season_id, country, code, captain_name, captain_discord, captain_roblox_id, approved")
+          .eq("approved", true)
+          .eq("season_id", seasonId)
+          .order("country", { ascending: true }),
+        supabase
+          .from("team_players")
+          .select("*")
+          .eq("season_id", seasonId)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("match_player_stats")
+          .select("*")
+          .eq("season_id", seasonId)
           .order("team_country", { ascending: true })
           .order("player_name", { ascending: true }),
       ]);
