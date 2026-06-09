@@ -2012,6 +2012,10 @@ export default function SAVLSitePage() {
   const [matches, setMatches] = useState<MatchRow[]>([]);
   const [activeSeason, setActiveSeason] = useState<Season | null>(null);
   const [activeSeasonId, setActiveSeasonId] = useState<string | null>(null);
+  const [statsSeason, setStatsSeason] = useState<Season | null>(null);
+  const [statsTeams, setStatsTeams] = useState<Team[]>([]);
+  const [statsMatches, setStatsMatches] = useState<MatchRow[]>([]);
+  const [statsTeamPlayers, setStatsTeamPlayers] = useState<TeamPlayer[]>([]);
   const [siteProfile, setSiteProfile] = useState<SiteProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("");
@@ -2354,7 +2358,7 @@ export default function SAVLSitePage() {
     await reloadTeams(seasonId);
     await reloadMatches(seasonId);
     await reloadTeamPlayers(seasonId);
-    await reloadPlayerStats(seasonId);
+    await reloadStatsShowcase();
     await reloadStaffApplications();
 
     showNotice("Admin unlocked.", true);
@@ -2372,7 +2376,7 @@ export default function SAVLSitePage() {
     await reloadTeams(seasonId);
     await reloadMatches(seasonId);
     await reloadTeamPlayers(seasonId);
-    await reloadPlayerStats(seasonId);
+    await reloadStatsShowcase();
     await reloadStaffApplications();
 
     showNotice("Admin locked.", true);
@@ -2469,7 +2473,7 @@ export default function SAVLSitePage() {
         reloadMatches(seasonId),
         reloadTeamPlayers(seasonId),
         reloadStaffApplications(),
-        reloadPlayerStats(seasonId),
+        reloadStatsShowcase(),
       ]);
       setLoading(false);
     }
@@ -2498,6 +2502,10 @@ export default function SAVLSitePage() {
   const approvedTeams = useMemo(() => {
     return teams.filter((team) => team.approved);
   }, [teams]);
+
+  const statsApprovedTeams = useMemo(() => {
+    return statsTeams.filter((team) => team.approved);
+  }, [statsTeams]);
 
   const pendingTeams = useMemo(() => {
     return teams.filter((team) => !team.approved);
@@ -2574,6 +2582,18 @@ export default function SAVLSitePage() {
 
     return stages.sort((a, b) => a.localeCompare(b));
   }, [matches]);
+
+  const statsAvailableStages = useMemo(() => {
+    const stages = Array.from(
+      new Set(
+        statsMatches
+          .map((match) => match.stage?.trim())
+          .filter((stage): stage is string => Boolean(stage)),
+      ),
+    );
+
+    return stages.sort((a, b) => a.localeCompare(b));
+  }, [statsMatches]);
 
   const filteredMatches = useMemo(() => {
     return matches.filter((match) => {
@@ -2672,7 +2692,7 @@ export default function SAVLSitePage() {
   const playerMetaByKey = useMemo(() => {
     const map = new Map<string, { username: string; robloxId: string | null; team: string }>();
 
-    for (const team of approvedTeams) {
+    for (const team of statsApprovedTeams) {
       if (team.captain_name?.trim()) {
         map.set(`captain-${team.id}`, {
           username: team.captain_name,
@@ -2682,8 +2702,8 @@ export default function SAVLSitePage() {
       }
     }
 
-    for (const player of teamPlayers) {
-      const team = approvedTeams.find((item) => item.id === player.team_id);
+    for (const player of statsTeamPlayers) {
+      const team = statsApprovedTeams.find((item) => item.id === player.team_id);
       if (!team) continue;
       map.set(`player-${player.id}`, {
         username: player.roblox_username,
@@ -2693,7 +2713,7 @@ export default function SAVLSitePage() {
     }
 
     return map;
-  }, [approvedTeams, teamPlayers]);
+  }, [statsApprovedTeams, statsTeamPlayers]);
 
   const findPlayerMeta = (
     username: string,
@@ -2707,7 +2727,7 @@ export default function SAVLSitePage() {
 
     const normalizedUsername = normalizeText(username);
 
-    for (const team of approvedTeams) {
+    for (const team of statsApprovedTeams) {
       if (normalizeText(team.captain_name ?? "") === normalizedUsername) {
         return {
           username: team.captain_name,
@@ -2717,11 +2737,11 @@ export default function SAVLSitePage() {
       }
     }
 
-    const rosterPlayer = teamPlayers.find(
+    const rosterPlayer = statsTeamPlayers.find(
       (player) => normalizeText(player.roblox_username) === normalizedUsername,
     );
     if (rosterPlayer) {
-      const rosterTeam = approvedTeams.find(
+      const rosterTeam = statsApprovedTeams.find(
         (team) => team.id === rosterPlayer.team_id,
       );
       return {
@@ -2799,7 +2819,7 @@ export default function SAVLSitePage() {
 
     if (leaderboardFilterStage !== "All") {
       const matchIds = new Set(
-        matches
+        statsMatches
           .filter((m) => (m.stage?.trim() ?? "") === leaderboardFilterStage)
           .map((m) => m.id),
       );
@@ -2807,7 +2827,7 @@ export default function SAVLSitePage() {
     }
 
     return aggregatePlayerStats(filtered);
-  }, [playerStats, leaderboardFilterTeam, leaderboardFilterStage, matches, playerMetaByKey, approvedTeams, teamPlayers]);
+  }, [playerStats, leaderboardFilterTeam, leaderboardFilterStage, statsMatches, playerMetaByKey, statsApprovedTeams, statsTeamPlayers]);
 
   // Awards computed data
   const awardsData = useMemo(() => {
@@ -2878,7 +2898,7 @@ export default function SAVLSitePage() {
       mostImproved,
       teamOfSeason,
     };
-  }, [playerStats, playerMetaByKey, approvedTeams, teamPlayers]);
+  }, [playerStats, playerMetaByKey, statsApprovedTeams, statsTeamPlayers]);
 
   const approvedStaff = useMemo(() => {
     return staffApplications.filter((staff) => staff.approved);
@@ -4235,6 +4255,135 @@ export default function SAVLSitePage() {
     return null;
   }
 
+  function isSeasonOne(season?: Season | null) {
+    if (!season) return false;
+
+    return (
+      normalizeText(season.slug) === "season-1" ||
+      normalizeText(season.name).includes("season 1") ||
+      normalizeText(season.name).includes("season i")
+    );
+  }
+
+  async function resolveStatsSeason() {
+    if (!supabase) return null;
+
+    const seasonOneBySlug = await supabase
+      .from("seasons")
+      .select("*")
+      .eq("slug", "season-1")
+      .maybeSingle();
+
+    if (!seasonOneBySlug.error && seasonOneBySlug.data) {
+      const season = seasonOneBySlug.data as Season;
+      setStatsSeason(season);
+      return season;
+    }
+
+    const archivedSeason = await supabase
+      .from("seasons")
+      .select("*")
+      .eq("is_archived", true)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!archivedSeason.error && archivedSeason.data) {
+      const season = archivedSeason.data as Season;
+      setStatsSeason(season);
+      return season;
+    }
+
+    setStatsSeason(activeSeason);
+    return activeSeason;
+  }
+
+  async function reloadStatsTeams(season: Season | null = statsSeason) {
+    if (!supabase) return;
+
+    if (!season?.id) {
+      setStatsTeams([]);
+      return;
+    }
+
+    let query: any = supabase
+      .from("teams")
+      .select("*")
+      .order("country", { ascending: true });
+
+    query = isSeasonOne(season)
+      ? query.or(`season_id.eq.${season.id},season_id.is.null`)
+      : query.eq("season_id", season.id);
+
+    const result = await query;
+
+    if (!result.error && result.data) {
+      setStatsTeams(result.data as Team[]);
+    }
+  }
+
+  async function reloadStatsMatches(season: Season | null = statsSeason) {
+    if (!supabase) return;
+
+    if (!season?.id) {
+      setStatsMatches([]);
+      return;
+    }
+
+    let query: any = supabase
+      .from("matches")
+      .select("*")
+      .order("match_date", { ascending: true })
+      .order("match_time", { ascending: true });
+
+    query = isSeasonOne(season)
+      ? query.or(`season_id.eq.${season.id},season_id.is.null`)
+      : query.eq("season_id", season.id);
+
+    const result = await query;
+
+    if (!result.error && result.data) {
+      setStatsMatches(result.data as MatchRow[]);
+    }
+  }
+
+  async function reloadStatsTeamPlayers(season: Season | null = statsSeason) {
+    if (!supabase) return;
+
+    if (!season?.id) {
+      setStatsTeamPlayers([]);
+      return;
+    }
+
+    let query: any = supabase
+      .from("team_players")
+      .select("*")
+      .order("created_at", { ascending: true });
+
+    query = isSeasonOne(season)
+      ? query.or(`season_id.eq.${season.id},season_id.is.null`)
+      : query.eq("season_id", season.id);
+
+    const result = await query;
+
+    if (!result.error && result.data) {
+      setStatsTeamPlayers(result.data as TeamPlayer[]);
+    }
+  }
+
+  async function reloadStatsShowcase() {
+    const season = await resolveStatsSeason();
+
+    await Promise.all([
+      reloadStatsTeams(season),
+      reloadStatsMatches(season),
+      reloadStatsTeamPlayers(season),
+      reloadPlayerStats(season),
+    ]);
+
+    return season;
+  }
+
   async function reloadLeagueSettings() {
     if (!supabase) return null;
 
@@ -4256,24 +4405,29 @@ export default function SAVLSitePage() {
     return resolveActiveSeason(nextActiveSeasonId);
   }
 
-  async function reloadPlayerStats(seasonId = activeSeasonId) {
+  async function reloadPlayerStats(season: Season | null = statsSeason) {
     if (!supabase) return;
     setPlayerStatsLoading(true);
 
-    if (!seasonId) {
+    if (!season?.id) {
       setPlayerStats([]);
       setPlayerStatsLoading(false);
       return;
     }
 
-    const result = await supabase
+    let query: any = supabase
       .from("match_player_stats")
       .select("*")
-      .eq("season_id", seasonId)
       .order("match_id", { ascending: true })
       .order("set_number", { ascending: true })
       .order("team_country", { ascending: true })
       .order("player_name", { ascending: true });
+
+    query = isSeasonOne(season)
+      ? query.or(`season_id.eq.${season.id},season_id.is.null`)
+      : query.eq("season_id", season.id);
+
+    const result = await query;
     setPlayerStatsLoading(false);
     if (!result.error && result.data) {
       setPlayerStats(result.data as PlayerStat[]);
@@ -5222,7 +5376,7 @@ export default function SAVLSitePage() {
                   onClick={() => {
                     setShowLeaderboard((prev) => !prev);
                     if (!showLeaderboard) {
-                      reloadPlayerStats();
+                      reloadStatsShowcase();
                       setTimeout(() => scrollToSection("leaderboard-section"), 50);
                     }
                   }}
@@ -5238,7 +5392,7 @@ export default function SAVLSitePage() {
                   onClick={() => {
                     setShowAwards((prev) => !prev);
                     if (!showAwards) {
-                      reloadPlayerStats();
+                      reloadStatsShowcase();
                       setTimeout(() => scrollToSection("awards-section"), 50);
                     }
                   }}
@@ -5270,10 +5424,10 @@ export default function SAVLSitePage() {
                 <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <p className="text-sm font-semibold uppercase tracking-[0.3em] text-sky-300">
-                      Season Leaderboard
+                      {statsSeason?.name ?? "Season"} Leaderboard
                     </p>
                     <p className="mt-1 text-sm text-white/60">
-                      Aggregate stats across all matches. Filter by team or round.
+                      Public leaderboard and season-wide stats. Filter by team or round.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -5315,7 +5469,7 @@ export default function SAVLSitePage() {
                       onChange={setLeaderboardFilterTeam}
                       options={[
                         { label: "All teams", value: "All" },
-                        ...approvedTeams.map((team) => ({
+                        ...statsApprovedTeams.map((team) => ({
                           label: team.country,
                           value: team.country,
                           imageUrl: getFlagUrl(team.code),
@@ -5334,7 +5488,7 @@ export default function SAVLSitePage() {
                       onChange={setLeaderboardFilterStage}
                       options={[
                         { label: "All rounds", value: "All" },
-                        ...availableStages.map((stage) => ({
+                        ...statsAvailableStages.map((stage) => ({
                           label: stage,
                           value: stage,
                         })),
@@ -5377,7 +5531,7 @@ export default function SAVLSitePage() {
                         .slice(0, 10)}
                       statKey="kills"
                       statLabel="Kills"
-                      teams={approvedTeams}
+                      teams={statsApprovedTeams}
                     />
                     {/* Receives Leaderboard */}
                     <LeaderboardTable
@@ -5389,7 +5543,7 @@ export default function SAVLSitePage() {
                         .slice(0, 10)}
                       statKey="receives"
                       statLabel="Receives"
-                      teams={approvedTeams}
+                      teams={statsApprovedTeams}
                     />
                     {/* Aces Leaderboard */}
                     <LeaderboardTable
@@ -5401,7 +5555,7 @@ export default function SAVLSitePage() {
                         .slice(0, 10)}
                       statKey="aces"
                       statLabel="Aces"
-                      teams={approvedTeams}
+                      teams={statsApprovedTeams}
                     />
                     {/* Assists Leaderboard */}
                     <LeaderboardTable
@@ -5413,7 +5567,7 @@ export default function SAVLSitePage() {
                         .slice(0, 10)}
                       statKey="assists"
                       statLabel="Assists"
-                      teams={approvedTeams}
+                      teams={statsApprovedTeams}
                       description="Ranked by average assists per match. All players are eligible."
                     />
                     {/* Ape Kills Leaderboard */}
@@ -5426,7 +5580,7 @@ export default function SAVLSitePage() {
                         .slice(0, 10)}
                       statKey="ape_kills"
                       statLabel="Ape Kills"
-                      teams={approvedTeams}
+                      teams={statsApprovedTeams}
                     />
                     {/* Blocks Leaderboard */}
                     <LeaderboardTable
@@ -5438,7 +5592,7 @@ export default function SAVLSitePage() {
                         .slice(0, 10)}
                       statKey="blocks"
                       statLabel="Blocks"
-                      teams={approvedTeams}
+                      teams={statsApprovedTeams}
                     />
                   </div>
                 )}
@@ -5454,10 +5608,10 @@ export default function SAVLSitePage() {
                 <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <p className="text-sm font-semibold uppercase tracking-[0.3em] text-yellow-300">
-                      Season Awards
+                      {statsSeason?.name ?? "Season"} Awards
                     </p>
                     <p className="mt-1 text-sm text-white/60">
-                      Season highlights and best performers.
+                      Awards and best performers remain here until the ceremony is fully finished.
                     </p>
                   </div>
                   <div className="flex flex-wrap gap-2">
@@ -5532,7 +5686,7 @@ export default function SAVLSitePage() {
                         players={awardsData.bestSpiker}
                         mainStat="kills"
                         mainStatLabel="Kills"
-                        teams={approvedTeams}
+                        teams={statsApprovedTeams}
                       />
                     ) : null}
                     {awardsTab === "best_receiver" ? (
@@ -5542,7 +5696,7 @@ export default function SAVLSitePage() {
                         players={awardsData.bestReceiver}
                         mainStat="receives"
                         mainStatLabel="Receives"
-                        teams={approvedTeams}
+                        teams={statsApprovedTeams}
                       />
                     ) : null}
                     {awardsTab === "best_server" ? (
@@ -5552,7 +5706,7 @@ export default function SAVLSitePage() {
                         players={awardsData.bestServer}
                         mainStat="aces"
                         mainStatLabel="Aces"
-                        teams={approvedTeams}
+                        teams={statsApprovedTeams}
                       />
                     ) : null}
                     {awardsTab === "best_setter" ? (
@@ -5562,7 +5716,7 @@ export default function SAVLSitePage() {
                         players={awardsData.bestSetter}
                         mainStat="assists"
                         mainStatLabel="Assists"
-                        teams={approvedTeams}
+                        teams={statsApprovedTeams}
                       />
                     ) : null}
                     {awardsTab === "best_aper" ? (
@@ -5572,7 +5726,7 @@ export default function SAVLSitePage() {
                         players={awardsData.bestAper}
                         mainStat="ape_kills"
                         mainStatLabel="Ape Kills"
-                        teams={approvedTeams}
+                        teams={statsApprovedTeams}
                       />
                     ) : null}
                     {awardsTab === "best_blocker" ? (
@@ -5582,7 +5736,7 @@ export default function SAVLSitePage() {
                         players={awardsData.bestBlocker}
                         mainStat="blocks"
                         mainStatLabel="Blocks"
-                        teams={approvedTeams}
+                        teams={statsApprovedTeams}
                       />
                     ) : null}
                     {awardsTab === "season_mvp" ? (
@@ -5590,7 +5744,7 @@ export default function SAVLSitePage() {
                         title="Season MVP"
                         subtitle="The player with the highest average full impact per match"
                         player={awardsData.seasonMvp[0] ?? null}
-                        teams={approvedTeams}
+                        teams={statsApprovedTeams}
                       />
                     ) : null}
                     {awardsTab === "most_improved" ? (
@@ -5600,7 +5754,7 @@ export default function SAVLSitePage() {
                         players={awardsData.mostImproved}
                         mainStat="kills"
                         mainStatLabel="Kills"
-                        teams={approvedTeams}
+                        teams={statsApprovedTeams}
                       />
                     ) : null}
                     {awardsTab === "team_of_season" ? (
