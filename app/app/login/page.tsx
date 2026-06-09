@@ -1,0 +1,115 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+const supabase: SupabaseClient | null =
+  supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+
+export default function LoginPage() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [notice, setNotice] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setLoading(false);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  async function loginWithDiscord() {
+    if (!supabase) {
+      setNotice("Supabase is not configured yet.");
+      return;
+    }
+
+    const redirectTo = `${window.location.origin}/profile`;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "discord",
+      options: {
+        redirectTo,
+        scopes: "identify",
+      },
+    });
+
+    if (error) setNotice(error.message);
+  }
+
+  async function logout() {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+    setSession(null);
+  }
+
+  return (
+    <main className="min-h-screen bg-[#03110D] px-6 py-10 text-white">
+      <div className="mx-auto max-w-3xl">
+        <nav className="flex flex-wrap items-center justify-between gap-3">
+          <Link href="/" className="text-sm font-semibold uppercase tracking-[0.25em] text-emerald-300">
+            SAVL
+          </Link>
+          <div className="flex flex-wrap gap-2 text-sm text-white/70">
+            <Link href="/" className="rounded-xl border border-white/10 px-4 py-2 hover:bg-white/5">Home</Link>
+            <Link href="/profile" className="rounded-xl border border-white/10 px-4 py-2 hover:bg-white/5">Profile</Link>
+            <Link href="/archives" className="rounded-xl border border-white/10 px-4 py-2 hover:bg-white/5">Archives</Link>
+          </div>
+        </nav>
+
+        <section className="mt-12 rounded-[2rem] border border-white/10 bg-[#0B1712] p-8 shadow-2xl shadow-black/20">
+          <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">
+            SAVL Account
+          </p>
+          <h1 className="mt-3 text-4xl font-black md:text-5xl">Login with Discord</h1>
+          <p className="mt-4 max-w-2xl text-white/70">
+            Use Discord as your SAVL identity. After logging in, you can link your Roblox username/User ID and the bot can connect transactions to your site profile.
+          </p>
+
+          <div className="mt-8 rounded-[1.5rem] border border-white/10 bg-white/5 p-5">
+            {loading ? (
+              <p className="text-white/60">Checking session...</p>
+            ) : session ? (
+              <div>
+                <p className="font-semibold text-emerald-300">You are logged in.</p>
+                <p className="mt-2 text-sm text-white/60">Continue to your profile to link Roblox and view your transactions.</p>
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <Link href="/profile" className="rounded-2xl bg-emerald-500 px-5 py-3 font-semibold text-black transition hover:-translate-y-0.5">
+                    Open Profile
+                  </Link>
+                  <button onClick={logout} className="rounded-2xl border border-white/10 px-5 py-3 font-semibold text-white/80 transition hover:bg-white/10">
+                    Log Out
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={loginWithDiscord} className="rounded-2xl bg-[#5865F2] px-6 py-3 font-bold text-white transition hover:-translate-y-0.5 hover:brightness-110">
+                Continue with Discord
+              </button>
+            )}
+
+            {notice ? <p className="mt-4 text-sm text-red-300">{notice}</p> : null}
+          </div>
+
+          <div className="mt-6 rounded-[1.5rem] border border-emerald-400/15 bg-emerald-400/10 p-5 text-sm text-emerald-100/80">
+            First setup required: enable Discord OAuth in Supabase Auth and add your site URL as an allowed redirect URL. The SQL setup file included in the ZIP creates the profile and transaction tables.
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
