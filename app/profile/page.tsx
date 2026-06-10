@@ -33,10 +33,12 @@ type TeamMembership = {
   roblox_username?: string | null;
   role?: string | null;
   isCaptain?: boolean;
+  isManager?: boolean;
 };
 
 type TeamTransaction = {
   id: string;
+  team_id?: number | null;
   team_name?: string | null;
   transaction_type?: string | null;
   requested_role?: string | null;
@@ -46,7 +48,9 @@ type TeamTransaction = {
   player_discord_username?: string | null;
   requester_discord_id?: string | null;
   requester_discord_username?: string | null;
+  handled_by_discord_id?: string | null;
   handled_by_discord_username?: string | null;
+  handled_at?: string | null;
   roblox_username?: string | null;
   roblox_user_id?: string | null;
   reason?: string | null;
@@ -179,14 +183,11 @@ export default function ProfilePage() {
     if (!supabase || !profile) return;
 
     const interval = window.setInterval(() => {
-      const discordId = profile.discord_id ?? discordIdentity?.discordId ?? null;
-      const discordUsername = profile.discord_username ?? discordIdentity?.username ?? null;
-      loadTransactions(discordId, discordUsername);
-      loadMembership(discordId, discordUsername);
+      loadProfileContext();
     }, 15000);
 
     return () => window.clearInterval(interval);
-  }, [profile?.discord_id, profile?.discord_username, discordIdentity?.discordId, discordIdentity?.username]);
+  }, [profile?.id]);
 
   async function syncProfile(currentSession: Session | null) {
     if (!supabase || !currentSession?.user) return;
@@ -223,144 +224,44 @@ export default function ProfilePage() {
     setProfile(nextProfile);
     setRobloxUsername(nextProfile.roblox_username ?? "");
     setRobloxUserId(nextProfile.roblox_user_id ?? "");
-    await loadTransactions(
-      nextProfile.discord_id ?? identity?.discordId ?? null,
-      nextProfile.discord_username ?? identity?.username ?? null,
-    );
-    await loadMembership(nextProfile.discord_id ?? identity?.discordId ?? null, nextProfile.discord_username ?? identity?.username ?? null);
+    await loadProfileContext(token);
   }
 
-  async function loadTransactions(discordId: string | null, discordUsername?: string | null) {
-    if (!supabase) return;
+  async function loadProfileContext(tokenOverride?: string | null) {
+    if (!supabase) return null;
 
-    const filters: string[] = [];
-    const cleanDiscordId = discordId?.trim();
-    const cleanUsername = cleanDiscordUsername(discordUsername);
-
-    if (cleanDiscordId) {
-      filters.push(`player_discord_id.eq.${cleanDiscordId}`);
-      filters.push(`requester_discord_id.eq.${cleanDiscordId}`);
-      filters.push(`handled_by_discord_id.eq.${cleanDiscordId}`);
-    }
-
-    if (cleanUsername) {
-      const usernameOptions = Array.from(new Set([cleanUsername, `${cleanUsername}#0`]));
-      for (const name of usernameOptions) {
-        filters.push(`player_discord_username.eq.${name}`);
-        filters.push(`requester_discord_username.eq.${name}`);
-        filters.push(`handled_by_discord_username.eq.${name}`);
-      }
-    }
-
-    if (filters.length === 0) {
+    const token = tokenOverride ?? (await supabase.auth.getSession()).data.session?.access_token;
+    if (!token) {
       setTransactions([]);
-      return;
+      setMembership(null);
+      return null;
     }
 
-    const { data, error } = await supabase
-      .from("team_transactions")
-      .select("*")
-      .or(filters.join(","))
-      .order("created_at", { ascending: false })
-      .limit(50);
+    const response = await fetch("/api/profile-transactions", {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
-    if (error) {
-      setNotice(`Transactions table is not ready yet: ${error.message}`);
-      return;
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setNotice(`Transactions could not be loaded: ${result?.error || response.statusText}`);
+      return null;
     }
 
-    setTransactions((data ?? []) as TeamTransaction[]);
+    const nextMembership = (result.membership ?? null) as TeamMembership | null;
+    setMembership(nextMembership);
+    setTransactions((result.transactions ?? []) as TeamTransaction[]);
+    return nextMembership;
   }
 
-  async function loadMembership(discordId: string | null, discordUsername: string | null) {
-    if (!supabase) return;
+  async function loadTransactions(_discordId?: string | null, _discordUsername?: string | null) {
+    await loadProfileContext();
+  }
 
-    const cleanDiscordId = discordId?.trim();
-    const cleanUsername = cleanDiscordUsername(discordUsername);
-
-    if (cleanDiscordId) {
-      const captainById = await supabase
-        .from("teams")
-        .select("id,country,captain_name")
-        .eq("captain_discord_id", cleanDiscordId)
-        .limit(1)
-        .maybeSingle();
-
-      if (!captainById.error && captainById.data) {
-        setMembership({
-          id: Number(captainById.data.id),
-          team_id: Number(captainById.data.id),
-          team_name: captainById.data.country ?? null,
-          roblox_username: captainById.data.captain_name ?? null,
-          role: "Captain",
-          isCaptain: true,
-        });
-        return;
-      }
-    }
-
-    if (cleanUsername) {
-      const captainByName = await supabase
-        .from("teams")
-        .select("id,country,captain_name")
-        .in("captain_discord", [cleanUsername, `${cleanUsername}#0`])
-        .limit(1)
-        .maybeSingle();
-
-      if (!captainByName.error && captainByName.data) {
-        setMembership({
-          id: Number(captainByName.data.id),
-          team_id: Number(captainByName.data.id),
-          team_name: captainByName.data.country ?? null,
-          roblox_username: captainByName.data.captain_name ?? null,
-          role: "Captain",
-          isCaptain: true,
-        });
-        return;
-      }
-    }
-
-    let player: any = null;
-
-    if (cleanDiscordId) {
-      const byId = await supabase
-        .from("team_players")
-        .select("*")
-        .eq("discord_id", cleanDiscordId)
-        .limit(1)
-        .maybeSingle();
-      if (!byId.error && byId.data) player = byId.data;
-    }
-
-    if (!player && cleanUsername) {
-      const byName = await supabase
-        .from("team_players")
-        .select("*")
-        .in("discord_username", [cleanUsername, `${cleanUsername}#0`])
-        .limit(1)
-        .maybeSingle();
-      if (!byName.error && byName.data) player = byName.data;
-    }
-
-    if (!player) {
-      setMembership(null);
-      return;
-    }
-
-    const team = await supabase
-      .from("teams")
-      .select("country")
-      .eq("id", player.team_id)
-      .maybeSingle();
-
-    setMembership({
-      id: player.id,
-      team_id: player.team_id,
-      team_name: team.data?.country ?? null,
-      roblox_username: player.roblox_username,
-      role: player.role,
-      isCaptain: false,
-    });
+  async function loadMembership(_discordId: string | null, _discordUsername: string | null) {
+    return await loadProfileContext();
   }
 
   async function leaveCurrentTeam() {
@@ -392,8 +293,7 @@ export default function ProfilePage() {
     }
 
     setNotice(`You left ${result.team || "your team"}.`);
-    await loadMembership(profile.discord_id ?? discordIdentity?.discordId ?? null, profile.discord_username ?? discordIdentity?.username ?? null);
-    await loadTransactions(profile.discord_id ?? discordIdentity?.discordId ?? null, profile.discord_username ?? discordIdentity?.username ?? null);
+    await loadProfileContext(token);
   }
 
   async function saveRoblox(event: FormEvent<HTMLFormElement>) {
@@ -442,8 +342,7 @@ export default function ProfilePage() {
 
     setProfile(result.profile as PlayerProfile);
     setNotice("Roblox account linked successfully.");
-    await loadMembership(profile.discord_id ?? discordIdentity?.discordId ?? null, profile.discord_username ?? discordIdentity?.username ?? null);
-    await loadTransactions(profile.discord_id ?? discordIdentity?.discordId ?? null, profile.discord_username ?? discordIdentity?.username ?? null);
+    await loadProfileContext(token);
   }
 
   async function logout() {
@@ -454,6 +353,11 @@ export default function ProfilePage() {
     setTransactions([]);
     setMembership(null);
   }
+
+  const isManagerProfile = Boolean(membership?.isManager || membership?.isCaptain || membership?.role === "Vice Captain");
+  const transactionsTitle = isManagerProfile
+    ? "Your Transactions (Captain & Vice Captain)"
+    : "Your Transactions (Player)";
 
   if (loading) {
     return <main className="min-h-screen bg-[#03110D] p-10 text-white">Loading profile...</main>;
@@ -557,9 +461,9 @@ export default function ProfilePage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.3em] text-emerald-300">Transactions</p>
-                <h2 className="mt-2 text-3xl font-black">Your Transactions</h2>
+                <h2 className="mt-2 text-3xl font-black">{transactionsTitle}</h2>
               </div>
-              <button onClick={() => loadTransactions(profile?.discord_id ?? discordIdentity?.discordId ?? null, profile?.discord_username ?? discordIdentity?.username ?? null)} className="rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-white/75 hover:bg-white/10">
+              <button onClick={() => loadProfileContext()} className="rounded-2xl border border-white/10 px-4 py-2 text-sm font-semibold text-white/75 hover:bg-white/10">
                 Refresh
               </button>
             </div>
@@ -567,7 +471,7 @@ export default function ProfilePage() {
             <div className="mt-6 space-y-4">
               {transactions.length === 0 ? (
                 <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-5 text-white/60">
-                  No transactions found yet.
+                  {isManagerProfile ? "No team transactions found yet." : "No player transactions found yet."}
                 </div>
               ) : (
                 transactions.map((item) => (
@@ -589,9 +493,10 @@ export default function ProfilePage() {
                       <p>Player Discord: {item.player_discord_username || item.player_discord_id || "—"}</p>
                       <p>Role: {item.requested_role || "—"}</p>
                       <p>Roblox ID: {item.roblox_user_id || "—"}</p>
-                      <p>Requested by: {item.requester_discord_username || "—"}</p>
-                      <p>Handled by: {item.handled_by_discord_username || "—"}</p>
+                      <p>Requested by: {item.requester_discord_username || item.requester_discord_id || "—"}</p>
+                      <p>Handled by: {item.handled_by_discord_username || item.handled_by_discord_id || "—"}</p>
                       <p>Created: {formatDate(item.created_at)}</p>
+                      <p>Handled at: {formatDate(item.handled_at)}</p>
                     </div>
                     {item.reason ? <p className="mt-3 rounded-xl bg-red-400/10 p-3 text-sm text-red-200">{item.reason}</p> : null}
                   </article>

@@ -199,7 +199,7 @@ function getTeamImageUrl(code: string) {
   return `https://flagcdn.com/w160/${code}.png`;
 }
 
-function formatDate(date: string) {
+function formatDate(date?: string | null) {
   if (!date) return "-";
 
   try {
@@ -326,8 +326,160 @@ function sortByAverage(key: LeaderboardStatKey) {
     const avgDiff = statAverage(b, key) - statAverage(a, key);
     if (avgDiff !== 0) return avgDiff;
     if (b[key] !== a[key]) return b[key] - a[key];
+    if (b.matches_played !== a.matches_played) return b.matches_played - a.matches_played;
     return a.player_username.localeCompare(b.player_username);
   };
+}
+
+function normalizePlayerSearch(value: string) {
+  return normalizeText(value).replace(/[^a-z0-9]/g, "");
+}
+
+function findLeaderboardPlayerByName(players: LeaderboardPlayer[], username: string) {
+  const normalized = normalizeText(username);
+  const compact = normalizePlayerSearch(username);
+
+  return (
+    players.find((player) => normalizeText(player.player_username) === normalized) ??
+    players.find((player) => normalizePlayerSearch(player.player_username) === compact) ??
+    null
+  );
+}
+
+function awardEligiblePool(players: LeaderboardPlayer[]) {
+  if (players.length <= 3) return players;
+
+  const maxMatches = Math.max(...players.map((player) => player.matches_played || 0));
+  const minMatches = Math.max(1, Math.ceil(maxMatches * 0.5));
+  const eligible = players.filter((player) => player.matches_played >= minMatches);
+
+  return eligible.length >= 3 ? eligible : players;
+}
+
+function topByAverageWithMatchRequirement(players: LeaderboardPlayer[], key: LeaderboardStatKey) {
+  return [...awardEligiblePool(players)].sort(sortByAverage(key)).slice(0, 3);
+}
+
+function playerOverallScore(player: LeaderboardPlayer) {
+  return player.kills + player.receives + player.assists + player.aces + player.blocks;
+}
+
+function compareOverallLeaderboard(a: LeaderboardPlayer, b: LeaderboardPlayer) {
+  const scoreDiff = playerOverallScore(b) - playerOverallScore(a);
+  if (scoreDiff !== 0) return scoreDiff;
+  if (b.matches_played !== a.matches_played) return b.matches_played - a.matches_played;
+  if (b.kills !== a.kills) return b.kills - a.kills;
+  if (b.receives !== a.receives) return b.receives - a.receives;
+  return a.player_username.localeCompare(b.player_username);
+}
+
+function cleanArchivedDiscordUsername(value?: string | null) {
+  return String(value ?? "")
+    .trim()
+    .replace(/^@/, "")
+    .replace(/^archive[_-]+/i, "")
+    .replace(/#0$/, "");
+}
+
+type ArchiveRosterMember = {
+  key: string;
+  role: "Captain" | "Vice Captain" | "Player";
+  roblox_username: string;
+  roblox_user_id?: string | null;
+  discord_username?: string | null;
+  source: "captain" | "stats" | "roster";
+};
+
+function archiveRosterKey(username?: string | null, robloxUserId?: string | null) {
+  const cleanId = String(robloxUserId ?? "").trim();
+  if (/^\d+$/.test(cleanId) && cleanId !== "0" && !cleanId.startsWith("900")) {
+    return `id:${cleanId}`;
+  }
+
+  return `name:${normalizePlayerSearch(username ?? "")}`;
+}
+
+function rosterRoleRank(role: ArchiveRosterMember["role"]) {
+  if (role === "Captain") return 3;
+  if (role === "Vice Captain") return 2;
+  return 1;
+}
+
+function buildArchiveRoster(team: Team, players: TeamPlayer[], stats: PlayerStat[]) {
+  const map = new Map<string, ArchiveRosterMember>();
+
+  const addMember = (member: Omit<ArchiveRosterMember, "key">) => {
+    const username = String(member.roblox_username ?? "").trim();
+    if (!username) return;
+
+    const key = archiveRosterKey(username, member.roblox_user_id);
+    const cleanDiscord = cleanArchivedDiscordUsername(member.discord_username);
+    const next: ArchiveRosterMember = {
+      ...member,
+      key,
+      roblox_username: username,
+      discord_username: cleanDiscord || null,
+    };
+
+    const current = map.get(key);
+    if (!current) {
+      map.set(key, next);
+      return;
+    }
+
+    const shouldUpgradeRole = rosterRoleRank(next.role) > rosterRoleRank(current.role);
+    const shouldPreferRealDiscord = !current.discord_username && next.discord_username;
+    const shouldPreferRosterOverStats = current.source === "stats" && next.source === "roster";
+
+    if (shouldUpgradeRole || shouldPreferRealDiscord || shouldPreferRosterOverStats) {
+      map.set(key, {
+        ...current,
+        ...next,
+        role: shouldUpgradeRole ? next.role : current.role,
+        source: shouldPreferRosterOverStats ? next.source : current.source,
+      });
+    }
+  };
+
+  addMember({
+    role: "Captain",
+    roblox_username: team.captain_name,
+    roblox_user_id: team.captain_roblox_id,
+    discord_username: team.captain_discord,
+    source: "captain",
+  });
+
+  stats
+    .filter((row) => normalizeText(row.team_country) === normalizeText(team.country))
+    .forEach((row) => {
+      addMember({
+        role: "Player",
+        roblox_username: row.player_name,
+        roblox_user_id: /^\d+$/.test(String(row.player_key ?? "")) ? row.player_key : null,
+        discord_username: null,
+        source: "stats",
+      });
+    });
+
+  players
+    .filter((player) => player.team_id === team.id)
+    .forEach((player) => {
+      addMember({
+        role: player.role,
+        roblox_username: player.roblox_username,
+        roblox_user_id: player.roblox_user_id,
+        discord_username: player.discord_username,
+        source: "roster",
+      });
+    });
+
+  return Array.from(map.values())
+    .sort((a, b) => {
+      const roleDiff = rosterRoleRank(b.role) - rosterRoleRank(a.role);
+      if (roleDiff !== 0) return roleDiff;
+      return a.roblox_username.localeCompare(b.roblox_username);
+    })
+    .slice(0, 10);
 }
 
 const APER_FULL_WEIGHT_MATCHES = 3;
@@ -412,11 +564,15 @@ function buildLeaderboard(stats: PlayerStat[], teams: Team[] = [], players: Team
 
   const findPlayerMeta = (playerName: string, playerKey?: string | null, teamCountry?: string | null) => {
     const normalizedName = normalizeText(playerName);
+    const compactName = normalizePlayerSearch(playerName);
     const normalizedKey = normalizeText(playerKey ?? "");
     const rosterPlayer = players.find((player) => {
-      const usernameMatch = normalizeText(player.roblox_username) === normalizedName;
-      const idMatch = normalizedKey ? normalizeText(player.roblox_user_id ?? "") === normalizedKey : false;
-      return usernameMatch || idMatch;
+      const usernameMatch = normalizePlayerSearch(player.roblox_username) === compactName;
+      const idMatch =
+        normalizedKey &&
+        normalizeText(player.roblox_user_id ?? "") === normalizedKey &&
+        (!compactName || normalizePlayerSearch(player.roblox_username) === compactName);
+      return usernameMatch || Boolean(idMatch);
     });
 
     if (rosterPlayer) {
@@ -430,8 +586,10 @@ function buildLeaderboard(stats: PlayerStat[], teams: Team[] = [], players: Team
 
     const captainTeam = teams.find(
       (team) =>
-        normalizeText(team.captain_name) === normalizedName ||
-        (normalizedKey ? normalizeText(team.captain_roblox_id ?? "") === normalizedKey : false),
+        normalizePlayerSearch(team.captain_name) === compactName ||
+        (normalizedKey &&
+          normalizeText(team.captain_roblox_id ?? "") === normalizedKey &&
+          (!compactName || normalizePlayerSearch(team.captain_name) === compactName)),
     );
 
     if (captainTeam) {
@@ -450,8 +608,13 @@ function buildLeaderboard(stats: PlayerStat[], teams: Team[] = [], players: Team
   };
 
   for (const row of stats) {
-    const meta = findPlayerMeta(row.player_name, row.player_key, row.team_country);
-    const key = row.player_key || `${normalizeText(meta.username)}-${normalizeText(row.team_country)}`;
+    const savedName = String(row.player_name ?? "").trim();
+    const meta = findPlayerMeta(savedName, row.player_key, row.team_country);
+    const displayName = savedName || meta.username || "Unknown Player";
+    const compactName = normalizePlayerSearch(displayName);
+    const numericStatKey = /^\d+$/.test(String(row.player_key ?? "")) ? String(row.player_key) : null;
+    const metaMatchesSavedName = normalizePlayerSearch(meta.username ?? "") === compactName;
+    const key = compactName || numericStatKey || String(row.player_key ?? "").trim() || `${normalizeText(displayName)}-${normalizeText(row.team_country)}`;
     const totalKills = (row.kills ?? 0) + (row.ape_kills ?? 0);
     const existing = map.get(key);
 
@@ -468,12 +631,15 @@ function buildLeaderboard(stats: PlayerStat[], teams: Team[] = [], players: Team
       existing.one_touches += row.one_touches ?? 0;
       existing.kill_blocks += row.kill_blocks ?? 0;
       existing.blocks += (row.kill_blocks ?? 0) + (row.one_touches ?? 0);
+      if (normalizeText(existing.team) !== normalizeText(row.team_country)) {
+        existing.team = row.team_country || existing.team;
+      }
     } else {
       map.set(key, {
-        player_username: meta.username,
+        player_username: displayName,
         player_key: key,
-        player_roblox_id: meta.robloxId,
-        team: meta.team,
+        player_roblox_id: metaMatchesSavedName ? meta.robloxId : numericStatKey,
+        team: row.team_country || meta.team,
         matches_played: 1,
         kills: totalKills,
         ape_kills: row.ape_kills ?? 0,
@@ -494,9 +660,7 @@ function buildLeaderboard(stats: PlayerStat[], teams: Team[] = [], players: Team
 }
 
 function buildSelectedArchivedPlayer(username: string, leaderboard: LeaderboardPlayer[], teams: Team[], players: TeamPlayer[]): LeaderboardPlayer {
-  const statsPlayer = leaderboard.find(
-    (player) => normalizeText(player.player_username) === normalizeText(username),
-  );
+  const statsPlayer = findLeaderboardPlayerByName(leaderboard, username);
   if (statsPlayer) return statsPlayer;
 
   const rosterPlayer = players.find(
@@ -544,8 +708,8 @@ function buildSelectedArchivedPlayer(username: string, leaderboard: LeaderboardP
 }
 
 function buildAwardsData(leaderboard: LeaderboardPlayer[], teams: Team[], players: TeamPlayer[]) {
-  const bestSpiker = [...leaderboard].sort(sortByAverage("kills")).slice(0, 3);
-  const bestReceiver = [...leaderboard].sort(sortByAverage("receives")).slice(0, 3);
+  const bestSpiker = topByAverageWithMatchRequirement(leaderboard, "kills");
+  const bestReceiver = topByAverageWithMatchRequirement(leaderboard, "receives");
   const bestServer = [...leaderboard].sort(sortByAverage("aces")).slice(0, 3);
   const bestSetter = [...leaderboard].filter(isEligibleBestSetter).sort(compareBestSetter).slice(0, 3);
   const bestAper = [...leaderboard].sort(compareBestAper).slice(0, 3);
@@ -692,7 +856,7 @@ function ArchivedAwardPodium({
               <p className="mt-4 truncate text-lg font-black text-white">{player.player_username}</p>
               <p className="truncate text-sm text-white/55">{player.team}</p>
               <div className="mt-4 grid grid-cols-2 gap-2">
-                <StatPill label={`Avg ${mainStatLabel}`} value={mainStat === "kills" ? playerTotalKillPercentage(player) : average.toFixed(1)} />
+                <StatPill label={`Avg ${mainStatLabel}`} value={average.toFixed(1)} />
                 <StatPill label={`Total ${mainStatLabel}`} value={player[mainStat]} />
                 <StatPill label="Recs" value={player.receives} />
                 <StatPill label="Matches" value={player.matches_played} />
@@ -1039,33 +1203,35 @@ export default function ArchivesPage() {
                     <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/55">No teams found for this season.</div>
                   ) : null}
                   {teams.map((team) => {
-                    const rosterCount = players.filter((player) => player.team_id === team.id).length + 1;
+                    const rosterMembers = buildArchiveRoster(team, players, stats);
                     return (
                       <div key={team.id}>
                         <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 p-4">
-                        <div className="flex items-center gap-3">
-                          <img src={getTeamImageUrl(team.code)} alt="" className="h-10 w-12 rounded-lg object-cover" />
-                          <div>
-                            <p className="font-bold">{team.country}</p>
-                            <p className="text-sm text-white/55">Captain {team.captain_name}</p>
+                          <div className="flex items-center gap-3">
+                            <img src={getTeamImageUrl(team.code)} alt="" className="h-10 w-12 rounded-lg object-cover" />
+                            <div>
+                              <p className="font-bold">{team.country}</p>
+                              <p className="text-sm text-white/55">Captain {team.captain_name}</p>
+                            </div>
                           </div>
-                        </div>
-                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/65">
-                          {rosterCount} members
-                        </span>
+                          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/65">
+                            {rosterMembers.length} members
+                          </span>
                         </div>
                         <div className="mt-2 rounded-2xl border border-white/10 bg-black/10 p-3 text-sm text-white/60">
-                        <p className="font-semibold text-white/80">Roster</p>
-                        <p className="mt-1">Captain: {team.captain_name} • @{team.captain_discord}</p>
-                        {players.filter((player) => player.team_id === team.id).length > 0 ? (
-                          <div className="mt-2 space-y-1">
-                            {players.filter((player) => player.team_id === team.id).map((player) => (
-                              <p key={player.id}>
-                                {player.role}: {player.roblox_username} • @{player.discord_username}
-                              </p>
-                            ))}
-                          </div>
-                        ) : null}
+                          <p className="font-semibold text-white/80">Roster</p>
+                          {rosterMembers.length === 0 ? (
+                            <p className="mt-1 text-white/45">No roster data found.</p>
+                          ) : (
+                            <div className="mt-2 space-y-1">
+                              {rosterMembers.map((member) => (
+                                <p key={member.key}>
+                                  {member.role}: {member.roblox_username}
+                                  {member.discord_username ? ` • @${member.discord_username}` : ""}
+                                </p>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -1074,38 +1240,56 @@ export default function ArchivesPage() {
               </div>
 
               <div className="rounded-[2rem] border border-white/10 bg-[#0B1712] p-6">
-                <h3 className="text-2xl font-black">Archived Player Stats</h3>
-                <div className="mt-5 max-h-[720px] space-y-3 overflow-y-auto pr-1">
+                <div className="flex flex-wrap items-end justify-between gap-3">
+                  <div>
+                    <h3 className="text-2xl font-black">Complete Player Leaderboard</h3>
+                    <p className="mt-1 text-sm text-white/55">All archived players, ranked with the same detailed stats style from Stat Track.</p>
+                  </div>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-white/55">
+                    {leaderboard.length} players
+                  </span>
+                </div>
+                <div className="mt-5 max-h-[720px] overflow-auto rounded-2xl border border-white/10">
                   {leaderboard.length === 0 ? (
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-white/55">No player stats found for this season.</div>
-                  ) : null}
-                  {[...leaderboard]
-                    .sort((a, b) => {
-                      const aScore = a.kills + a.assists + a.receives + a.aces + a.blocks;
-                      const bScore = b.kills + b.assists + b.receives + b.aces + b.blocks;
-                      if (bScore !== aScore) return bScore - aScore;
-                      return a.player_username.localeCompare(b.player_username);
-                    })
-                    .map((player, index) => (
-                    <div key={`${player.player_key}-${player.team}`} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-300">#{index + 1}</p>
-                          <p className="text-lg font-black">{player.player_username}</p>
-                          <p className="text-sm text-white/55">{player.team} • {player.matches_played} matches</p>
-                        </div>
-                        <p className="text-2xl font-black text-emerald-300">{player.kills + player.assists + player.receives + player.aces + player.blocks}</p>
-                      </div>
-                      <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs text-white/65 md:grid-cols-6">
-                        <span>K {player.kills}</span>
-                        <span>Ape {player.ape_kills}</span>
-                        <span>Ast {player.assists}</span>
-                        <span>Rec {player.receives}</span>
-                        <span>Aces {player.aces}</span>
-                        <span>Blk {player.blocks}</span>
-                      </div>
-                    </div>
-                  ))}
+                    <div className="p-4 text-white/55">No player stats found for this season.</div>
+                  ) : (
+                    <table className="min-w-[920px] w-full text-sm">
+                      <thead className="sticky top-0 bg-[#101B18] text-left text-xs uppercase tracking-[0.16em] text-white/45">
+                        <tr>
+                          <th className="px-4 py-3">#</th>
+                          <th className="px-4 py-3">Player</th>
+                          <th className="px-4 py-3">Team</th>
+                          <th className="px-4 py-3 text-center">Matches</th>
+                          <th className="px-4 py-3 text-center">Kills</th>
+                          <th className="px-4 py-3 text-center">K/M</th>
+                          <th className="px-4 py-3 text-center">Receives</th>
+                          <th className="px-4 py-3 text-center">R/M</th>
+                          <th className="px-4 py-3 text-center">Assists</th>
+                          <th className="px-4 py-3 text-center">Aces</th>
+                          <th className="px-4 py-3 text-center">Blocks</th>
+                          <th className="px-4 py-3 text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-white/10">
+                        {[...leaderboard].sort(compareOverallLeaderboard).map((player, index) => (
+                          <tr key={`${player.player_key}-${player.team}`} className="hover:bg-white/[0.03]">
+                            <td className="px-4 py-3 font-black text-emerald-300">#{index + 1}</td>
+                            <td className="px-4 py-3 font-bold text-white">{player.player_username}</td>
+                            <td className="px-4 py-3 text-white/60">{player.team}</td>
+                            <td className="px-4 py-3 text-center">{player.matches_played}</td>
+                            <td className="px-4 py-3 text-center">{player.kills}</td>
+                            <td className="px-4 py-3 text-center text-white/60">{statAverage(player, "kills").toFixed(1)}</td>
+                            <td className="px-4 py-3 text-center">{player.receives}</td>
+                            <td className="px-4 py-3 text-center text-white/60">{statAverage(player, "receives").toFixed(1)}</td>
+                            <td className="px-4 py-3 text-center">{player.assists}</td>
+                            <td className="px-4 py-3 text-center">{player.aces}</td>
+                            <td className="px-4 py-3 text-center">{player.blocks}</td>
+                            <td className="px-4 py-3 text-right font-black text-emerald-300">{playerOverallScore(player)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </div>
             </section>

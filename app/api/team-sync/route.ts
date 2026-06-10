@@ -151,6 +151,7 @@ async function recordTeamTransaction(payload: Record<string, any>) {
     external_source: "savl_site",
     external_id: externalId,
     status: "accepted",
+    handled_at: new Date().toISOString(),
     ...payload,
   });
 
@@ -506,6 +507,23 @@ async function leaveTeam(ctx: NonNullable<Awaited<ReturnType<typeof getAuthConte
   return NextResponse.json({ ok: true, team: team.country });
 }
 
+
+async function listPendingTransfers(ctx: NonNullable<Awaited<ReturnType<typeof getAuthContext>>>) {
+  if (!ctx.isAdmin) return jsonError("Only Admin can list pending transfers.", 403);
+  if (!supabaseAdmin) return jsonError("Supabase service role is not configured.", 500);
+
+  const { data, error } = await supabaseAdmin
+    .from("team_transactions")
+    .select("*")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (error) return jsonError(error.message, 500);
+
+  return NextResponse.json({ ok: true, transactions: data ?? [] });
+}
+
 async function clearTransfer(ctx: NonNullable<Awaited<ReturnType<typeof getAuthContext>>>, body: any) {
   if (!ctx.isAdmin) return jsonError("Only Admin can clear transfers.", 403);
   if (!supabaseAdmin) return jsonError("Supabase service role is not configured.", 500);
@@ -541,6 +559,7 @@ export async function POST(request: NextRequest) {
     if (action === "remove_player") return await removePlayer(ctx, body);
     if (action === "leave_team") return await leaveTeam(ctx);
     if (action === "clear_transfer") return await clearTransfer(ctx, body);
+    if (action === "list_pending_transfers") return await listPendingTransfers(ctx);
 
     return jsonError("Unknown team sync action.");
   } catch (error: any) {

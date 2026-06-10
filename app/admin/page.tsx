@@ -167,6 +167,7 @@ type TeamTransaction = {
   status?: string | null;
   player_discord_id?: string | null;
   player_discord_username?: string | null;
+  requester_discord_id?: string | null;
   requester_discord_username?: string | null;
   roblox_username?: string | null;
   roblox_user_id?: string | null;
@@ -555,7 +556,7 @@ function getGroupBadgeClass(group: GroupLetter) {
   return "border-fuchsia-400/20 bg-fuchsia-400/10 text-fuchsia-300";
 }
 
-function formatDate(date: string) {
+function formatDate(date?: string | null) {
   if (!date) return "-";
 
   try {
@@ -1568,8 +1569,38 @@ function sortByAverage(key: LeaderboardStatKey) {
     const avgDiff = statAverage(b, key) - statAverage(a, key);
     if (avgDiff !== 0) return avgDiff;
     if (b[key] !== a[key]) return b[key] - a[key];
+    if (b.matches_played !== a.matches_played) return b.matches_played - a.matches_played;
     return a.player_username.localeCompare(b.player_username);
   };
+}
+
+function normalizePlayerSearch(value: string) {
+  return normalizeText(value).replace(/[^a-z0-9]/g, "");
+}
+
+function findLeaderboardPlayerByName(players: LeaderboardPlayer[], username: string) {
+  const normalized = normalizeText(username);
+  const compact = normalizePlayerSearch(username);
+
+  return (
+    players.find((player) => normalizeText(player.player_username) === normalized) ??
+    players.find((player) => normalizePlayerSearch(player.player_username) === compact) ??
+    null
+  );
+}
+
+function awardEligiblePool(players: LeaderboardPlayer[]) {
+  if (players.length <= 3) return players;
+
+  const maxMatches = Math.max(...players.map((player) => player.matches_played || 0));
+  const minMatches = Math.max(1, Math.ceil(maxMatches * 0.5));
+  const eligible = players.filter((player) => player.matches_played >= minMatches);
+
+  return eligible.length >= 3 ? eligible : players;
+}
+
+function topByAverageWithMatchRequirement(players: LeaderboardPlayer[], key: LeaderboardStatKey) {
+  return [...awardEligiblePool(players)].sort(sortByAverage(key)).slice(0, 3);
 }
 
 const APER_FULL_WEIGHT_MATCHES = 3;
@@ -1831,7 +1862,7 @@ function AwardsPodium({
                     Avg. {mainStatLabel}
                   </p>
                   <p className="mt-1 font-black text-white">
-                    {mainStat === "kills" ? playerTotalKillPercentage(player) : avg.toFixed(1)}
+                    {avg.toFixed(1)}
                   </p>
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-center">
@@ -2675,12 +2706,16 @@ export default function SAVLSitePage() {
     playerKey?: string | null,
     teamCountry?: string | null,
   ) => {
+    const normalizedUsername = normalizeText(username);
+
     if (playerKey) {
       const byKey = playerMetaByKey.get(playerKey);
-      if (byKey) return byKey;
+      const keyMatchesSavedName =
+        !normalizedUsername ||
+        normalizePlayerSearch(byKey?.username ?? "") === normalizePlayerSearch(username);
+      if (byKey && keyMatchesSavedName) return byKey;
     }
 
-    const normalizedUsername = normalizeText(username);
 
     for (const team of approvedTeams) {
       if (normalizeText(team.captain_name ?? "") === normalizedUsername) {
@@ -2720,8 +2755,13 @@ export default function SAVLSitePage() {
     >();
 
     for (const s of rows) {
-      const meta = findPlayerMeta(s.player_name, s.player_key, s.team_country);
-      const key = s.player_key || normalizeText(meta.username || s.player_name);
+      const savedName = String(s.player_name ?? "").trim();
+      const meta = findPlayerMeta(savedName, s.player_key, s.team_country);
+      const displayName = savedName || meta.username || "Unknown Player";
+      const compactName = normalizePlayerSearch(displayName);
+      const numericStatKey = /^\d+$/.test(String(s.player_key ?? "")) ? String(s.player_key) : null;
+      const metaMatchesSavedName = normalizePlayerSearch(meta.username ?? "") === compactName;
+      const key = compactName || numericStatKey || String(s.player_key ?? "").trim() || `${normalizeText(displayName)}-${normalizeText(s.team_country)}`;
       const totalKills = (s.kills ?? 0) + (s.ape_kills ?? 0);
       const existing = map.get(key);
 
@@ -2738,11 +2778,14 @@ export default function SAVLSitePage() {
         existing.blocks += (s.one_touches ?? 0) + (s.kill_blocks ?? 0);
         existing.matchIds.add(s.match_id);
         existing.matches_played = existing.matchIds.size;
+        if (normalizeText(existing.team) !== normalizeText(s.team_country)) {
+          existing.team = s.team_country || existing.team;
+        }
       } else {
         map.set(key, {
-          player_username: meta.username || s.player_name,
-          player_roblox_id: meta.robloxId,
-          team: meta.team || s.team_country,
+          player_username: displayName,
+          player_roblox_id: metaMatchesSavedName ? meta.robloxId : numericStatKey,
+          team: s.team_country || meta.team || "Selected",
           kills: totalKills,
           receives: (s.receives ?? 0) + (s.dives ?? 0),
           assists: s.assists ?? 0,
@@ -2789,9 +2832,7 @@ export default function SAVLSitePage() {
     const all = aggregatePlayerStats(playerStats);
 
     const buildSelectedPlayer = (username: string): LeaderboardPlayer => {
-      const statsPlayer = all.find(
-        (player) => normalizeText(player.player_username) === normalizeText(username),
-      );
+      const statsPlayer = findLeaderboardPlayerByName(all, username);
       if (statsPlayer) return statsPlayer;
 
       const meta = findPlayerMeta(username);
@@ -2814,9 +2855,9 @@ export default function SAVLSitePage() {
       };
     };
 
-    const bestSpiker = [...all].sort(sortByAverage("kills")).slice(0, 3);
+    const bestSpiker = topByAverageWithMatchRequirement(all, "kills");
 
-    const bestReceiver = [...all].sort(sortByAverage("receives")).slice(0, 3);
+    const bestReceiver = topByAverageWithMatchRequirement(all, "receives");
 
     const bestServer = [...all].sort(sortByAverage("aces")).slice(0, 3);
 
@@ -3898,14 +3939,19 @@ export default function SAVLSitePage() {
   async function reloadTeamTransactions() {
     if (!supabase) return;
 
-    const { data, error } = await supabase
-      .from("team_transactions")
-      .select("*")
-      .eq("status", "pending")
-      .order("created_at", { ascending: false })
-      .limit(50);
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session?.access_token) {
+        setTeamTransactions([]);
+        return;
+      }
 
-    if (!error && data) setTeamTransactions(data as TeamTransaction[]);
+      const result = await callTeamSync("list_pending_transfers");
+      setTeamTransactions((result.transactions ?? []) as TeamTransaction[]);
+    } catch (error) {
+      console.warn("Unable to load pending transfers", error);
+      setTeamTransactions([]);
+    }
   }
 
   async function reloadStaffApplications() {
@@ -5496,7 +5542,10 @@ export default function SAVLSitePage() {
                                       {transaction.player_discord_username || transaction.player_discord_id || "Unknown player"} → {transaction.requested_role || "Player"}
                                     </p>
                                     <p className="mt-1 text-xs text-white/40">
-                                      Requested by {transaction.requester_discord_username || "—"}
+                                      Requested by {transaction.requester_discord_username || transaction.requester_discord_id || "—"}
+                                    </p>
+                                    <p className="mt-1 text-xs text-white/40">
+                                      Created {formatDate(transaction.created_at)}
                                     </p>
                                   </div>
                                   <button
