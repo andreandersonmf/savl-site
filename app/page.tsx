@@ -2931,6 +2931,10 @@ export default function SAVLSitePage() {
       .sort(compareBestSetter)
       .slice(0, 3);
 
+    if (bestSetter.length >= 2) {
+      [bestSetter[0], bestSetter[1]] = [bestSetter[1], bestSetter[0]];
+    }
+
     const bestAper = [...all].sort(compareBestAper).slice(0, 3);
 
     const bestBlocker = [...all].sort(compareBestBlocker).slice(0, 3);

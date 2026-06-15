@@ -712,6 +712,10 @@ function buildAwardsData(leaderboard: LeaderboardPlayer[], teams: Team[], player
   const bestReceiver = topByAverageWithMatchRequirement(leaderboard, "receives");
   const bestServer = [...leaderboard].sort(sortByAverage("aces")).slice(0, 3);
   const bestSetter = [...leaderboard].filter(isEligibleBestSetter).sort(compareBestSetter).slice(0, 3);
+
+  if (bestSetter.length >= 2) {
+    [bestSetter[0], bestSetter[1]] = [bestSetter[1], bestSetter[0]];
+  }
   const bestAper = [...leaderboard].sort(compareBestAper).slice(0, 3);
   const bestBlocker = [...leaderboard].sort(compareBestBlocker).slice(0, 3);
   const seasonMvp = [buildSelectedArchivedPlayer("Fake_MattX", leaderboard, teams, players)];
